@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/formatters.dart';
 import '../../core/providers.dart';
+import '../../theme.dart';
+import '../../ui/ft_ui.dart';
 import '../household/household_providers.dart';
 import 'goal.dart';
 import 'goal_repository.dart';
@@ -25,65 +27,80 @@ class GoalsScreen extends ConsumerWidget {
     final goalsAsync = ref.watch(goalsProvider(household.id));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Tujuan')),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _openSheet(context, ref, household.id, user.uid),
-        icon: const Icon(Icons.add),
-        label: const Text('Tujuan baru'),
-      ),
+      backgroundColor: FtColors.bg,
       body: goalsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Gagal: $e')),
         data: (goals) {
-          if (goals.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32),
-                child: Text(
-                  'Belum ada tujuan.\nMis. dana darurat, liburan, beli rumah.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey.shade600),
+          final totalTarget = goals.fold<int>(0, (a, b) => a + b.target);
+          final totalCurrent = goals.fold<int>(0, (a, b) => a + b.current);
+          return FtAppChrome(
+            current: FtTab.goals,
+            child: ListView(
+              padding: const EdgeInsets.only(bottom: 120),
+              children: [
+                FtSubHeader(
+                  title: 'Tujuan',
+                  trailing: IconButton.filled(
+                    onPressed: () =>
+                        _openSheet(context, ref, household.id, user.uid),
+                    icon: const Icon(Icons.add),
+                  ),
                 ),
-              ),
-            );
-          }
-          return ListView.builder(
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 96),
-            itemCount: goals.length,
-            itemBuilder: (_, i) {
-              final g = goals[i];
-              final owner = g.ownerId != null
-                  ? household.memberOf(g.ownerId!)?.displayName
-                  : 'Bersama';
-              return _GoalCard(
-                goal: g,
-                ownerLabel: owner ?? '-',
-                onContribute: () => _openContributeSheet(context, ref, household.id, g),
-                onDelete: () async {
-                  final ok = await showDialog<bool>(
-                    context: context,
-                    builder: (_) => AlertDialog(
-                      title: Text('Hapus "${g.label}"?'),
-                      content: const Text('Tidak bisa dibatalkan.'),
-                      actions: [
-                        TextButton(
-                            onPressed: () => Navigator.pop(context, false),
-                            child: const Text('Batal')),
-                        FilledButton(
-                            onPressed: () => Navigator.pop(context, true),
-                            child: const Text('Hapus')),
-                      ],
+                FtCard(
+                  margin: const EdgeInsets.fromLTRB(22, 4, 22, 18),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Eyebrow('Tujuan Finansial'),
+                      const SizedBox(height: 6),
+                      Text(
+                        Money.format(totalCurrent),
+                        style: Theme.of(context).textTheme.headlineLarge,
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'dari ${Money.format(totalTarget)} target',
+                        style: const TextStyle(
+                          color: FtColors.ink3,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      FtProgressBar(
+                        value: totalCurrent,
+                        max: totalTarget <= 0 ? 1 : totalTarget,
+                        color: FtColors.moss,
+                        height: 6,
+                      ),
+                    ],
+                  ),
+                ),
+                if (goals.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 48),
+                    child: Center(
+                      child: Text(
+                        'Belum ada tujuan.\nMis. dana darurat, liburan, beli rumah.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: FtColors.ink3),
+                      ),
                     ),
-                  );
-                  if (ok == true) {
-                    await ref.read(goalRepositoryProvider).delete(
-                          hid: household.id,
-                          goalId: g.id,
-                        );
-                  }
-                },
-              );
-            },
+                  )
+                else
+                  for (final g in goals)
+                    _GoalCard(
+                      goal: g,
+                      ownerLabel: g.ownerId != null
+                          ? household.memberOf(g.ownerId!)?.displayName ?? '-'
+                          : 'Bersama',
+                      onContribute: () =>
+                          _openContributeSheet(context, ref, household.id, g),
+                      onDelete: () =>
+                          _confirmDelete(context, ref, household.id, g),
+                    ),
+              ],
+            ),
           );
         },
       ),
@@ -102,7 +119,9 @@ class GoalsScreen extends ConsumerWidget {
       builder: (_) => _GoalEditSheet(currentUid: currentUid),
     );
     if (result == null) return;
-    await ref.read(goalRepositoryProvider).add(
+    await ref
+        .read(goalRepositoryProvider)
+        .add(
           hid: hid,
           label: result.label,
           target: result.target,
@@ -135,8 +154,10 @@ class GoalsScreen extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Tambah ke ${goal.label}',
-                style: Theme.of(context).textTheme.titleLarge),
+            Text(
+              'Tambah ke ${goal.label}',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
             const SizedBox(height: 12),
             TextField(
               controller: ctrl,
@@ -161,11 +182,37 @@ class GoalsScreen extends ConsumerWidget {
       ),
     );
     if (amount != null) {
-      await ref.read(goalRepositoryProvider).contribute(
-            hid: hid,
-            goalId: goal.id,
-            amount: amount,
-          );
+      await ref
+          .read(goalRepositoryProvider)
+          .contribute(hid: hid, goalId: goal.id, amount: amount);
+    }
+  }
+
+  Future<void> _confirmDelete(
+    BuildContext context,
+    WidgetRef ref,
+    String hid,
+    Goal goal,
+  ) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('Hapus "${goal.label}"?'),
+        content: const Text('Tidak bisa dibatalkan.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) {
+      await ref.read(goalRepositoryProvider).delete(hid: hid, goalId: goal.id);
     }
   }
 }
@@ -190,10 +237,10 @@ class _GoalCard extends StatelessWidget {
       current: goal.current,
       monthlyContrib: goal.monthlyContrib,
     );
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+    return FtCard(
+      margin: const EdgeInsets.fromLTRB(22, 0, 22, 12),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.zero,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -208,12 +255,16 @@ class _GoalCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(goal.label,
-                          style: const TextStyle(fontWeight: FontWeight.bold)),
+                      Text(
+                        goal.label,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
                       Text(
                         '$ownerLabel • ${goalScopeLabel(goal.scope)}',
-                        style:
-                            TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 12,
+                        ),
                       ),
                     ],
                   ),
@@ -233,19 +284,25 @@ class _GoalCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                      '${Money.format(goal.current)} / ${Money.format(goal.target)}',
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                    '${Money.format(goal.current)} / ${Money.format(goal.target)}',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
                 if (goal.isComplete)
-                  const Chip(label: Text('Tercapai'), visualDensity: VisualDensity.compact)
+                  const Chip(
+                    label: Text('Tercapai'),
+                    visualDensity: VisualDensity.compact,
+                  )
                 else if (months != null)
-                  Text('±$months bln lagi',
-                      style:
-                          TextStyle(color: Colors.grey.shade600, fontSize: 12))
+                  Text(
+                    '±$months bln lagi',
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                  )
                 else
-                  Text('Sisa ${Money.format(goal.remaining)}',
-                      style:
-                          TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                  Text(
+                    'Sisa ${Money.format(goal.remaining)}',
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                  ),
               ],
             ),
             const SizedBox(height: 6),
@@ -308,8 +365,22 @@ class _GoalEditSheetState extends ConsumerState<_GoalEditSheet> {
   String _icon = 'savings';
   String _color = '#10B981';
 
-  static const _icons = ['savings', 'flight', 'home', 'school', 'directions_car', 'celebration'];
-  static const _colors = ['#10B981', '#3B82F6', '#EC4899', '#F59E0B', '#8B5CF6', '#0EA5E9'];
+  static const _icons = [
+    'savings',
+    'flight',
+    'home',
+    'school',
+    'directions_car',
+    'celebration',
+  ];
+  static const _colors = [
+    '#10B981',
+    '#3B82F6',
+    '#EC4899',
+    '#F59E0B',
+    '#8B5CF6',
+    '#0EA5E9',
+  ];
 
   @override
   void dispose() {
@@ -351,14 +422,15 @@ class _GoalEditSheetState extends ConsumerState<_GoalEditSheet> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Tujuan baru',
-                style: Theme.of(context).textTheme.titleLarge),
+            Text('Tujuan baru', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 16),
             TextField(
               controller: _label,
               textCapitalization: TextCapitalization.words,
               decoration: const InputDecoration(
-                  labelText: 'Nama tujuan', hintText: 'Dana darurat'),
+                labelText: 'Nama tujuan',
+                hintText: 'Dana darurat',
+              ),
             ),
             const SizedBox(height: 12),
             TextField(
@@ -366,7 +438,9 @@ class _GoalEditSheetState extends ConsumerState<_GoalEditSheet> {
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               decoration: const InputDecoration(
-                  labelText: 'Target', prefixText: 'Rp '),
+                labelText: 'Target',
+                prefixText: 'Rp ',
+              ),
             ),
             const SizedBox(height: 12),
             TextField(
@@ -383,14 +457,17 @@ class _GoalEditSheetState extends ConsumerState<_GoalEditSheet> {
               onTap: () async {
                 final picked = await showDatePicker(
                   context: context,
-                  initialDate: _due ?? DateTime.now().add(const Duration(days: 365)),
+                  initialDate:
+                      _due ?? DateTime.now().add(const Duration(days: 365)),
                   firstDate: DateTime.now(),
                   lastDate: DateTime.now().add(const Duration(days: 365 * 20)),
                 );
                 if (picked != null) setState(() => _due = picked);
               },
               child: InputDecorator(
-                decoration: const InputDecoration(labelText: 'Target tanggal (opsional)'),
+                decoration: const InputDecoration(
+                  labelText: 'Target tanggal (opsional)',
+                ),
                 child: Text(_due == null ? 'Tidak diset' : Dates.short(_due!)),
               ),
             ),
@@ -398,7 +475,10 @@ class _GoalEditSheetState extends ConsumerState<_GoalEditSheet> {
             SegmentedButton<GoalScope>(
               segments: const [
                 ButtonSegment(value: GoalScope.shared, label: Text('Bersama')),
-                ButtonSegment(value: GoalScope.personal, label: Text('Pribadi')),
+                ButtonSegment(
+                  value: GoalScope.personal,
+                  label: Text('Pribadi'),
+                ),
               ],
               selected: {_scope},
               onSelectionChanged: (s) => setState(() => _scope = s.first),
@@ -467,11 +547,11 @@ Color _parseColor(String hex) {
 }
 
 IconData _iconFor(String name) => switch (name) {
-      'savings' => Icons.savings,
-      'flight' => Icons.flight_takeoff,
-      'home' => Icons.home,
-      'school' => Icons.school,
-      'directions_car' => Icons.directions_car,
-      'celebration' => Icons.celebration,
-      _ => Icons.flag,
-    };
+  'savings' => Icons.savings,
+  'flight' => Icons.flight_takeoff,
+  'home' => Icons.home,
+  'school' => Icons.school,
+  'directions_car' => Icons.directions_car,
+  'celebration' => Icons.celebration,
+  _ => Icons.flag,
+};

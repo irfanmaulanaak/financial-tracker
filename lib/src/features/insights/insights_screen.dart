@@ -5,6 +5,8 @@ import '../../core/category_analysis.dart';
 import '../../core/expense_aggregations.dart';
 import '../../core/formatters.dart';
 import '../../core/health_score.dart';
+import '../../theme.dart';
+import '../../ui/ft_ui.dart';
 import '../cards/cards_screen.dart';
 import '../expenses/expense.dart';
 import '../expenses/expense_providers.dart';
@@ -34,12 +36,14 @@ class InsightsScreen extends ConsumerWidget {
     final investments = investmentsAsync.value ?? const [];
 
     final records = cycleExpenses
-        .map((e) => ExpenseRecord(
-              amount: e.amount,
-              categoryId: e.categoryId,
-              spentBy: e.spentBy,
-              date: e.date,
-            ))
+        .map(
+          (e) => ExpenseRecord(
+            amount: e.amount,
+            categoryId: e.categoryId,
+            spentBy: e.spentBy,
+            date: e.date,
+          ),
+        )
         .toList();
     final byCat = spentByCategory(records);
     final totalSpentValue = totalSpent(records);
@@ -47,42 +51,53 @@ class InsightsScreen extends ConsumerWidget {
     final avgPrev = prevCycles.isEmpty
         ? 0
         : prevCycles
-                .map((window) => window.fold<int>(0, (a, b) => a + b.amount.toInt()))
-                .fold<int>(0, (a, b) => a + b) ~/
-            prevCycles.length;
+                  .map(
+                    (window) =>
+                        window.fold<int>(0, (a, b) => a + b.amount.toInt()),
+                  )
+                  .fold<int>(0, (a, b) => a + b) ~/
+              prevCycles.length;
 
     final assets = householdAssetsAndDebt(
-        household,
-        cards.map((c) => (limit: c.limit, used: c.used)));
-    final score = computeHealthScore(HealthScoreInputs(
-      spendThisCycle: totalSpentValue,
-      incomeThisCycle: income,
-      monthlyBudget: household.monthlyBudgetTotal,
-      savingsBalance: assets.savingsBalance,
-      cardDebt: assets.cardDebt,
-      avgMonthlySpend: avgPrev,
-      investmentCount: investments.where((i) => i.currentValue > 0).length,
-    ));
+      household,
+      cards.map((c) => (limit: c.limit, used: c.used)),
+    );
+    final score = computeHealthScore(
+      HealthScoreInputs(
+        spendThisCycle: totalSpentValue,
+        incomeThisCycle: income,
+        monthlyBudget: household.monthlyBudgetTotal,
+        savingsBalance: assets.savingsBalance,
+        cardDebt: assets.cardDebt,
+        avgMonthlySpend: avgPrev,
+        investmentCount: investments.where((i) => i.currentValue > 0).length,
+      ),
+    );
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Insight')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          _HealthCard(score: score),
-          const SizedBox(height: 16),
-          Text('Distribusi pengeluaran',
-              style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          SpendDonut(totals: byCat, categories: household.categories),
-          const SizedBox(height: 8),
-          _Legend(totals: byCat, categories: household.categories),
-          const SizedBox(height: 24),
-          Text('Analisis per kategori',
-              style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          ..._buildAnalyses(household.categories, cycleExpenses, prevCycles),
-        ],
+      backgroundColor: FtColors.bg,
+      body: FtAppChrome(
+        current: FtTab.home,
+        child: ListView(
+          padding: const EdgeInsets.only(bottom: 120),
+          children: [
+            const FtSubHeader(title: 'Insight'),
+            _HealthCard(score: score),
+            const FtSectionHeader(title: 'Distribusi Pengeluaran'),
+            FtCard(
+              margin: const EdgeInsets.fromLTRB(22, 0, 22, 18),
+              child: Column(
+                children: [
+                  SpendDonut(totals: byCat, categories: household.categories),
+                  const SizedBox(height: 12),
+                  _Legend(totals: byCat, categories: household.categories),
+                ],
+              ),
+            ),
+            const FtSectionHeader(title: 'Analisis Per Kategori'),
+            ..._buildAnalyses(household.categories, cycleExpenses, prevCycles),
+          ],
+        ),
       ),
     );
   }
@@ -95,15 +110,21 @@ class InsightsScreen extends ConsumerWidget {
     if (cats.isEmpty) return const [];
     final byCatCurrent = <String, int>{};
     for (final e in current) {
-      byCatCurrent.update(e.categoryId, (v) => v + e.amount,
-          ifAbsent: () => e.amount);
+      byCatCurrent.update(
+        e.categoryId,
+        (v) => v + e.amount,
+        ifAbsent: () => e.amount,
+      );
     }
     final history = <String, List<int>>{};
     for (final window in previousWindows) {
       final totals = <String, int>{};
       for (final e in window) {
-        totals.update(e.categoryId, (v) => v + e.amount,
-            ifAbsent: () => e.amount);
+        totals.update(
+          e.categoryId,
+          (v) => v + e.amount,
+          ifAbsent: () => e.amount,
+        );
       }
       // Use a fresh union of categories appearing in any window OR current.
       for (final c in cats) {
@@ -143,37 +164,38 @@ class _HealthCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = _scoreColor(score.score);
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
+    return FtCard(
+      margin: const EdgeInsets.fromLTRB(22, 4, 22, 18),
+      backgroundColor: color.withValues(alpha: 0.08),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Text('${score.score}',
-                  style: TextStyle(
-                      fontSize: 56,
-                      fontWeight: FontWeight.bold,
-                      color: color,
-                      height: 1)),
+              Text(
+                '${score.score}',
+                style: TextStyle(
+                  fontSize: 56,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                  height: 1,
+                ),
+              ),
               const SizedBox(width: 12),
               Padding(
                 padding: const EdgeInsets.only(top: 14),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('/100',
-                        style: TextStyle(color: color, fontSize: 14)),
-                    Text(score.verdict,
-                        style: TextStyle(
-                            color: color,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold)),
+                    Text('/100', style: TextStyle(color: color, fontSize: 14)),
+                    Text(
+                      score.verdict,
+                      style: TextStyle(
+                        color: color,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -185,13 +207,22 @@ class _HealthCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: Row(
                 children: [
-                  Expanded(child: Text(f.label, style: const TextStyle(fontSize: 12))),
+                  Expanded(
+                    child: Text(f.label, style: const TextStyle(fontSize: 12)),
+                  ),
                   if (f.contribution == null)
-                    Text('—',
-                        style: TextStyle(color: Colors.grey.shade500, fontSize: 12))
+                    Text(
+                      '—',
+                      style: TextStyle(
+                        color: Colors.grey.shade500,
+                        fontSize: 12,
+                      ),
+                    )
                   else
-                    Text('${f.contribution} / ${f.weight}',
-                        style: const TextStyle(fontSize: 12)),
+                    Text(
+                      '${f.contribution} / ${f.weight}',
+                      style: const TextStyle(fontSize: 12),
+                    ),
                 ],
               ),
             ),
@@ -232,8 +263,9 @@ class _Legend extends StatelessWidget {
             ),
             const SizedBox(width: 6),
             Text(
-                '${cat?.label ?? '-'}: ${(share * 100).toStringAsFixed(0)}%',
-                style: const TextStyle(fontSize: 12)),
+              '${cat?.label ?? '-'}: ${(share * 100).toStringAsFixed(0)}%',
+              style: const TextStyle(fontSize: 12),
+            ),
           ],
         );
       }).toList(),
@@ -247,31 +279,36 @@ class _AnalysisTile extends StatelessWidget {
   final CategoryAnalysis analysis;
 
   Color _verdictColor(String v) => switch (v) {
-        'Sangat boros' => const Color(0xFFDC2626),
-        'Boros' => const Color(0xFFEF4444),
-        'Stabil' => const Color(0xFF64748B),
-        'Lebih hemat' => const Color(0xFF10B981),
-        _ => const Color(0xFF94A3B8),
-      };
+    'Sangat boros' => const Color(0xFFDC2626),
+    'Boros' => const Color(0xFFEF4444),
+    'Stabil' => const Color(0xFF64748B),
+    'Lebih hemat' => const Color(0xFF10B981),
+    _ => const Color(0xFF94A3B8),
+  };
 
   @override
   Widget build(BuildContext context) {
     final color = _verdictColor(analysis.verdict);
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4),
+    return FtCard(
+      margin: const EdgeInsets.fromLTRB(22, 0, 22, 10),
+      padding: EdgeInsets.zero,
       child: ListTile(
         title: Text(label),
-        subtitle: Text(analysis.historicalAverage > 0
-            ? 'Sekarang ${Money.format(analysis.currentSpend)} • rata-rata ${Money.format(analysis.historicalAverage)}'
-            : Money.format(analysis.currentSpend)),
+        subtitle: Text(
+          analysis.historicalAverage > 0
+              ? 'Sekarang ${Money.format(analysis.currentSpend)} • rata-rata ${Money.format(analysis.historicalAverage)}'
+              : Money.format(analysis.currentSpend),
+        ),
         trailing: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(20),
           ),
-          child: Text(analysis.verdict,
-              style: TextStyle(color: color, fontSize: 12)),
+          child: Text(
+            analysis.verdict,
+            style: TextStyle(color: color, fontSize: 12),
+          ),
         ),
       ),
     );

@@ -23,8 +23,8 @@ Keep only active issues here. Remove an issue once it is fully addressed.
 - Subcollections can remain orphaned when the last member leaves.
 
 ### Design mismatch with `claude-design`
-- Core app screens still use mostly stock Material layouts.
-- Home, cards, assets/accounts, insights, and transaction entry should use the warm editorial cards, serif-led money hierarchy, compact section cards, and bottom navigation style from `claude-design/`.
+- Home, assets/accounts, cards, goals, and insights now use the warm editorial cards, serif-led money hierarchy, compact sections, and floating bottom nav.
+- Remaining: transaction entry, logs/details, investments/export/member/category screens still need the same treatment before this issue is closed.
 
 ### Auth sign-out silently swallows Google errors
 - `AuthRepository.signOut` has an empty `catch`.

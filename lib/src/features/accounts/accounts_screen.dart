@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/formatters.dart';
+import '../../theme.dart';
+import '../../ui/ft_ui.dart';
 import '../household/household.dart';
 import '../household/household_providers.dart';
 import 'account.dart';
@@ -17,36 +19,110 @@ class AccountsScreen extends ConsumerWidget {
     if (household == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
+    final cashTotal = household.cashAccounts.fold<int>(
+      0,
+      (a, b) => a + b.value,
+    );
+    final savingsTotal = household.savingsAccounts.fold<int>(
+      0,
+      (a, b) => a + b.value,
+    );
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Akun'),
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: 'Tunai / Debit'),
-              Tab(text: 'Tabungan'),
+        backgroundColor: FtColors.bg,
+        body: FtAppChrome(
+          current: FtTab.assets,
+          child: Column(
+            children: [
+              FtSubHeader(
+                title: 'Aset',
+                trailing: IconButton.filled(
+                  onPressed: () => _openAddSheet(context, ref, household),
+                  icon: const Icon(Icons.add),
+                ),
+              ),
+              FtCard(
+                margin: const EdgeInsets.fromLTRB(22, 4, 22, 14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Eyebrow('Total Aset Cair'),
+                    const SizedBox(height: 6),
+                    Text(
+                      Money.format(cashTotal + savingsTotal),
+                      style: Theme.of(context).textTheme.headlineLarge,
+                    ),
+                    const SizedBox(height: 14),
+                    FtProgressBar(
+                      value: cashTotal,
+                      max: cashTotal + savingsTotal == 0
+                          ? 1
+                          : cashTotal + savingsTotal,
+                      color: FtColors.sky,
+                      trackColor: FtColors.moss.withValues(alpha: 0.22),
+                      height: 7,
+                    ),
+                    const SizedBox(height: 14),
+                    FtStatGrid(
+                      items: [
+                        FtStatItem(
+                          label: 'Tunai / Debit',
+                          value: Money.format(cashTotal),
+                          color: FtColors.sky,
+                        ),
+                        FtStatItem(
+                          label: 'Tabungan',
+                          value: Money.format(savingsTotal),
+                          color: FtColors.moss,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                child: Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    color: FtColors.surfaceAlt,
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: FtColors.line, width: 0.5),
+                  ),
+                  child: const TabBar(
+                    dividerColor: Colors.transparent,
+                    indicator: BoxDecoration(
+                      color: FtColors.ink,
+                      borderRadius: BorderRadius.all(Radius.circular(999)),
+                    ),
+                    labelColor: FtColors.bg,
+                    unselectedLabelColor: FtColors.ink2,
+                    tabs: [
+                      Tab(text: 'Tunai / Debit'),
+                      Tab(text: 'Tabungan'),
+                    ],
+                  ),
+                ),
+              ),
+              Expanded(
+                child: TabBarView(
+                  children: [
+                    _AccountList(
+                      accounts: household.cashAccounts,
+                      kind: AccountKind.cash,
+                      householdId: household.id,
+                    ),
+                    _AccountList(
+                      accounts: household.savingsAccounts,
+                      kind: AccountKind.savings,
+                      householdId: household.id,
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
-        ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () => _openAddSheet(context, ref, household),
-          icon: const Icon(Icons.add),
-          label: const Text('Tambah akun'),
-        ),
-        body: TabBarView(
-          children: [
-            _AccountList(
-              accounts: household.cashAccounts,
-              kind: AccountKind.cash,
-              householdId: household.id,
-            ),
-            _AccountList(
-              accounts: household.savingsAccounts,
-              kind: AccountKind.savings,
-              householdId: household.id,
-            ),
-          ],
         ),
       ),
     );
@@ -63,7 +139,9 @@ class AccountsScreen extends ConsumerWidget {
       builder: (_) => const _AccountEditSheet(),
     );
     if (result == null) return;
-    await ref.read(accountsRepositoryProvider).add(
+    await ref
+        .read(accountsRepositoryProvider)
+        .add(
           householdId: household.id,
           kind: result.kind,
           label: result.label,
@@ -99,27 +177,77 @@ class _AccountList extends ConsumerWidget {
     }
     final sorted = [...accounts]
       ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
-    return ListView.separated(
+    return ListView.builder(
+      padding: const EdgeInsets.only(bottom: 120),
       itemCount: sorted.length,
-      separatorBuilder: (_, _) => const Divider(height: 1),
       itemBuilder: (_, i) {
         final a = sorted[i];
-        return ListTile(
-          title: Text(a.label),
-          subtitle: a.hint != null ? Text(a.hint!) : null,
-          trailing: Text(
-            Money.format(a.value),
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-          ),
+        final color = kind == AccountKind.cash ? FtColors.sky : FtColors.moss;
+        return FtCard(
+          margin: EdgeInsets.fromLTRB(22, i == 0 ? 8 : 0, 22, 10),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           onTap: () => _openEditSheet(context, ref, a),
           onLongPress: () => _confirmDelete(context, ref, a),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  kind == AccountKind.cash
+                      ? Icons.account_balance_wallet_outlined
+                      : Icons.savings_outlined,
+                  color: color,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      a.label,
+                      style: const TextStyle(
+                        color: FtColors.ink,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (a.hint != null)
+                      Text(
+                        a.hint!,
+                        style: const TextStyle(
+                          color: FtColors.ink3,
+                          fontSize: 11,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              Text(
+                Money.format(a.value),
+                style: const TextStyle(
+                  color: FtColors.ink,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
         );
       },
     );
   }
 
   Future<void> _openEditSheet(
-      BuildContext context, WidgetRef ref, Account a) async {
+    BuildContext context,
+    WidgetRef ref,
+    Account a,
+  ) async {
     final result = await showModalBottomSheet<_AccountDraft>(
       context: context,
       isScrollControlled: true,
@@ -127,14 +255,18 @@ class _AccountList extends ConsumerWidget {
     );
     if (result == null) return;
     if (result.deltaMode) {
-      await ref.read(accountsRepositoryProvider).applyDelta(
+      await ref
+          .read(accountsRepositoryProvider)
+          .applyDelta(
             householdId: householdId,
             kind: a.kind,
             accountId: a.id,
             delta: result.value,
           );
     } else {
-      await ref.read(accountsRepositoryProvider).updateAccount(
+      await ref
+          .read(accountsRepositoryProvider)
+          .updateAccount(
             householdId: householdId,
             kind: a.kind,
             accountId: a.id,
@@ -146,7 +278,10 @@ class _AccountList extends ConsumerWidget {
   }
 
   Future<void> _confirmDelete(
-      BuildContext context, WidgetRef ref, Account a) async {
+    BuildContext context,
+    WidgetRef ref,
+    Account a,
+  ) async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
@@ -154,20 +289,20 @@ class _AccountList extends ConsumerWidget {
         content: const Text('Saldo dan riwayat akan hilang dari ringkasan.'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Batal')),
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
           FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Hapus')),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Hapus'),
+          ),
         ],
       ),
     );
     if (ok != true) return;
-    await ref.read(accountsRepositoryProvider).delete(
-          householdId: householdId,
-          kind: a.kind,
-          accountId: a.id,
-        );
+    await ref
+        .read(accountsRepositoryProvider)
+        .delete(householdId: householdId, kind: a.kind, accountId: a.id);
   }
 }
 
@@ -198,7 +333,8 @@ class _AccountEditSheetState extends State<_AccountEditSheet> {
   late final _label = TextEditingController(text: widget.initial?.label ?? '');
   late final _hint = TextEditingController(text: widget.initial?.hint ?? '');
   late final _value = TextEditingController(
-      text: widget.initial != null ? widget.initial!.value.toString() : '');
+    text: widget.initial != null ? widget.initial!.value.toString() : '',
+  );
   late final _delta = TextEditingController();
   AccountKind _kind = AccountKind.cash;
   bool _deltaMode = false;
@@ -239,7 +375,8 @@ class _AccountEditSheetState extends State<_AccountEditSheet> {
         ),
       );
     } else {
-      final value = int.tryParse(_value.text.replaceAll(RegExp(r'\D'), '')) ?? 0;
+      final value =
+          int.tryParse(_value.text.replaceAll(RegExp(r'\D'), '')) ?? 0;
       Navigator.pop(
         context,
         _AccountDraft(kind: _kind, label: label, hint: hint, value: value),
@@ -269,8 +406,14 @@ class _AccountEditSheetState extends State<_AccountEditSheet> {
             if (!isEdit) ...[
               SegmentedButton<AccountKind>(
                 segments: const [
-                  ButtonSegment(value: AccountKind.cash, label: Text('Tunai/Debit')),
-                  ButtonSegment(value: AccountKind.savings, label: Text('Tabungan')),
+                  ButtonSegment(
+                    value: AccountKind.cash,
+                    label: Text('Tunai/Debit'),
+                  ),
+                  ButtonSegment(
+                    value: AccountKind.savings,
+                    label: Text('Tabungan'),
+                  ),
                 ],
                 selected: {_kind},
                 onSelectionChanged: (s) => setState(() => _kind = s.first),
