@@ -19,7 +19,8 @@ Household financial tracker for Indonesian families. Flutter + Firebase. iOS + A
 - ✅ Auth expanded (email/password + Google + email-link passwordless, all three on the same redesigned editorial auth screens)
 - ✅ Visual refresh (warm cream editorial theme matching `claude-design/`: Newsreader serif + Inter sans, clay/sage/moss palette, custom `FtColors`, reusable `Eyebrow`)
 - ✅ CI: GitHub Actions `build` workflow — analyze + unit tests on every PR; release APKs (split-per-ABI) on `main` + tag-triggered GH Release attach
-- ✅ Tests: 104 Dart unit tests + 54 emulator integration tests, all green
+- ✅ Tests: 104 Dart unit tests + 63 emulator integration tests, all green
+- ✅ Hardening pass: invite-bound self-join rules (require claimed invite + same-tx consume via `getAfter`), recurring runner wired on home mount, expense delete reverses `card.used` and removes installments, income delete reverses destination account, last-member leave purges all subcollections, oversized UI files split into per-widget modules
 - ⏭ Next: TestFlight distribution + Phase 5 deferred items (push notifications, Cloud Function recurring, web build) only if needed
 
 ## Stack

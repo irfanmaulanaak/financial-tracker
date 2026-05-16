@@ -33,6 +33,9 @@ service cloud.firestore {
       // Non-member self-join: must add only themselves AND reference a valid,
       // unconsumed invite for THIS household. The `claimedInvite` field on
       // the household carries the code so the rule can resolve the invite.
+      // `getAfter` requires the same transaction to also consume the invite
+      // (binding `consumedBy` to the caller) — otherwise the code could be
+      // re-used by other joiners.
       allow update: if request.auth != null
                     && !(request.auth.uid in resource.data.memberIds)
                     && request.auth.uid in request.resource.data.memberIds
@@ -46,7 +49,11 @@ service cloud.firestore {
                     && get(/databases/$(database)/documents/invites/$(request.resource.data.claimedInvite))
                          .data.consumed == false
                     && get(/databases/$(database)/documents/invites/$(request.resource.data.claimedInvite))
-                         .data.expiresAt > request.time;
+                         .data.expiresAt > request.time
+                    && getAfter(/databases/$(database)/documents/invites/$(request.resource.data.claimedInvite))
+                         .data.consumed == true
+                    && getAfter(/databases/$(database)/documents/invites/$(request.resource.data.claimedInvite))
+                         .data.consumedBy == request.auth.uid;
 
       allow delete: if request.auth != null
                     && request.auth.uid in resource.data.memberIds;

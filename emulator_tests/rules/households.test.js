@@ -6,6 +6,7 @@ import {
   updateDoc,
   collection,
   addDoc,
+  runTransaction,
 } from 'firebase/firestore';
 import { after, afterEach, before, describe, it } from 'mocha';
 
@@ -116,7 +117,25 @@ describe('rules / households/{hid}', () => {
     );
   });
 
-  it('non-member self-join requires a valid claimed invite for THIS household', async () => {
+  // Helper: simulates the Dart join transaction (household update + invite consume).
+  function joinTx(db, hid, code, joiner) {
+    return runTransaction(db, async (tx) => {
+      const hSnap = await tx.get(doc(db, 'households', hid));
+      await tx.get(doc(db, 'invites', code));
+      const ids = (hSnap.data()?.memberIds || []).concat(joiner);
+      tx.update(doc(db, 'households', hid), {
+        memberIds: ids,
+        claimedInvite: code,
+      });
+      tx.update(doc(db, 'invites', code), {
+        consumed: true,
+        consumedBy: joiner,
+        consumedAt: new Date(),
+      });
+    });
+  }
+
+  it('non-member self-join succeeds when invite is claimed + consumed in same tx', async () => {
     await seedWithoutRules(async (db) => {
       await setDoc(doc(db, 'households/h1'), baseHousehold('alice', ['alice']));
       await setDoc(doc(db, 'invites/111111'), {
@@ -128,12 +147,7 @@ describe('rules / households/{hid}', () => {
       });
     });
     const bobDb = await dbAs('bob');
-    await assertSucceeds(
-      updateDoc(doc(bobDb, 'households/h1'), {
-        memberIds: ['alice', 'bob'],
-        claimedInvite: '111111',
-      })
-    );
+    await assertSucceeds(joinTx(bobDb, 'h1', '111111', 'bob'));
   });
 
   it('non-member self-join is denied without claimedInvite', async () => {
@@ -143,6 +157,26 @@ describe('rules / households/{hid}', () => {
     const bobDb = await dbAs('bob');
     await assertFails(
       updateDoc(doc(bobDb, 'households/h1'), { memberIds: ['alice', 'bob'] })
+    );
+  });
+
+  it('non-member self-join is denied if invite is NOT consumed in same tx', async () => {
+    await seedWithoutRules(async (db) => {
+      await setDoc(doc(db, 'households/h1'), baseHousehold('alice', ['alice']));
+      await setDoc(doc(db, 'invites/110000'), {
+        householdId: 'h1',
+        generatedBy: 'alice',
+        generatedAt: new Date(),
+        expiresAt: new Date(Date.now() + 24 * 3600 * 1000),
+        consumed: false,
+      });
+    });
+    const bobDb = await dbAs('bob');
+    await assertFails(
+      updateDoc(doc(bobDb, 'households/h1'), {
+        memberIds: ['alice', 'bob'],
+        claimedInvite: '110000',
+      })
     );
   });
 
@@ -159,12 +193,7 @@ describe('rules / households/{hid}', () => {
       });
     });
     const bobDb = await dbAs('bob');
-    await assertFails(
-      updateDoc(doc(bobDb, 'households/h1'), {
-        memberIds: ['alice', 'bob'],
-        claimedInvite: '222222',
-      })
-    );
+    await assertFails(joinTx(bobDb, 'h1', '222222', 'bob'));
   });
 
   it('non-member self-join is denied when claimedInvite targets a different household', async () => {
@@ -179,12 +208,7 @@ describe('rules / households/{hid}', () => {
       });
     });
     const bobDb = await dbAs('bob');
-    await assertFails(
-      updateDoc(doc(bobDb, 'households/h1'), {
-        memberIds: ['alice', 'bob'],
-        claimedInvite: '333333',
-      })
-    );
+    await assertFails(joinTx(bobDb, 'h1', '333333', 'bob'));
   });
 
   it('non-member cannot add someone else to memberIds even with a valid invite', async () => {
@@ -199,12 +223,7 @@ describe('rules / households/{hid}', () => {
       });
     });
     const bobDb = await dbAs('bob');
-    await assertFails(
-      updateDoc(doc(bobDb, 'households/h1'), {
-        memberIds: ['alice', 'carol'],
-        claimedInvite: '444444',
-      })
-    );
+    await assertFails(joinTx(bobDb, 'h1', '444444', 'carol'));
   });
 
   it('non-member cannot write to subcollections', async () => {
