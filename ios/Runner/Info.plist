@@ -66,5 +66,18 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<!-- Google Sign-In OAuth callback. Value must match REVERSED_CLIENT_ID
+	     in ios/Runner/GoogleService-Info.plist. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.361266947064-8torhm8lco4ok9770rvmm48vpkjfppll</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>
