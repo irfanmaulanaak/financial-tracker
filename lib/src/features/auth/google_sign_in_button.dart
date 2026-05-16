@@ -119,18 +119,33 @@ class _GoogleGPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-String _friendlyGoogleError(GoogleSignInException e) => switch (e.code) {
-  GoogleSignInExceptionCode.canceled =>
-    'Google Sign-In dibatalkan atau Credential Manager gagal. Tutup app lalu rebuild kalau baru update Firebase config.',
-  GoogleSignInExceptionCode.interrupted => 'Proses terganggu, coba lagi',
-  GoogleSignInExceptionCode.clientConfigurationError =>
-    'Google Sign-In native belum punya OAuth client. Cek SHA Android lalu unduh ulang google-services.json.',
-  GoogleSignInExceptionCode.providerConfigurationError =>
-    'Provider Google belum diaktifkan di Firebase Console',
-  GoogleSignInExceptionCode.uiUnavailable =>
-    'UI Google Sign-In tidak tersedia di platform ini',
-  _ => 'Gagal masuk dengan Google: ${e.description ?? e.code.name}',
-};
+String _friendlyGoogleError(GoogleSignInException e) {
+  final desc = e.description ?? '';
+  // Credential Manager fails with `canceled` + "Account reauth failed" / "[16]"
+  // when the calling app's signing cert isn't bound to an Android OAuth client
+  // in Firebase. The actual fix is in Firebase Console, not in-app.
+  if (e.code == GoogleSignInExceptionCode.canceled &&
+      (desc.contains('Account reauth failed') ||
+          desc.contains('[16]') ||
+          desc.contains('No credentials available'))) {
+    return 'Google menolak login (Credential Manager). '
+        'SHA-1 keystore belum terdaftar di Firebase. Tambah SHA-1 di '
+        'Firebase Console → Project Settings → Android app, lalu unduh ulang '
+        'google-services.json dan rebuild.';
+  }
+  return switch (e.code) {
+    GoogleSignInExceptionCode.canceled => 'Dibatalkan',
+    GoogleSignInExceptionCode.interrupted => 'Proses terganggu, coba lagi',
+    GoogleSignInExceptionCode.clientConfigurationError =>
+      'Google Sign-In native belum punya OAuth client. Tambah SHA-1 keystore '
+          'di Firebase Console lalu unduh ulang google-services.json.',
+    GoogleSignInExceptionCode.providerConfigurationError =>
+      'Provider Google belum diaktifkan di Firebase Console',
+    GoogleSignInExceptionCode.uiUnavailable =>
+      'UI Google Sign-In tidak tersedia di platform ini',
+    _ => 'Gagal masuk dengan Google: ${desc.isNotEmpty ? desc : e.code.name}',
+  };
+}
 
 String _friendlyFirebaseError(FirebaseAuthException e) => switch (e.code) {
   'account-exists-with-different-credential' =>

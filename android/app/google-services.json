@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "361266947064-micv4m0le9pk4eeqqfcovn3i9ui9t8nl.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.irfanmaulanaakbar.financial_tracker",
+            "certificate_hash": "ffe811a23684c4e61a1f3221d26a6d03bee9f13a"
+          }
+        },
+        {
           "client_id": "361266947064-v28oc1mqmucehibejqqq1vngp3nk5g0k.apps.googleusercontent.com",
           "client_type": 3
         }
