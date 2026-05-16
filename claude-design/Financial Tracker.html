@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Financial Tracker — iOS Design</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #efeae0; font-family: 'Geist', -apple-system, system-ui, sans-serif; }
+  body { min-height: 100vh; }
+  #live-root, #canvas-root { position: relative; }
+  .ft-toolbar {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(241,237,228,0.78); backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-bottom: 0.5px solid rgba(26,24,20,0.08);
+    padding: 14px 24px; display: flex; align-items: center; gap: 18px;
+  }
+  .ft-toolbar .brand {
+    font-family: 'Newsreader', serif; font-size: 18px; font-weight: 500; color: #1a1814;
+    letter-spacing: -0.3px;
+  }
+  .ft-toolbar .brand small {
+    font-family: 'Geist', sans-serif; font-size: 11px; color: #807868;
+    letter-spacing: 0.3px; margin-left: 8px; font-weight: 400;
+  }
+  .ft-toolbar a {
+    font-family: 'Geist', sans-serif; font-size: 12px; color: #4b463d; text-decoration: none;
+    padding: 6px 12px; border-radius: 999px; border: 0.5px solid rgba(26,24,20,0.12);
+    transition: background 150ms;
+  }
+  .ft-toolbar a:hover { background: rgba(26,24,20,0.05); }
+  .ft-toolbar a.active { background: #1a1814; color: #f1ede4; border-color: #1a1814; }
+  .ft-toolbar .spacer { flex: 1; }
+</style>
+</head>
+<body>
+
+<div class="ft-toolbar">
+  <div class="brand">Citra Finance <small>Mobile · iOS</small></div>
+  <div class="spacer"></div>
+  <a href="#live" class="active" id="tab-live">Prototype</a>
+  <a href="#canvas" id="tab-canvas">Compare Layouts</a>
+</div>
+
+<!-- LIVE PROTOTYPE — single iOS device, fully clickable, Tweaks for theme + layout -->
+<div id="live-root" style="display: flex; justify-content: center; padding: 48px 0 80px;">
+  <div id="live-mount"></div>
+</div>
+
+<!-- DESIGN CANVAS — comparison artboards for side-by-side review -->
+<div id="canvas-root" style="height: 100vh; display: none;">
+  <div id="canvas-mount" style="width: 100%; height: 100%;"></div>
+</div>
+
+<script>
+  // simple tab toggle
+  document.addEventListener('click', e => {
+    const t = e.target.closest('a');
+    if (!t || !t.id || !t.id.startsWith('tab-')) return;
+    e.preventDefault();
+    const which = t.id.slice(4);
+    document.getElementById('tab-live').classList.toggle('active', which === 'live');
+    document.getElementById('tab-canvas').classList.toggle('active', which === 'canvas');
+    document.getElementById('live-root').style.display = which === 'live' ? 'flex' : 'none';
+    document.getElementById('canvas-root').style.display = which === 'canvas' ? 'block' : 'none';
+  });
+</script>
+
+<!-- React + Babel -->
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<!-- Starter components -->
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+
+<!-- Our design system + data + screens -->
+<script type="text/babel" src="theme.jsx"></script>
+<script type="text/babel" src="data.jsx"></script>
+<script type="text/babel" src="icons.jsx"></script>
+<script type="text/babel" src="widgets.jsx"></script>
+<script type="text/babel" src="screens-home.jsx"></script>
+<script type="text/babel" src="screens-deep.jsx"></script>
+<script type="text/babel" src="screens-cards.jsx"></script>
+<script type="text/babel" src="screens-assets.jsx"></script>
+<script type="text/babel" src="screens-actions.jsx"></script>
+<script type="text/babel" src="screens-household.jsx"></script>
+<script type="text/babel" src="screens-rest.jsx"></script>
+<script type="text/babel" src="app.jsx"></script>
+
+<!-- Mount -->
+<script type="text/babel">
+  injectFTStyles();
+
+  // Live prototype
+  ReactDOM.createRoot(document.getElementById('live-mount'))
+    .render(<FinancialAppWithTweaks/>);
+
+  // Design canvas — comparison artboards
+  function CanvasShowcase() {
+    const W = 402, H = 874;
+    return (
+      <DesignCanvas>
+        <DCSection id="home" title="Beranda · Dua Pendekatan" subtitle="Layout editorial vs padat — terang dan gelap">
+          <DCArtboard id="ha-light" label="A · Editorial · Terang" width={W} height={H}>
+            <FinancialApp initialRoute="home" initialTheme="light" initialLayout="A" interactive={false}/>
+          </DCArtboard>
+          <DCArtboard id="hb-light" label="B · Padat · Terang" width={W} height={H}>
+            <FinancialApp initialRoute="home" initialTheme="light" initialLayout="B" interactive={false}/>
+          </DCArtboard>
+          <DCArtboard id="ha-dark" label="A · Editorial · Gelap" width={W} height={H}>
+            <FinancialApp initialRoute="home" initialTheme="dark" initialLayout="A" interactive={false}/>
+          </DCArtboard>
+          <DCArtboard id="hb-dark" label="B · Padat · Gelap" width={W} height={H}>
+            <FinancialApp initialRoute="home" initialTheme="dark" initialLayout="B" interactive={false}/>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="spend" title="Pengeluaran & Analisis" subtitle="Donut bulanan + breakdown kategori + analisis per-kategori">
+          <DCArtboard id="spend-light" label="Pengeluaran Bulanan" width={W} height={H}>
+            <FinancialApp initialRoute="spend" initialTheme="light" interactive={false}/>
+          </DCArtboard>
+          <DCArtboard id="cat-light" label="Detail · Belanja (over)" width={W} height={H}>
+            <FinancialAppWithRoute route="category" param="shopping" themeName="light"/>
+          </DCArtboard>
+          <DCArtboard id="cat-food" label="Detail · Makanan" width={W} height={H}>
+            <FinancialAppWithRoute route="category" param="food" themeName="light"/>
+          </DCArtboard>
+          <DCArtboard id="spend-dark" label="Pengeluaran · Gelap" width={W} height={H}>
+            <FinancialApp initialRoute="spend" initialTheme="dark" interactive={false}/>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="health" title="Kesehatan Finansial" subtitle="Traffic-light detector dengan komponen skor dan temuan">
+          <DCArtboard id="health-light" label="Detector · Terang" width={W} height={H}>
+            <FinancialApp initialRoute="health" initialTheme="light" interactive={false}/>
+          </DCArtboard>
+          <DCArtboard id="health-dark" label="Detector · Gelap" width={W} height={H}>
+            <FinancialApp initialRoute="health" initialTheme="dark" interactive={false}/>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="invest" title="Aset & Investasi" subtitle="Total aset · breakdown tunai/tabungan/investasi · rekomendasi alokasi">
+          <DCArtboard id="assets-light" label="Aset · Total" width={W} height={H}>
+            <FinancialApp initialRoute="assets" initialTheme="light" interactive={false}/>
+          </DCArtboard>
+          <DCArtboard id="inv-light" label="Aset · Alokasi" width={W} height={H}>
+            <FinancialApp initialRoute="assets" initialTheme="light" interactive={false}/>
+          </DCArtboard>
+          <DCArtboard id="inv-dark" label="Aset · Gelap" width={W} height={H}>
+            <FinancialApp initialRoute="assets" initialTheme="dark" interactive={false}/>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="cards" title="Utang & Kartu Kredit" subtitle="Total tagihan · cicilan aktif · pilihan saat catat pengeluaran">
+          <DCArtboard id="cards-light" label="Kartu Kredit · Terang" width={W} height={H}>
+            <FinancialApp initialRoute="cards" initialTheme="light" interactive={false}/>
+          </DCArtboard>
+          <DCArtboard id="cards-dark" label="Kartu Kredit · Gelap" width={W} height={H}>
+            <FinancialApp initialRoute="cards" initialTheme="dark" interactive={false}/>
+          </DCArtboard>
+          <DCArtboard id="add-credit" label="Catat · Kartu Kredit + Cicilan" width={W} height={H}>
+            <FinancialAppWithRoute route="add" themeName="light" extraProps={{ initialPayType: 'credit', initialAmount: 399000 }}/>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="goals" title="Tujuan & Pengeluaran" subtitle="Goals dengan progress · log harian · entry pengeluaran">
+          <DCArtboard id="goals-light" label="Daftar Tujuan" width={W} height={H}>
+            <FinancialApp initialRoute="goals" initialTheme="light" interactive={false}/>
+          </DCArtboard>
+          <DCArtboard id="goal-detail" label="Detail Goal · DP Rumah" width={W} height={H}>
+            <FinancialAppWithRoute route="goalDetail" param="house" themeName="light"/>
+          </DCArtboard>
+          <DCArtboard id="expenses-light" label="Log Pengeluaran" width={W} height={H}>
+            <FinancialApp initialRoute="expenses" initialTheme="light" interactive={false}/>
+          </DCArtboard>
+          <DCArtboard id="add-light" label="Catat Pengeluaran" width={W} height={H}>
+            <FinancialApp initialRoute="add" initialTheme="light" interactive={false}/>
+          </DCArtboard>
+          <DCArtboard id="settings-light" label="Profil & Pengaturan" width={W} height={H}>
+            <FinancialApp initialRoute="settings" initialTheme="light" interactive={false}/>
+          </DCArtboard>
+        </DCSection>
+      </DesignCanvas>
+    );
+  }
+
+  // helper: app with a specific route+param (for parameter-bearing screens in canvas)
+  function FinancialAppWithRoute({ route, param, themeName, extraProps = {} }) {
+    const theme = FT_THEMES[themeName];
+    const data = FT_DATA;
+    const noop = () => {};
+    let screen;
+    if (route === 'category') screen = <CategoryScreen theme={theme} data={data} catId={param} go={noop}/>;
+    else if (route === 'goalDetail') screen = <GoalDetailScreen theme={theme} data={data} goalId={param} go={noop}/>;
+    else if (route === 'add') screen = <AddExpenseScreen theme={theme} data={data} go={noop} onCommit={noop} {...extraProps}/>;
+    else screen = <HomeA theme={theme} data={data} go={noop}/>;
+    return (
+      <IOSDevice dark={themeName === 'dark'} width={402} height={874}>
+        <div className="ft" style={{ background: theme.bg, color: theme.ink, height: '100%', position: 'relative', overflow: 'hidden' }}>
+          <div style={{ height: '100%', overflow: 'auto' }} className="ft-scroll">{screen}</div>
+          {route !== 'add' && <TabBar theme={theme} route={route === 'category' ? 'spend' : route === 'goalDetail' ? 'goals' : 'home'} go={noop}/>}
+        </div>
+      </IOSDevice>
+    );
+  }
+
+  ReactDOM.createRoot(document.getElementById('canvas-mount'))
+    .render(<CanvasShowcase/>);
+</script>
+
+</body>
+</html>
