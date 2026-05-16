@@ -10,10 +10,14 @@ import 'features/cards/cards_screen.dart';
 import 'features/categories/category_manage_screen.dart';
 import 'features/expenses/expense_log_screen.dart';
 import 'features/expenses/record_expense_screen.dart';
+import 'features/export/export_screen.dart';
+import 'features/goals/goals_screen.dart';
 import 'features/home/home_screen.dart';
 import 'features/household/household_providers.dart';
 import 'features/incomes/income_log_screen.dart';
 import 'features/incomes/record_income_screen.dart';
+import 'features/insights/insights_screen.dart';
+import 'features/investments/investments_screen.dart';
 import 'features/members/member_list_screen.dart';
 import 'features/onboarding/creator_wizard.dart';
 import 'features/onboarding/join_household_screen.dart';
@@ -104,6 +108,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, state) =>
             CardDetailScreen(cardId: state.pathParameters['cardId']!),
       ),
+      GoRoute(path: '/insights', builder: (_, _) => const InsightsScreen()),
+      GoRoute(path: '/goals', builder: (_, _) => const GoalsScreen()),
+      GoRoute(
+          path: '/investments',
+          builder: (_, _) => const InvestmentsScreen()),
+      GoRoute(path: '/export', builder: (_, _) => const ExportScreen()),
     ],
   );
 });

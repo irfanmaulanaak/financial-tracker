@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/expense_aggregations.dart';
 import '../../core/formatters.dart';
+import '../../core/in_app_indicators.dart';
 import '../../core/net_worth.dart';
 import '../../core/payday.dart';
 import '../auth/auth_repository.dart';
@@ -33,6 +34,12 @@ class HomeScreen extends ConsumerWidget {
             icon: const Icon(Icons.more_vert),
             onSelected: (v) {
               switch (v) {
+                case 'insights':
+                  context.push('/insights');
+                case 'goals':
+                  context.push('/goals');
+                case 'investments':
+                  context.push('/investments');
                 case 'members':
                   context.push('/members');
                 case 'categories':
@@ -43,17 +50,24 @@ class HomeScreen extends ConsumerWidget {
                   context.push('/cards');
                 case 'incomes':
                   context.push('/incomes');
+                case 'export':
+                  context.push('/export');
                 case 'signout':
                   ref.read(authRepositoryProvider).signOut();
               }
             },
             itemBuilder: (_) => const [
+              PopupMenuItem(value: 'insights', child: Text('Insight')),
+              PopupMenuItem(value: 'goals', child: Text('Tujuan')),
+              PopupMenuItem(value: 'investments', child: Text('Investasi')),
+              PopupMenuDivider(),
               PopupMenuItem(value: 'accounts', child: Text('Akun')),
               PopupMenuItem(value: 'cards', child: Text('Kartu kredit')),
               PopupMenuItem(value: 'incomes', child: Text('Pemasukan')),
               PopupMenuItem(value: 'categories', child: Text('Kategori')),
               PopupMenuItem(value: 'members', child: Text('Anggota')),
               PopupMenuDivider(),
+              PopupMenuItem(value: 'export', child: Text('Ekspor data')),
               PopupMenuItem(value: 'signout', child: Text('Keluar')),
             ],
           ),
@@ -113,9 +127,25 @@ class HomeScreen extends ConsumerWidget {
             savings: savingsBalances,
             cards: cardBalances,
           );
+          final status = budgetStatus(
+            totalSpent: totalSpentValue,
+            monthlyBudget: household.monthlyBudgetTotal,
+          );
+          final dueBanners = <Widget>[];
+          for (final c in cards) {
+            final d = daysUntilDue(dueDay: c.dueDay, now: DateTime.now());
+            if (d != null && c.used > 0) {
+              dueBanners.add(_DueBanner(
+                  cardLabel: c.label, daysUntil: d, used: c.used));
+            }
+          }
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
             children: [
+              if (status != BudgetStatus.ok) _BudgetBanner(status: status),
+              if (status != BudgetStatus.ok) const SizedBox(height: 12),
+              ...dueBanners
+                  .expand((w) => [w, const SizedBox(height: 8)]),
               _NetWorthCard(nw: nw),
               const SizedBox(height: 12),
               _BudgetCard(
@@ -396,6 +426,72 @@ class _RecentExpenseTile extends StatelessWidget {
       trailing: Text(
         Money.format(expense.amount),
         style: const TextStyle(fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+}
+
+class _BudgetBanner extends StatelessWidget {
+  const _BudgetBanner({required this.status});
+  final BudgetStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final exceeded = status == BudgetStatus.exceeded;
+    final color = exceeded ? scheme.error : scheme.tertiary;
+    final msg = exceeded
+        ? 'Budget bulan ini sudah terlampaui!'
+        : 'Sudah ≥80% budget bulan ini.';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          Icon(exceeded ? Icons.warning_amber : Icons.info_outline,
+              color: color, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+              child: Text(msg,
+                  style: TextStyle(color: color, fontWeight: FontWeight.w500))),
+        ],
+      ),
+    );
+  }
+}
+
+class _DueBanner extends StatelessWidget {
+  const _DueBanner(
+      {required this.cardLabel, required this.daysUntil, required this.used});
+  final String cardLabel;
+  final int daysUntil;
+  final int used;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final urgent = daysUntil <= 0;
+    final color = urgent ? scheme.error : scheme.secondary;
+    final text = daysUntil <= 0
+        ? '$cardLabel: jatuh tempo hari ini — ${Money.format(used)}'
+        : '$cardLabel: jatuh tempo $daysUntil hari lagi (${Money.format(used)})';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.credit_card, color: color, size: 18),
+          const SizedBox(width: 8),
+          Expanded(child: Text(text, style: TextStyle(color: color, fontSize: 12))),
+        ],
       ),
     );
   }
