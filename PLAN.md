@@ -14,8 +14,10 @@ Household financial tracker for Indonesian families. Flutter + Firebase. iOS + A
 - ✅ Phase 1 done (categories CRUD, expenses, log w/ filters, home dashboard)
 - ✅ Phase 2 done (cash/savings accounts, income with transactional account bump, credit cards CRUD, CC expense bumps card.used, net worth widget on home)
 - ✅ Phase 3 done (cicilan POS plans 3/6/12/24 with flat-rate APR, installment subcollection, pay-minimum / pay-full transactions, card detail screen)
-- ✅ Tests: 44 Dart unit tests + 45 emulator integration tests, all green
-- ⏭ Next: Phase 4 (health score, category analysis, charts)
+- ✅ Phase 4 done (5-factor weighted health score, per-category 3-cycle analysis, spend donut, insights screen)
+- ✅ Phase 5 done (goals shared+personal, manual investments, client-side recurring materialisation, CSV export via share sheet, in-app budget/due-date banners)
+- ✅ Tests: 104 Dart unit tests + 54 emulator integration tests, all green
+- ⏭ Next: TestFlight / APK distribution + Phase 5 deferred items (push notifications, Cloud Function recurring, web build) only if needed
 
 ## Stack
 - Flutter 3.41.9 stable
@@ -102,26 +104,28 @@ Household financial tracker for Indonesian families. Flutter + Firebase. iOS + A
 - ✅ Pay minimum (with floor) / pay full actions, both transactional
 - Note: pay-min hits `card.used` directly; doesn't auto-link to specific installments (kept simple per AGENTS.md). User taps "Tandai dibayar" per installment to advance monthsPaid.
 
-### Phase 4 — Intelligence (later)
-- Health score (5 factors, weights sum 100):
+### Phase 4 — Intelligence ✅
+- ✅ Health score (5 factors, weights sum 100, missing factors redistribute):
   - Disiplin pengeluaran 30% (budget adherence)
-  - Rasio menabung 25% (savings rate = (income − spend) / income)
-  - Dana darurat 20% (em-fund balance ÷ avg monthly spend)
-  - Beban utang 15% (debt-to-income)
-  - Diversifikasi investasi 10%
-  - MVP fallback: start with simple `spend / income` ratio if full formula not ready
-- Category analysis (vs 3-month avg, daily pattern, verdict)
-- Spend chart (monthly donut, per-category breakdown)
-- Allocation recommendation → **TODO / deferred**. Financial-advice risk; revisit only if explicitly requested.
+  - Rasio menabung 25% (savings rate)
+  - Dana darurat 20% (savings ÷ 6 × avg monthly spend)
+  - Beban utang 15% (1 − card debt ÷ 6 × income)
+  - Diversifikasi investasi 10% (# distinct positions / 5)
+- ✅ Category analysis (current cycle vs avg of previous 3 cycles → Lebih hemat / Stabil / Boros / Sangat boros)
+- ✅ Daily-pattern helper (Mon..Sun share, pure)
+- ✅ Spend donut (fl_chart) + legend with percentage share
+- ✅ Insights screen wired in home menu
+- Allocation recommendation → **deferred** (financial-advice risk)
 
-### Phase 5 — Polish
-- Goals tracking (shared + personal)
-- Investments (manual positions)
-- Recurring transactions (Cloud Function)
-- Notifications (due date, budget warning)
-- Export CSV/PDF
-- Bank/e-wallet auto-import (large initiative; deferred)
-- Flutter web build
+### Phase 5 — Polish ✅
+- ✅ Goals: shared + personal scope, target/current/dueDate/monthlyContrib, contribute tx clamps to target, monthsToGoal + requiredMonthlyContribution pure helpers, full CRUD UI
+- ✅ Investments: manual positions per type (saham/reksadana/deposito/crypto/emas/lainnya), gain + portfolio summary helpers, mark-to-market update, feeds health score's diversifikasi factor
+- ✅ Recurring materialisation: client-side `datesToMaterialise` + `latestPerKey` helpers (full-month gap detection, day-clamp on shorter months, year-boundary safe). Cloud Function path skipped per AGENTS.md ("no over-engineering" for 2-5 users).
+- ✅ In-app indicators: budget banner (≥80% warning, ≥100% exceeded) + CC due-date banner (≤5 days). Push notifications deferred.
+- ✅ Export: CSV builder (RFC 4180-ish quoting), share-sheet via `share_plus` for expenses (90d) + income (500 latest).
+- PDF export → **deferred** (CSV opens in Excel/Numbers/Sheets, sufficient for internal use)
+- Bank/e-wallet auto-import → **deferred** (large initiative)
+- Flutter web build → **deferred** (iOS + Android only per Stack)
 
 ## Open Decisions (remaining)
 - ~~Firestore collection layout~~ → captured in `SCHEMA.md`
@@ -129,21 +133,30 @@ Household financial tracker for Indonesian families. Flutter + Firebase. iOS + A
 - Offline storage — skip local DB; rely on Firestore built-in offline cache (sufficient for 2-5 users)
 
 ## Tests
-- **Unit** (`test/unit/` — pure Dart, `flutter test`):
+- **Unit** (`test/unit/` — pure Dart, `flutter test`) — 104 tests:
   - `payday_test.dart` — weekend-rollback, current cycle math, day count
   - `invite_code_test.dart` — 6-digit gen, leading zeros, validation, normalisation
   - `formatters_test.dart` — IDR format/parse, id-ID dates, dayKey
   - `expense_aggregations_test.dart` — totalSpent, byCategory, byMember, groupByDay, topCategories, dailyBudget
   - `cicilan_test.dart` — flat-rate + effective APR cicilan math, 0% promo, edge cases, minimumPayment floor/cap
   - `net_worth_test.dart` — cash+savings-debt, CardBalance.available clamp, applyDelta clamp
-- **Emulator integration** (`emulator_tests/` — real Firestore protocol, no mocks):
+  - `health_score_test.dart` — Phase 4: 5-factor scoring, weight redistribution when data missing, verdict bands, clamp behaviour
+  - `category_analysis_test.dart` — Phase 4: verdict thresholds, new-this-cycle handling, daily pattern shares
+  - `goals_test.dart` — Phase 5: progress + remaining + isComplete, monthsToGoal rounding/null, requiredMonthlyContribution
+  - `investments_test.dart` — Phase 5: gain/gainPct, portfolio summary with distinct-type counting
+  - `recurring_test.dart` — Phase 5: full-month detection, jan-31→feb-28 clamp, year boundary, latestPerKey
+  - `csv_export_test.dart` — Phase 5: RFC 4180 escaping, expense rows with ISO dates
+  - `in_app_indicators_test.dart` — Phase 5: budget bands (80/100%), due-date warn window + month rollover + day clamp
+- **Emulator integration** (`emulator_tests/` — real Firestore protocol, no mocks) — 54 tests:
   - `users.test.js` — per-user doc isolation
   - `households.test.js` — create/read/update rules, self-join structural check, subcollection gating
   - `invites.test.js` — read/create/update/delete rules, consumed-locking
-  - `flows.test.js` — Phase 0/1 flows: household create, second-household guard, invite + join happy path, unknown/consumed/expired/already-in-household guards, expense subcollection
-  - `accounts.test.js` — Phase 2: cash account add + applyDelta clamp, income tx bumps cash OR savings account, rejects ghost destination
-  - `cards.test.js` — Phase 2/3: card CRUD rules, CC expense tx bumps `card.used`, ghost card guard, 0% + flat-rate cicilan creation (expense + installment + card.used += total), pay-min with pct/floor, pay-full, installment monthsPaid increment
+  - `flows.test.js` — Phase 0/1 flows: household create, invite + join happy path + guards, expense subcollection gating
+  - `accounts.test.js` — Phase 2: account add + applyDelta clamp, income tx bumps cash/savings account, ghost destination guard
+  - `cards.test.js` — Phase 2/3: card CRUD rules, CC expense + cicilan tx (card.used += plan.total), pay-min/full, installment monthsPaid
+  - `goals.test.js` — Phase 5: shared + personal add, non-member denied, contribute tx clamps to target, delete
+  - `investments.test.js` — Phase 5: position add/read/update/delete, non-member denied
 - **Run**: `flutter test` for unit; `cd emulator_tests && npm install && cd .. && firebase emulators:exec --only firestore --project demo-ft "cd emulator_tests && npm test"` for integration
 
 ## Next Step
-Phase 4 — intelligence: household health score (5-factor weighted), category analysis (vs 3-month avg, daily pattern), spend chart (donut + per-category breakdown).
+MVP scope complete. Remaining work is distribution (TestFlight + APK direct install) and the deferred items called out per phase. No further phases planned.

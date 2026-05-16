@@ -81,12 +81,12 @@ class GoalRepository {
     String? color,
   }) async {
     await _col(hid).doc(goalId).update({
-      if (label != null) 'label': label,
-      if (target != null) 'target': target,
-      if (dueDate != null) 'dueDate': Timestamp.fromDate(dueDate),
-      if (monthlyContrib != null) 'monthlyContrib': monthlyContrib,
-      if (icon != null) 'icon': icon,
-      if (color != null) 'color': color,
+      'label': ?label,
+      'target': ?target,
+      'dueDate': ?dueDate != null ? Timestamp.fromDate(dueDate) : null,
+      'monthlyContrib': ?monthlyContrib,
+      'icon': ?icon,
+      'color': ?color,
     });
   }
 

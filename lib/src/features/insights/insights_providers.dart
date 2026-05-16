@@ -5,7 +5,6 @@ import '../expenses/expense.dart';
 import '../expenses/expense_repository.dart';
 import '../household/household.dart';
 import '../household/household_providers.dart';
-import '../incomes/income.dart';
 import '../incomes/income_repository.dart';
 
 /// Expenses for the previous N budget cycles (excluding current).
