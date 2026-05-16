@@ -53,7 +53,7 @@ class _GoogleSignInButtonState extends ConsumerState<GoogleSignInButton> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           _busy
-              ? const SizedBox(
+              ? SizedBox(
                   width: 18,
                   height: 18,
                   child: CircularProgressIndicator(

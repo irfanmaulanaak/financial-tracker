@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/formatters.dart';
 import '../../../theme.dart';
 import '../../../ui/ft_ui.dart';
 import '../../goals/goal.dart';
@@ -27,7 +28,6 @@ class GoalsPreview extends StatelessWidget {
                 const Expanded(child: Eyebrow('Tujuan Finansial')),
                 Text(
                   '${goals.length} aktif',
-                  style: const TextStyle(color: FtColors.ink3, fontSize: 11),
                 ),
               ],
             ),
@@ -49,7 +49,7 @@ class _GoalPreviewRow extends StatelessWidget {
     final color = parseColor(goal.color);
     return Container(
       padding: const EdgeInsets.fromLTRB(18, 10, 18, 14),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         border: Border(top: BorderSide(color: FtColors.line, width: 0.5)),
       ),
       child: Row(
@@ -76,7 +76,7 @@ class _GoalPreviewRow extends StatelessWidget {
                         goal.label,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: FtColors.ink,
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
@@ -85,7 +85,7 @@ class _GoalPreviewRow extends StatelessWidget {
                     ),
                     Text(
                       '${(goal.progress * 100).round()}%',
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: FtColors.ink3,
                         fontSize: 11,
                       ),
@@ -100,9 +100,22 @@ class _GoalPreviewRow extends StatelessWidget {
                   height: 3,
                 ),
                 const SizedBox(height: 6),
-                Text(
-                  '${compactMoney(goal.current)} / ${compactMoney(goal.target)}',
-                  style: const TextStyle(color: FtColors.ink3, fontSize: 11),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '${compactMoney(goal.current)} / ${compactMoney(goal.target)}',
+                      ),
+                    ),
+                    if (goal.dueDate != null)
+                      Text(
+                        Dates.monthYear(goal.dueDate!),
+                        style: TextStyle(
+                          color: FtColors.ink3,
+                          fontSize: 11,
+                        ),
+                      ),
+                  ],
                 ),
               ],
             ),

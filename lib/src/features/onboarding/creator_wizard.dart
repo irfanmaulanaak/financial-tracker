@@ -224,7 +224,7 @@ class _CreatorWizardScreenState extends ConsumerState<CreatorWizardScreen> {
           ],
         ),
         const SizedBox(height: 8),
-        const Text(
+        Text(
           'Jika gajian jatuh di Sabtu/Minggu, akan otomatis mundur ke Jumat.',
           style: TextStyle(color: FtColors.ink3, fontSize: 12),
         ),
@@ -248,7 +248,7 @@ class _CreatorWizardScreenState extends ConsumerState<CreatorWizardScreen> {
           style: Theme.of(context).textTheme.titleLarge,
         ),
         const SizedBox(height: 4),
-        const Text(
+        Text(
           'Isi budget per kategori sekarang, atau lewati dan atur nanti.',
           style: TextStyle(color: FtColors.ink3),
         ),
@@ -273,7 +273,6 @@ class _CreatorWizardScreenState extends ConsumerState<CreatorWizardScreen> {
         ),
         if (_error != null) ...[
           const SizedBox(height: 8),
-          Text(_error!, style: const TextStyle(color: FtColors.danger)),
         ],
         const SizedBox(height: 16),
         FilledButton(
@@ -294,7 +293,6 @@ class _CreatorWizardScreenState extends ConsumerState<CreatorWizardScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Icon(Icons.check_circle_outline, size: 56, color: FtColors.sage),
         const SizedBox(height: 8),
         Text(
           'Rumah tangga dibuat!',
@@ -322,7 +320,6 @@ class _CreatorWizardScreenState extends ConsumerState<CreatorWizardScreen> {
           _InviteCodeCard(code: _inviteCode!),
         if (_error != null) ...[
           const SizedBox(height: 8),
-          Text(_error!, style: const TextStyle(color: FtColors.danger)),
         ],
         const Spacer(),
         FilledButton(

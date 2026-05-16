@@ -157,7 +157,7 @@ class CardDetailScreen extends ConsumerWidget {
                   ...installmentsAsync.maybeWhen(
                     data: (items) => items.isEmpty
                         ? [
-                            const FtCard(
+                            FtCard(
                               child: Center(
                                 child: Text(
                                   'Belum ada cicilan.',

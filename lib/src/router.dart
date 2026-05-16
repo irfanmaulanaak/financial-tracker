@@ -8,10 +8,12 @@ import 'features/auth/sign_in_screen.dart';
 import 'features/auth/sign_up_screen.dart';
 import 'features/cards/card_detail_screen.dart';
 import 'features/cards/cards_screen.dart';
+import 'features/categories/category_detail_screen.dart';
 import 'features/categories/category_manage_screen.dart';
 import 'features/expenses/expense_log_screen.dart';
 import 'features/expenses/record_expense_screen.dart';
 import 'features/export/export_screen.dart';
+import 'features/goals/goal_detail_screen.dart';
 import 'features/goals/goals_screen.dart';
 import 'features/home/home_screen.dart';
 import 'features/household/household_providers.dart';
@@ -23,6 +25,8 @@ import 'features/members/member_list_screen.dart';
 import 'features/onboarding/creator_wizard.dart';
 import 'features/onboarding/join_household_screen.dart';
 import 'features/onboarding/landing_screen.dart';
+import 'features/settings/settings_screen.dart';
+import 'ui/ft_motion.dart';
 import 'core/providers.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -74,53 +78,37 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/onboard/join',
         builder: (_, _) => const JoinHouseholdScreen(),
       ),
-      GoRoute(path: '/home', builder: (_, _) => const HomeScreen()),
-      GoRoute(
-        path: '/expenses',
-        builder: (_, _) => const ExpenseLogScreen(),
-      ),
-      GoRoute(
-        path: '/expenses/new',
-        builder: (_, _) => const RecordExpenseScreen(),
-      ),
-      GoRoute(
-        path: '/categories',
-        builder: (_, _) => const CategoryManageScreen(),
-      ),
-      GoRoute(
-        path: '/members',
-        builder: (_, _) => const MemberListScreen(),
-      ),
-      GoRoute(
-        path: '/accounts',
-        builder: (_, _) => const AccountsScreen(),
-      ),
-      GoRoute(
-        path: '/incomes',
-        builder: (_, _) => const IncomeLogScreen(),
-      ),
-      GoRoute(
-        path: '/incomes/new',
-        builder: (_, _) => const RecordIncomeScreen(),
-      ),
-      GoRoute(
-        path: '/cards',
-        builder: (_, _) => const CardsScreen(),
-      ),
-      GoRoute(
-        path: '/cards/:cardId',
-        builder: (_, state) =>
-            CardDetailScreen(cardId: state.pathParameters['cardId']!),
-      ),
-      GoRoute(path: '/insights', builder: (_, _) => const InsightsScreen()),
-      GoRoute(path: '/goals', builder: (_, _) => const GoalsScreen()),
-      GoRoute(
-          path: '/investments',
-          builder: (_, _) => const InvestmentsScreen()),
-      GoRoute(path: '/export', builder: (_, _) => const ExportScreen()),
+      _fadeRoute('/home', (_) => const HomeScreen()),
+      _fadeRoute('/expenses', (_) => const ExpenseLogScreen()),
+      _fadeRoute('/expenses/new', (_) => const RecordExpenseScreen()),
+      _fadeRoute('/categories', (_) => const CategoryManageScreen()),
+      _fadeRoute('/categories/:categoryId', (state) =>
+          CategoryDetailScreen(categoryId: state.pathParameters['categoryId']!)),
+      _fadeRoute('/members', (_) => const MemberListScreen()),
+      _fadeRoute('/accounts', (_) => const AccountsScreen()),
+      _fadeRoute('/incomes', (_) => const IncomeLogScreen()),
+      _fadeRoute('/incomes/new', (_) => const RecordIncomeScreen()),
+      _fadeRoute('/cards', (_) => const CardsScreen()),
+      _fadeRoute('/cards/:cardId', (state) =>
+          CardDetailScreen(cardId: state.pathParameters['cardId']!)),
+      _fadeRoute('/insights', (_) => const InsightsScreen()),
+      _fadeRoute('/goals', (_) => const GoalsScreen()),
+      _fadeRoute('/goals/:goalId', (state) =>
+          GoalDetailScreen(goalId: state.pathParameters['goalId']!)),
+      _fadeRoute('/investments', (_) => const InvestmentsScreen()),
+      _fadeRoute('/export', (_) => const ExportScreen()),
+      _fadeRoute('/settings', (_) => const SettingsScreen()),
     ],
   );
 });
+
+GoRoute _fadeRoute(String path, Widget Function(GoRouterState) builder) {
+  return GoRoute(
+    path: path,
+    pageBuilder: (context, state) => ftFadeUpPage(context, state,
+        child: builder(state)),
+  );
+}
 
 /// Bridges a Riverpod provider rebuild into go_router's refresh.
 class _ProviderRefreshNotifier extends ChangeNotifier {

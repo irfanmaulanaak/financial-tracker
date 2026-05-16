@@ -81,20 +81,49 @@ class InsightsScreen extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.only(bottom: 120),
           children: [
-            const FtSubHeader(title: 'Insight'),
-            _HealthCard(score: score),
-            const FtSectionHeader(title: 'Distribusi Pengeluaran'),
+            const FtSubHeader(title: 'Kesehatan Finansial'),
+            _HealthHero(score: score),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(22, 18, 22, 8),
+              child: Eyebrow('Distribusi Pengeluaran'),
+            ),
             FtCard(
               margin: const EdgeInsets.fromLTRB(22, 0, 22, 18),
+              child: cycleExpensesAsync.isLoading
+                  ? const SizedBox(
+                      height: 200,
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  : Column(
+                      children: [
+                        SpendDonut(
+                            totals: byCat, categories: household.categories),
+                        const SizedBox(height: 12),
+                        _Legend(
+                            totals: byCat, categories: household.categories),
+                      ],
+                    ),
+            ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(22, 0, 22, 8),
+              child: Eyebrow('Komponen Skor'),
+            ),
+            FtCard(
+              margin: const EdgeInsets.fromLTRB(22, 0, 22, 18),
+              padding: EdgeInsets.zero,
               child: Column(
                 children: [
-                  SpendDonut(totals: byCat, categories: household.categories),
-                  const SizedBox(height: 12),
-                  _Legend(totals: byCat, categories: household.categories),
+                  for (var i = 0; i < score.factors.length; i++) ...[
+                    if (i > 0) const Divider(),
+                    _FactorRow(factor: score.factors[i]),
+                  ],
                 ],
               ),
             ),
-            const FtSectionHeader(title: 'Analisis Per Kategori'),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(22, 0, 22, 8),
+              child: Eyebrow('Analisis Per Kategori'),
+            ),
             ..._buildAnalyses(household.categories, cycleExpenses, prevCycles),
           ],
         ),
@@ -126,7 +155,6 @@ class InsightsScreen extends ConsumerWidget {
           ifAbsent: () => e.amount,
         );
       }
-      // Use a fresh union of categories appearing in any window OR current.
       for (final c in cats) {
         history.putIfAbsent(c.id, () => []).add(totals[c.id] ?? 0);
       }
@@ -149,83 +177,211 @@ class InsightsScreen extends ConsumerWidget {
   }
 }
 
-class _HealthCard extends StatelessWidget {
-  const _HealthCard({required this.score});
+class _HealthHero extends StatelessWidget {
+  const _HealthHero({required this.score});
   final HealthScore score;
 
-  Color _scoreColor(int s) {
-    if (s >= 80) return const Color(0xFF10B981);
-    if (s >= 65) return const Color(0xFF22C55E);
-    if (s >= 50) return const Color(0xFFF59E0B);
-    if (s >= 30) return const Color(0xFFEF4444);
-    return const Color(0xFFDC2626);
-  }
+  Color _stateColor(String state) => switch (state) {
+    'good' => FtColors.healthOk,
+    'caution' => FtColors.healthWarn,
+    'risk' => FtColors.healthBad,
+    _ => FtColors.healthOk,
+  };
+
+  String _stateLabel(String state) => switch (state) {
+    'good' => 'Sehat',
+    'caution' => 'Perhatian',
+    'risk' => 'Berisiko',
+    _ => 'Sehat',
+  };
 
   @override
   Widget build(BuildContext context) {
-    final color = _scoreColor(score.score);
+    final color = _stateColor(score.score >= 80 ? 'good' : score.score >= 50 ? 'caution' : 'risk');
     return FtCard(
       margin: const EdgeInsets.fromLTRB(22, 4, 22, 18),
-      backgroundColor: color.withValues(alpha: 0.08),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Text(
-                '${score.score}',
-                style: TextStyle(
-                  fontSize: 56,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                  height: 1,
+              // Traffic light visual
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: FtColors.surfaceAlt,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: FtColors.line),
+                ),
+                child: Column(
+                  children: [
+                    _Light(color: FtColors.healthOk, on: score.score >= 80),
+                    const SizedBox(height: 8),
+                    _Light(color: FtColors.healthWarn, on: score.score >= 50 && score.score < 80),
+                    const SizedBox(height: 8),
+                    _Light(color: FtColors.healthBad, on: score.score < 50),
+                  ],
                 ),
               ),
-              const SizedBox(width: 12),
-              Padding(
-                padding: const EdgeInsets.only(top: 14),
+              const SizedBox(width: 16),
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('/100', style: TextStyle(color: color, fontSize: 14)),
+                    const Eyebrow('Status Bulan Ini'),
                     Text(
-                      score.verdict,
-                      style: TextStyle(
-                        color: color,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      _stateLabel(score.score >= 80 ? 'good' : score.score >= 50 ? 'caution' : 'risk'),
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                            color: color,
+                            fontSize: 22,
+                          ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Text(
+                          '${score.score}',
+                          style: Theme.of(context)
+                              .textTheme
+                              .displayLarge
+                              ?.copyWith(fontSize: 44, height: 1),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          '/ 100',
+                          style: TextStyle(color: FtColors.ink3, fontSize: 13),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          for (final f in score.factors)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(f.label, style: const TextStyle(fontSize: 12)),
-                  ),
-                  if (f.contribution == null)
-                    Text(
-                      '—',
-                      style: TextStyle(
-                        color: Colors.grey.shade500,
-                        fontSize: 12,
-                      ),
-                    )
-                  else
-                    Text(
-                      '${f.contribution} / ${f.weight}',
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                ],
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: color.withValues(alpha: 0.25), width: 0.5),
+            ),
+            child: Text(
+              score.verdict,
+              style: TextStyle(
+                color: FtColors.ink2,
+                fontSize: 12,
+                height: 1.55,
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Light extends StatelessWidget {
+  const _Light({required this.color, required this.on});
+  final Color color;
+  final bool on;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      width: 28,
+      height: 28,
+      decoration: BoxDecoration(
+        color: on ? color : color.withValues(alpha: 0.15),
+        shape: BoxShape.circle,
+        boxShadow: on
+            ? [
+                BoxShadow(
+                  color: color.withValues(alpha: 0.45),
+                  blurRadius: 10,
+                  spreadRadius: 1,
+                ),
+              ]
+            : null,
+      ),
+    );
+  }
+}
+
+class _FactorRow extends StatelessWidget {
+  const _FactorRow({required this.factor});
+  final HealthFactor factor;
+
+  Color _factorColor(double? raw) {
+    if (raw == null) return FtColors.ink4;
+    if (raw >= 0.7) return FtColors.healthOk;
+    if (raw >= 0.4) return FtColors.healthWarn;
+    return FtColors.healthBad;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _factorColor(factor.rawScore01);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 42,
+            height: 42,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                CircularProgressIndicator(
+                  value: (factor.rawScore01 ?? 0).toDouble(),
+                  strokeWidth: 4,
+                  color: color,
+                  backgroundColor: FtColors.line,
+                ),
+                Text(
+                  factor.contribution != null ? '${factor.contribution}' : '—',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: color,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  factor.label,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+                if (factor.rawScore01 != null)
+                  Text(
+                    '${(factor.rawScore01! * 100).round()}% dari target',
+                    style: TextStyle(
+                      color: FtColors.ink3,
+                      fontSize: 11,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          Text(
+            '${factor.weight}%',
+            style: TextStyle(
+              color: FtColors.ink4,
+              fontSize: 10,
+            ),
+          ),
         ],
       ),
     );

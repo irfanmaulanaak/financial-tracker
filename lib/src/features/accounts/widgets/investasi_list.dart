@@ -2,116 +2,88 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/formatters.dart';
-import '../../theme.dart';
-import '../../ui/ft_ui.dart';
-import '../household/household_providers.dart';
-import 'investment.dart';
-import 'investments_repository.dart';
+import '../../../core/formatters.dart';
+import '../../../theme.dart';
+import '../../../ui/ft_ui.dart';
+import '../../investments/investment.dart';
+import '../../investments/investments_repository.dart';
 
-final investmentsProvider = StreamProvider.family<List<Investment>, String>((
-  ref,
-  hid,
-) {
-  return ref.watch(investmentsRepositoryProvider).watchAll(hid);
-});
-
-class InvestmentsScreen extends ConsumerWidget {
-  const InvestmentsScreen({super.key});
+class InvestasiList extends ConsumerWidget {
+  const InvestasiList({
+    required this.householdId,
+    required this.items,
+    required this.isLoading,
+    required this.error,
+  });
+  final String householdId;
+  final List<Investment> items;
+  final bool isLoading;
+  final Object? error;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final household = ref.watch(currentHouseholdProvider).value;
-    if (household == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-    final invAsync = ref.watch(investmentsProvider(household.id));
-
-    return Scaffold(
-      backgroundColor: FtColors.bg,
-      body: FtAppChrome(
-        current: FtTab.assets,
-        child: Column(
-          children: [
-            FtSubHeader(
-              title: 'Investasi',
-              trailing: FtAddButton(
-                tooltip: 'Posisi baru',
-                onTap: () => _openAdd(context, ref, household.id),
+    if (isLoading) {
+      return ListView(
+        padding: const EdgeInsets.fromLTRB(22, 4, 22, 120),
+        children: [
+          FtShimmer(
+            child: Container(
+              height: 120,
+              decoration: BoxDecoration(
+                color: FtColors.surfaceAlt,
+                borderRadius: BorderRadius.circular(14),
               ),
             ),
-            Expanded(
-                child: invAsync.when(
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
-                  error: (e, _) => Center(child: Text('Gagal: $e')),
-                  data: (items) {
-                    final summary = summarisePortfolio(items);
-                    return ListView(
-                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 120),
-                      children: [
-                        _Summary(summary: summary),
-                        const SizedBox(height: 16),
-                        if (items.isEmpty)
-                          Padding(
-                            padding: EdgeInsets.symmetric(vertical: 48),
-                            child: Center(
-                              child: Text(
-                                'Belum ada investasi.\nTambah posisi manual via tombol "+".',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(color: FtColors.ink3),
-                              ),
-                            ),
-                          )
-                        else
-                          ...items.map(
-                            (i) => _InvestmentTile(
-                              inv: i,
-                              onUpdate: () => _openUpdateValue(
-                                context,
-                                ref,
-                                household.id,
-                                i,
-                              ),
-                              onDelete: () =>
-                                  _confirmDelete(context, ref, household.id, i),
-                            ),
-                          ),
-                      ],
-                    );
-                  },
+          ),
+          const SizedBox(height: 14),
+          for (var i = 0; i < 3; i++) ...[
+            FtShimmer(
+              child: Container(
+                height: 72,
+                margin: const EdgeInsets.only(bottom: 10),
+                decoration: BoxDecoration(
+                  color: FtColors.surfaceAlt,
+                  borderRadius: BorderRadius.circular(14),
                 ),
+              ),
             ),
           ],
-        ),
-      ),
+        ],
+      );
+    }
+    if (error != null) {
+      return Center(child: Text('Gagal: $error'));
+    }
+    final summary = summarisePortfolio(items);
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(22, 4, 22, 120),
+      children: [
+        InvestasiSummary(summary: summary),
+        const SizedBox(height: 14),
+        if (items.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 36),
+            child: Center(
+              child: Text(
+                'Belum ada investasi.\nTambah posisi via tombol "+".',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: FtColors.ink3),
+              ),
+            ),
+          )
+        else
+          for (final i in items)
+            InvestmentTile(
+              inv: i,
+              onUpdate: () => _openUpdate(context, ref, i),
+              onDelete: () => _confirmDelete(context, ref, i),
+            ),
+      ],
     );
   }
 
-  Future<void> _openAdd(BuildContext context, WidgetRef ref, String hid) async {
-    final draft = await showModalBottomSheet<_Draft>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => const _InvestmentEditSheet(),
-    );
-    if (draft == null) return;
-    await ref
-        .read(investmentsRepositoryProvider)
-        .add(
-          hid: hid,
-          label: draft.label,
-          type: draft.type,
-          currentValue: draft.currentValue,
-          costBasis: draft.costBasis,
-        );
-  }
-
-  Future<void> _openUpdateValue(
-    BuildContext context,
-    WidgetRef ref,
-    String hid,
-    Investment i,
-  ) async {
+  Future<void> _openUpdate(
+      BuildContext context, WidgetRef ref, Investment i) async {
     final ctrl = TextEditingController(text: i.currentValue.toString());
     final v = await showModalBottomSheet<int>(
       context: context,
@@ -126,10 +98,8 @@ class InvestmentsScreen extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              'Update ${i.label}',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
+            Text('Update ${i.label}',
+                style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 12),
             TextField(
               controller: ctrl,
@@ -156,16 +126,12 @@ class InvestmentsScreen extends ConsumerWidget {
     if (v != null) {
       await ref
           .read(investmentsRepositoryProvider)
-          .updateValue(hid: hid, id: i.id, currentValue: v);
+          .updateValue(hid: householdId, id: i.id, currentValue: v);
     }
   }
 
   Future<void> _confirmDelete(
-    BuildContext context,
-    WidgetRef ref,
-    String hid,
-    Investment i,
-  ) async {
+      BuildContext context, WidgetRef ref, Investment i) async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
@@ -183,13 +149,15 @@ class InvestmentsScreen extends ConsumerWidget {
       ),
     );
     if (ok == true) {
-      await ref.read(investmentsRepositoryProvider).delete(hid: hid, id: i.id);
+      await ref
+          .read(investmentsRepositoryProvider)
+          .delete(hid: householdId, id: i.id);
     }
   }
 }
 
-class _Summary extends StatelessWidget {
-  const _Summary({required this.summary});
+class InvestasiSummary extends StatelessWidget {
+  const InvestasiSummary({required this.summary});
   final PortfolioSummary summary;
 
   @override
@@ -197,9 +165,7 @@ class _Summary extends StatelessWidget {
     final positive = summary.totalGain >= 0;
     final color = positive ? FtColors.sage : FtColors.danger;
     return FtCard(
-      backgroundColor: positive
-          ? const Color(0xFFEAF0EC)
-          : const Color(0xFFF2E7E3),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -207,16 +173,28 @@ class _Summary extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             Money.format(summary.totalValue),
-            style: Theme.of(context).textTheme.displaySmall,
+            style: Theme.of(context).textTheme.headlineMedium,
           ),
           const SizedBox(height: 6),
-          Text(
-            '${positive ? '+' : ''}${Money.format(summary.totalGain)} (${(summary.gainPct * 100).toStringAsFixed(1)}%)',
-            style: TextStyle(color: color, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Diversifikasi: ${summary.distinctTypes} jenis aset',
+          Row(
+            children: [
+              Icon(
+                positive
+                    ? Icons.arrow_upward_rounded
+                    : Icons.arrow_downward_rounded,
+                size: 14,
+                color: color,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                '${positive ? '+' : ''}${Money.format(summary.totalGain)} (${(summary.gainPct * 100).toStringAsFixed(1)}%)',
+                style: TextStyle(color: color, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                '${summary.distinctTypes} jenis aset',
+              ),
+            ],
           ),
         ],
       ),
@@ -224,8 +202,8 @@ class _Summary extends StatelessWidget {
   }
 }
 
-class _InvestmentTile extends StatelessWidget {
-  const _InvestmentTile({
+class InvestmentTile extends StatelessWidget {
+  const InvestmentTile({
     required this.inv,
     required this.onUpdate,
     required this.onDelete,
@@ -239,7 +217,7 @@ class _InvestmentTile extends StatelessWidget {
     final positive = inv.gain >= 0;
     final color = positive ? FtColors.sage : FtColors.danger;
     return FtCard(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       onTap: onUpdate,
       onLongPress: onDelete,
@@ -249,9 +227,10 @@ class _InvestmentTile extends StatelessWidget {
             width: 42,
             height: 42,
             decoration: BoxDecoration(
-              color: FtColors.surfaceAlt,
+              color: FtColors.clay.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: FtColors.line, width: 0.5),
+              border: Border.all(
+                  color: FtColors.clay.withValues(alpha: 0.24), width: 0.5),
             ),
           ),
           const SizedBox(width: 12),
@@ -261,6 +240,8 @@ class _InvestmentTile extends StatelessWidget {
               children: [
                 Text(
                   inv.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: FtColors.ink,
                     fontWeight: FontWeight.w600,
@@ -295,21 +276,21 @@ class _InvestmentTile extends StatelessWidget {
   }
 }
 
-class _Draft {
+class InvestmentDraft {
   final String label;
   final InvestmentType type;
   final int currentValue;
   final int costBasis;
-  const _Draft(this.label, this.type, this.currentValue, this.costBasis);
+  const InvestmentDraft(this.label, this.type, this.currentValue, this.costBasis);
 }
 
-class _InvestmentEditSheet extends StatefulWidget {
-  const _InvestmentEditSheet();
+class InvestmentEditSheet extends StatefulWidget {
+  const InvestmentEditSheet({super.key});
   @override
-  State<_InvestmentEditSheet> createState() => _InvestmentEditSheetState();
+  State<InvestmentEditSheet> createState() => _InvestmentEditSheetState();
 }
 
-class _InvestmentEditSheetState extends State<_InvestmentEditSheet> {
+class _InvestmentEditSheetState extends State<InvestmentEditSheet> {
   final _label = TextEditingController();
   final _current = TextEditingController();
   final _cost = TextEditingController();
@@ -336,10 +317,8 @@ class _InvestmentEditSheetState extends State<_InvestmentEditSheet> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              'Investasi baru',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
+            Text('Investasi baru',
+                style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 16),
             TextField(
               controller: _label,
@@ -390,7 +369,8 @@ class _InvestmentEditSheetState extends State<_InvestmentEditSheet> {
                 final cv = int.tryParse(_current.text) ?? 0;
                 final cb = int.tryParse(_cost.text) ?? 0;
                 if (label.isEmpty || cv < 0 || cb < 0) return;
-                Navigator.pop(context, _Draft(label, _type, cv, cb));
+                Navigator.pop(
+                    context, InvestmentDraft(label, _type, cv, cb));
               },
               child: const Text('Simpan'),
             ),

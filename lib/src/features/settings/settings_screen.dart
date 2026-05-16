@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../core/formatters.dart';
 import '../../core/home_layout_provider.dart';
+import '../../core/providers.dart';
 import '../../core/theme_provider.dart';
 import '../../theme.dart';
 import '../../ui/ft_haptics.dart';
 import '../../ui/ft_motion.dart';
 import '../../ui/ft_ui.dart';
 import '../auth/auth_repository.dart';
+import '../home/widgets/home_formatters.dart';
 import '../household/household.dart';
 import '../household/household_providers.dart';
 import '../household/name_format.dart';
@@ -53,7 +54,7 @@ class SettingsScreen extends ConsumerWidget {
                     child: Text(
                       initialsOf(
                           user.displayName ?? user.email ?? 'User'),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'Newsreader',
                         fontSize: 22,
                         color: FtColors.ink,
@@ -77,7 +78,7 @@ class SettingsScreen extends ConsumerWidget {
                         const SizedBox(height: 2),
                         Text(
                           'Bergabung ${Dates.short(household.createdAt)}',
-                          style: const TextStyle(
+                          style: TextStyle(
                               color: FtColors.ink3, fontSize: 11),
                         ),
                       ],
@@ -210,7 +211,7 @@ class SettingsScreen extends ConsumerWidget {
             ),
             FtCard(
               margin: const EdgeInsets.fromLTRB(22, 0, 22, 18),
-              child: const Column(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
@@ -302,7 +303,7 @@ class SettingsScreen extends ConsumerWidget {
                   dense: true,
                   title: Text('Tanggal $day'),
                   trailing: selected == day
-                      ? const Icon(Icons.check, color: FtColors.moss)
+                      ? const Icon(Icons.check)
                       : null,
                   onTap: () => setState(() => selected = day),
                 );
@@ -432,7 +433,7 @@ class _MembersSection extends StatelessWidget {
                         const SizedBox(height: 2),
                         Text(
                           '${roleToString(household.members[i].role)} · Bergabung ${Dates.short(household.members[i].joinedAt)}',
-                          style: const TextStyle(
+                          style: TextStyle(
                               color: FtColors.ink3, fontSize: 11),
                         ),
                       ],
@@ -475,7 +476,7 @@ class _ToggleRow extends StatelessWidget {
               ),
               Text(
                 value,
-                style: const TextStyle(
+                style: TextStyle(
                     color: FtColors.ink3, fontSize: 11),
               ),
             ],
@@ -555,11 +556,11 @@ class _SettingsRow extends StatelessWidget {
             if (detail.isNotEmpty)
               Text(
                 detail,
-                style: const TextStyle(
+                style: TextStyle(
                     color: FtColors.ink3, fontSize: 12),
               ),
             const SizedBox(width: 4),
-            const Icon(Icons.chevron_right,
+            Icon(Icons.chevron_right,
                 size: 16, color: FtColors.ink4),
           ],
         ),

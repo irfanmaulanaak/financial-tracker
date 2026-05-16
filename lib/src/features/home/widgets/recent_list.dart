@@ -54,7 +54,7 @@ class RecentList extends StatelessWidget {
           ...recentAsync.maybeWhen(
             data: (recent) => recent.isEmpty
                 ? [
-                    const Padding(
+                    Padding(
                       padding: EdgeInsets.fromLTRB(18, 12, 18, 18),
                       child: Text(
                         'Belum ada pengeluaran.',
@@ -101,7 +101,7 @@ class _RecentExpenseRow extends StatelessWidget {
         : FtColors.ink3;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         border: Border(top: BorderSide(color: FtColors.line, width: 0.5)),
       ),
       child: Row(
@@ -129,7 +129,7 @@ class _RecentExpenseRow extends StatelessWidget {
                   category?.label ?? '-',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: FtColors.ink,
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -139,18 +139,19 @@ class _RecentExpenseRow extends StatelessWidget {
                 Text(
                   [
                     Dates.short(expense.date),
+                    if (expense.note != null && expense.note!.isNotEmpty)
+                      expense.note!,
                     if (spender != null) prettyName(spender!.displayName),
                   ].join(' · '),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: FtColors.ink3, fontSize: 11),
                 ),
               ],
             ),
           ),
           Text(
             compactMoney(expense.amount),
-            style: const TextStyle(
+            style: TextStyle(
               color: FtColors.ink,
               fontSize: 13,
               fontWeight: FontWeight.w700,

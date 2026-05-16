@@ -1,17 +1,18 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-final homeLayoutProvider = StateNotifierProvider<HomeLayoutNotifier, String>(
-  (ref) => HomeLayoutNotifier(),
+final homeLayoutProvider = NotifierProvider<HomeLayoutNotifier, String>(
+  HomeLayoutNotifier.new,
 );
 
-class HomeLayoutNotifier extends StateNotifier<String> {
-  HomeLayoutNotifier() : super('A') {
-    _load();
-  }
-
+class HomeLayoutNotifier extends Notifier<String> {
   static const _key = 'home_layout';
+
+  @override
+  String build() {
+    _load();
+    return 'A';
+  }
 
   Future<void> _load() async {
     final prefs = await SharedPreferences.getInstance();

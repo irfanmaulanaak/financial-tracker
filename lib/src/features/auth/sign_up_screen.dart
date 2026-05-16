@@ -70,7 +70,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
         crossAxisAlignment: WrapCrossAlignment.center,
         alignment: WrapAlignment.center,
         children: [
-          const Text(
+          Text(
             'Sudah punya akun?',
             style: TextStyle(color: FtColors.ink3, fontSize: 13),
           ),
@@ -81,7 +81,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
-            child: const Text(
+            child: Text(
               'Masuk',
               style: TextStyle(
                 color: FtColors.clay,
@@ -153,7 +153,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
         FilledButton(
           onPressed: _busy ? null : _submit,
           child: _busy
-              ? const SizedBox(
+              ? SizedBox(
                   width: 18,
                   height: 18,
                   child: CircularProgressIndicator(
@@ -172,7 +172,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
           },
         ),
         const SizedBox(height: 16),
-        const Text(
+        Text(
           'Dengan mendaftar, kamu menyetujui penggunaan data sesuai kebijakan internal aplikasi.',
           textAlign: TextAlign.center,
           style: TextStyle(

@@ -77,7 +77,7 @@ class _CategoryCell extends StatelessWidget {
                   category.label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: FtColors.ink2,
                     fontWeight: FontWeight.w600,
                     fontSize: 11,
@@ -89,7 +89,7 @@ class _CategoryCell extends StatelessWidget {
           const Spacer(),
           Text(
             compactMoney(spent),
-            style: const TextStyle(
+            style: TextStyle(
               color: FtColors.ink,
               fontWeight: FontWeight.w700,
               fontSize: 14,
@@ -100,6 +100,7 @@ class _CategoryCell extends StatelessWidget {
             value: spent,
             max: budget <= 0 ? 1 : budget,
             color: color,
+            overflowColor: FtColors.danger,
             height: 3,
           ),
           const SizedBox(height: 5),

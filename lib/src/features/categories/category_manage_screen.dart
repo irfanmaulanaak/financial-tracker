@@ -158,7 +158,7 @@ class _CategoryTile extends StatelessWidget {
               children: [
                 Text(
                   category.label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: FtColors.ink,
                     fontWeight: FontWeight.w600,
                   ),
@@ -166,7 +166,6 @@ class _CategoryTile extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   Money.format(category.monthlyBudget),
-                  style: const TextStyle(color: FtColors.ink3, fontSize: 12),
                 ),
               ],
             ),

@@ -43,7 +43,13 @@ class HealthSnapshot extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Eyebrow('Kesehatan Finansial'),
+                Row(
+                  children: [
+                    const Eyebrow('Kesehatan Finansial'),
+                    const SizedBox(width: 8),
+                    _TrafficLight(score: score.score),
+                  ],
+                ),
                 const SizedBox(height: 4),
                 Text(
                   score.verdict,
@@ -57,12 +63,10 @@ class HealthSnapshot extends StatelessWidget {
                   _summary(score),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: FtColors.ink2, fontSize: 12),
                 ),
               ],
             ),
           ),
-          const Icon(Icons.chevron_right, color: FtColors.ink4),
         ],
       ),
     );
@@ -73,5 +77,27 @@ class HealthSnapshot extends StatelessWidget {
       ..sort((a, b) => (a.contribution ?? 0).compareTo(b.contribution ?? 0));
     if (available.isEmpty) return 'Data belum cukup untuk membaca pola.';
     return '${available.first.label} paling perlu perhatian.';
+  }
+}
+
+class _TrafficLight extends StatelessWidget {
+  const _TrafficLight({required this.score});
+  final int score;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = score >= 80
+        ? FtColors.healthOk
+        : score >= 50
+            ? FtColors.healthWarn
+            : FtColors.healthBad;
+    return Container(
+      width: 8,
+      height: 8,
+      decoration: BoxDecoration(
+        color: color,
+        shape: BoxShape.circle,
+      ),
+    );
   }
 }

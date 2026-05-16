@@ -86,7 +86,6 @@ class _MemberListScreenState extends ConsumerState<MemberListScreen> {
                   const SizedBox(height: 4),
                   Text(
                     'Payday tanggal ${household.payday} • ${Money.format(household.monthlyBudgetTotal)} / siklus',
-                    style: const TextStyle(color: FtColors.ink3, fontSize: 12),
                   ),
                 ],
               ),
@@ -123,8 +122,7 @@ class _MemberListScreenState extends ConsumerState<MemberListScreen> {
             const SizedBox(height: 24),
           TextButton.icon(
             onPressed: () => _leave(household.id, user.uid),
-            icon: const Icon(Icons.logout, color: FtColors.danger),
-            label: const Text(
+            label: Text(
               'Keluar dari rumah tangga',
               style: TextStyle(color: FtColors.danger),
             ),

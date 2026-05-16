@@ -66,7 +66,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         crossAxisAlignment: WrapCrossAlignment.center,
         alignment: WrapAlignment.center,
         children: [
-          const Text(
+          Text(
             'Belum punya akun?',
             style: TextStyle(color: FtColors.ink3, fontSize: 13),
           ),
@@ -77,7 +77,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
-            child: const Text(
+            child: Text(
               'Daftar',
               style: TextStyle(
                 color: FtColors.clay,
@@ -147,7 +147,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                         const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
-                  child: const Text(
+                  child: Text(
                     'Lupa password?',
                     style: TextStyle(
                       color: FtColors.ink3,
@@ -165,7 +165,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         FilledButton(
           onPressed: _busy ? null : _submit,
           child: _busy
-              ? const SizedBox(
+              ? SizedBox(
                   width: 18,
                   height: 18,
                   child: CircularProgressIndicator(

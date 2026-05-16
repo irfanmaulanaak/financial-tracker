@@ -42,6 +42,21 @@ class ExpenseRepository {
         .map((s) => s.docs.map(Expense.fromSnapshot).toList());
   }
 
+  Stream<List<Expense>> watchByCategory({
+    required String householdId,
+    required String categoryId,
+    required DateTime startInclusive,
+    required DateTime endExclusive,
+  }) {
+    return _col(householdId)
+        .where('categoryId', isEqualTo: categoryId)
+        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startInclusive))
+        .where('date', isLessThan: Timestamp.fromDate(endExclusive))
+        .orderBy('date', descending: true)
+        .snapshots()
+        .map((s) => s.docs.map(Expense.fromSnapshot).toList());
+  }
+
   /// Cash/debit/e-wallet expense — single write, no balance side-effect.
   /// For credit-card expense use [addCardExpense] or [addCicilanExpense].
   Future<String> add({

@@ -125,7 +125,6 @@ class _JoinHouseholdScreenState extends ConsumerState<JoinHouseholdScreen> {
                     const SizedBox(height: 16),
                     Text(
                       _error!,
-                      style: const TextStyle(color: FtColors.danger),
                     ),
                   ],
                   const SizedBox(height: 24),

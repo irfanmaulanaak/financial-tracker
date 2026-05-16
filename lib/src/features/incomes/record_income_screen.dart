@@ -159,7 +159,7 @@ class _RecordIncomeScreenState extends ConsumerState<RecordIncomeScreen> {
                     const Eyebrow('Masuk ke'),
                     const SizedBox(height: 10),
                     if (accounts.isEmpty)
-                      const Padding(
+                      Padding(
                         padding: EdgeInsets.symmetric(vertical: 6),
                         child: Text(
                           'Belum ada akun. Tambah dari menu Akun.',
@@ -203,7 +203,6 @@ class _RecordIncomeScreenState extends ConsumerState<RecordIncomeScreen> {
                       const SizedBox(height: 14),
                       Text(
                         _error!,
-                        style: const TextStyle(color: FtColors.danger),
                       ),
                     ],
                   ],
@@ -275,7 +274,7 @@ class _AmountDisplay extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            const Text(
+            Text(
               '+Rp',
               style: TextStyle(
                 color: FtColors.ink3,
@@ -354,7 +353,7 @@ class _SourceChips extends StatelessWidget {
     IncomeSource.refund: Icons.south_outlined,
     IncomeSource.other: Icons.more_horiz,
   };
-  static const _colors = {
+  static final _colors = {
     IncomeSource.salary: FtColors.sage,
     IncomeSource.freelance: FtColors.clay,
     IncomeSource.invest: FtColors.moss,
@@ -472,7 +471,7 @@ class _AccountRow extends StatelessWidget {
                     label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: FtColors.ink,
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
@@ -483,7 +482,7 @@ class _AccountRow extends StatelessWidget {
                     hint,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: FtColors.ink3,
                       fontSize: 11,
                       fontFeatures: [FontFeature.tabularFigures()],
@@ -493,7 +492,7 @@ class _AccountRow extends StatelessWidget {
               ),
             ),
             if (selected)
-              const Icon(Icons.check, color: FtColors.moss, size: 16),
+              Icon(Icons.check, size: 16, color: FtColors.moss),
           ],
         ),
       ),
@@ -531,7 +530,7 @@ class _MetaRow extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.calendar_today_outlined,
                     size: 14,
                     color: FtColors.ink3,
@@ -540,7 +539,7 @@ class _MetaRow extends StatelessWidget {
                   Expanded(
                     child: Text(
                       Dates.short(date),
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: FtColors.ink,
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
@@ -610,7 +609,7 @@ class _Keypad extends StatelessWidget {
     if (bottomInset > 0) return const SizedBox.shrink();
     return Container(
       padding: const EdgeInsets.fromLTRB(22, 12, 22, 24),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: FtColors.surfaceAlt,
         border: Border(top: BorderSide(color: FtColors.line, width: 0.5)),
       ),
@@ -638,7 +637,7 @@ class _Keypad extends StatelessWidget {
                   alignment: Alignment.center,
                   child: Text(
                     k,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'Newsreader',
                       fontSize: 22,
                       fontWeight: FontWeight.w400,

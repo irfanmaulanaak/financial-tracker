@@ -2,14 +2,13 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../core/formatters.dart';
 import '../../theme.dart';
-import '../../ui/ft_motion.dart';
 import '../../ui/ft_ui.dart';
 import '../goals/goal.dart';
 import '../goals/goal_repository.dart';
+import '../home/widgets/home_formatters.dart';
 import '../household/household_providers.dart';
 
 final _goalProvider =
@@ -191,7 +190,7 @@ class _Body extends ConsumerWidget {
                           Text(
                             ['Okt', 'Nov', 'Des', 'Jan', 'Feb', 'Mar',
                               'Apr', 'Mei'][i],
-                            style: const TextStyle(
+                            style: TextStyle(
                                 fontSize: 9, color: FtColors.ink3),
                           ),
                         ],
@@ -212,7 +211,7 @@ class _Body extends ConsumerWidget {
                 const SizedBox(height: 10),
                 Text(
                   'Dengan rata-rata setoran ${Money.format(goal.monthlyContrib)} per bulan, tujuan ini tercapai dalam ${monthsLeft > 0 ? monthsLeft : '?'} bulan.',
-                  style: const TextStyle(
+                  style: TextStyle(
                       color: FtColors.ink2, fontSize: 13, height: 1.5),
                 ),
               ],

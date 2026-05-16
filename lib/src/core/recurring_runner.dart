@@ -45,7 +45,9 @@ class RecurringRunner {
     _lastRunPerHousehold[householdId] = n;
 
     final eCount = await _runExpenses(householdId: householdId, now: n);
-    final iCount = await _runIncomes(householdId: householdId, now: n);
+    // Income is NOT auto-materialised — user explicitly records it on payday
+    // to avoid inaccurate duplicates.  Recurring flag is kept as a reminder.
+    final iCount = 0; // await _runIncomes(...)
     return (expenses: eCount, incomes: iCount);
   }
 

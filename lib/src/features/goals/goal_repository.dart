@@ -24,6 +24,12 @@ class GoalRepository {
         );
   }
 
+  Stream<Goal?> watchOne({required String hid, required String goalId}) {
+    return _col(hid).doc(goalId).snapshots().map(
+          (s) => s.exists ? Goal.fromSnapshot(s) : null,
+        );
+  }
+
   Future<String> add({
     required String hid,
     required String label,

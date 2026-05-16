@@ -102,7 +102,7 @@ class _FtInputState extends State<FtInput> {
           onChanged: widget.onChanged,
           cursorColor: FtColors.clay,
           cursorWidth: 1.5,
-          style: const TextStyle(
+          style: TextStyle(
             color: FtColors.ink,
             fontSize: 15,
             height: 1.3,
@@ -110,7 +110,7 @@ class _FtInputState extends State<FtInput> {
           decoration: InputDecoration(
             isDense: true,
             hintText: widget.hintText,
-            hintStyle: const TextStyle(
+            hintStyle: TextStyle(
               color: FtColors.ink4,
               fontSize: 15,
               fontWeight: FontWeight.w400,
@@ -129,7 +129,7 @@ class _FtInputState extends State<FtInput> {
             disabledBorder: _border(FtColors.line, 0.5),
             errorBorder: _border(FtColors.danger, 0.5),
             focusedErrorBorder: _border(FtColors.danger, 1.0),
-            errorStyle: const TextStyle(
+            errorStyle: TextStyle(
               color: FtColors.danger,
               fontSize: 12,
               height: 1.4,

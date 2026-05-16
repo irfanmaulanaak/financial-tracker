@@ -8,9 +8,16 @@ import '../../theme.dart';
 import '../../ui/ft_ui.dart';
 import '../household/household_providers.dart';
 import '../household/name_format.dart';
-import 'credit_card.dart';
 import 'card_repository.dart';
+import 'credit_card.dart';
 import 'edit_card_sheet.dart';
+
+final _cardInstallmentsProvider =
+    StreamProvider.family<List<Installment>, ({String hid, String cardId})>(
+  (ref, p) => ref
+      .watch(cardRepositoryProvider)
+      .watchInstallments(hid: p.hid, cardId: p.cardId),
+);
 
 final cardsProvider = StreamProvider.family<List<CreditCard>, String>((
   ref,
@@ -32,7 +39,33 @@ class CardsScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: FtColors.bg,
       body: cards.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => ListView(
+          padding: const EdgeInsets.fromLTRB(22, 4, 22, 120),
+          children: [
+            FtShimmer(
+              child: Container(
+                height: 180,
+                decoration: BoxDecoration(
+                  color: FtColors.surfaceAlt,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+            for (var i = 0; i < 2; i++) ...[
+              FtShimmer(
+                child: Container(
+                  height: 160,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: FtColors.surfaceAlt,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
         error: (e, _) => Center(child: Text('Gagal: $e')),
         data: (items) {
           final totalUsed = items.fold<int>(0, (a, b) => a + b.used);
@@ -104,7 +137,7 @@ class CardsScreen extends ConsumerWidget {
                   child: Eyebrow('Kartu Aktif'),
                 ),
                 if (items.isEmpty)
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.symmetric(vertical: 48),
                     child: Center(
                       child: Text(
@@ -119,6 +152,7 @@ class CardsScreen extends ConsumerWidget {
                       padding: const EdgeInsets.fromLTRB(22, 0, 22, 12),
                       child: _CardTile(
                         card: c,
+                        hid: household.id,
                         ownerName: prettyName(
                             household.memberOf(c.ownerId)?.displayName ?? '-'),
                         onTap: () => context.push('/cards/${c.id}'),
@@ -163,10 +197,12 @@ class CardsScreen extends ConsumerWidget {
 class _CardTile extends StatelessWidget {
   const _CardTile({
     required this.card,
+    required this.hid,
     required this.ownerName,
     required this.onTap,
   });
   final CreditCard card;
+  final String hid;
   final String ownerName;
   final VoidCallback onTap;
 
@@ -258,8 +294,99 @@ class _CardTile extends StatelessWidget {
               ],
             ),
           ),
+          _CardInstallmentsInline(
+            hid: hid,
+            cardId: card.id,
+          ),
         ],
       ),
+    );
+  }
+}
+
+class _CardInstallmentsInline extends ConsumerWidget {
+  const _CardInstallmentsInline({required this.hid, required this.cardId});
+  final String hid;
+  final String cardId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(_cardInstallmentsProvider((hid: hid, cardId: cardId)));
+    return async.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (items) {
+        final active = items.where((i) => !i.isComplete).toList();
+        if (active.isEmpty) return const SizedBox.shrink();
+        final totalMonthly = active.fold<int>(0, (a, i) => a + i.monthly);
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Divider(),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Icon(Icons.calendar_month, size: 14, color: FtColors.ink3),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${active.length} cicilan aktif · ${Money.format(totalMonthly)}/bln',
+                    style: TextStyle(
+                      color: FtColors.ink2,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              for (final i in active.take(3))
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              i.label.isNotEmpty ? i.label : 'Cicilan',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: FtColors.ink,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${i.monthsPaid}/${i.monthsTotal} bulan · ${Money.format(i.monthly)}/bln',
+                              style: TextStyle(
+                                color: FtColors.ink3,
+                                fontSize: 10,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(
+                        width: 60,
+                        child: FtProgressBar(
+                          value: i.monthsPaid,
+                          max: i.monthsTotal,
+                          color: FtColors.plum,
+                          height: 4,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

@@ -70,7 +70,7 @@ class AccountList extends ConsumerWidget {
                   children: [
                     Text(
                       a.label,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: FtColors.ink,
                         fontWeight: FontWeight.w600,
                       ),
@@ -78,7 +78,7 @@ class AccountList extends ConsumerWidget {
                     if (a.hint != null)
                       Text(
                         a.hint!,
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: FtColors.ink3,
                           fontSize: 11,
                         ),
@@ -88,7 +88,7 @@ class AccountList extends ConsumerWidget {
               ),
               Text(
                 Money.format(a.value),
-                style: const TextStyle(
+                style: TextStyle(
                   color: FtColors.ink,
                   fontWeight: FontWeight.w700,
                   fontSize: 13,

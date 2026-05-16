@@ -117,7 +117,7 @@ class _EmailLinkScreenState extends ConsumerState<EmailLinkScreen> {
                 FtHaptics.tap();
                 context.go('/sign-in');
               },
-        child: const Text(
+        child: Text(
           'Kembali ke login biasa',
           style: TextStyle(color: FtColors.ink3, fontSize: 13),
         ),
@@ -144,7 +144,7 @@ class _EmailLinkScreenState extends ConsumerState<EmailLinkScreen> {
             trailing: IconButton(
               onPressed: _busy ? null : _pasteFromClipboard,
               splashRadius: 18,
-              icon: const Icon(
+              icon: Icon(
                 Icons.content_paste_outlined,
                 size: 18,
                 color: FtColors.ink3,
@@ -158,7 +158,7 @@ class _EmailLinkScreenState extends ConsumerState<EmailLinkScreen> {
         FilledButton(
           onPressed: _busy ? null : (isStep2 ? _submitLink : _sendLink),
           child: _busy
-              ? const SizedBox(
+              ? SizedBox(
                   width: 18,
                   height: 18,
                   child: CircularProgressIndicator(

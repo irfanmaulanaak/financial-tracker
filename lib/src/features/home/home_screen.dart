@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/expense_aggregations.dart';
 import '../../core/health_score.dart';
+import '../../core/home_layout_provider.dart';
 import '../../core/in_app_indicators.dart';
 import '../../core/net_worth.dart';
 import '../../core/payday.dart';
@@ -29,6 +30,7 @@ import 'widgets/cards_preview.dart';
 import 'widgets/category_grid.dart';
 import 'widgets/goals_preview.dart';
 import 'widgets/health_snapshot.dart';
+import 'widgets/home_b_body.dart';
 import 'widgets/home_header.dart';
 import 'widgets/month_strip.dart';
 import 'widgets/net_worth_section.dart';
@@ -119,6 +121,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         .map((w) => w.fold<int>(0, (a, b) => a + b.amount))
                         .fold<int>(0, (a, b) => a + b) ~/
                     prevCycles.length;
+          final invTotal =
+              investments.fold<int>(0, (a, i) => a + i.currentValue);
           final nw = computeNetWorth(
             cash: [
               for (final a in household.cashAccounts)
@@ -137,6 +141,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   used: c.used,
                 ),
             ],
+            investments: invTotal,
           );
           final assets = householdAssetsAndDebt(
             household,
@@ -166,59 +171,130 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   DueBanner(cardLabel: c.label, daysUntil: d, used: c.used),
           ];
 
+          Widget section(Widget child, {int index = 0}) => FtFadeUp(
+                duration: const Duration(milliseconds: 340),
+                delay: Duration(milliseconds: index * 60),
+                distance: 10,
+                child: child,
+              );
+
+          final displayName = prettyName(
+              user?.displayName ?? user?.email ?? 'Keluarga');
+          final layout = ref.watch(homeLayoutProvider);
+
+          if (layout == 'B') {
+            return FtAppChrome(
+              current: FtTab.home,
+              child: HomeBBody(
+                household: household,
+                displayName: displayName,
+                nw: nw,
+                totalSpent: totalSpentValue,
+                income: income,
+                health: health,
+                cards: cards,
+                goals: goals,
+                categories: categories,
+                totalsByCat: byCat,
+                onMembers: () => context.push('/members'),
+                onMenuSelect: _handleMenu,
+                onAssets: () => context.push('/accounts'),
+                onExpenses: () => context.push('/expenses'),
+                onCards: () => context.push('/cards'),
+                onGoals: () => context.push('/goals'),
+                onInsights: () => context.push('/insights'),
+              ),
+            );
+          }
+
           return FtAppChrome(
             current: FtTab.home,
-            child: FtFadeUp(
-              duration: const Duration(milliseconds: 360),
-              distance: 10,
-              child: ListView(
-                padding: const EdgeInsets.only(bottom: 120),
-                physics: const BouncingScrollPhysics(
-                  parent: AlwaysScrollableScrollPhysics(),
-                ),
-                children: [
-                HomeHeader(
-                  household: household,
-                  displayName: prettyName(
-                      user?.displayName ?? user?.email ?? 'Keluarga'),
-                  onMembers: () => context.push('/members'),
-                  onSelected: _handleMenu,
-                ),
-                AssetHero(nw: nw, onTap: () => context.push('/accounts')),
-                AssetBreakdown(nw: nw, onTap: () => context.push('/accounts')),
-                if (status != BudgetStatus.ok) BudgetBanner(status: status),
-                for (final banner in dueBanners) banner,
-                MonthStrip(
-                  totalSpent: totalSpentValue,
-                  income: income,
-                  daily: daily,
-                  cycleStart: cycle.start,
-                  cycleEndExclusive: cycle.endExclusive,
-                ),
-                CardsPreview(
-                  cards: cards,
-                  onTap: () => context.push('/cards'),
-                ),
-                HealthSnapshot(
-                  score: health,
-                  onTap: () => context.push('/insights'),
-                ),
-                CategoryGrid(
-                  categories: categories.take(4).toList(),
-                  totals: byCat,
-                  onTap: () => context.push('/expenses'),
-                ),
-                GoalsPreview(
-                  goals: goals,
-                  onTap: () => context.push('/goals'),
-                ),
-                RecentList(
-                  recentAsync: recentAsync,
-                  household: household,
-                  onTap: () => context.push('/expenses'),
-                ),
-                ],
+            child: ListView(
+              padding: const EdgeInsets.only(bottom: 120),
+              physics: const BouncingScrollPhysics(
+                parent: AlwaysScrollableScrollPhysics(),
               ),
+              children: [
+                section(
+                  HomeHeader(
+                    household: household,
+                    displayName: displayName,
+                    onMembers: () => context.push('/members'),
+                    onSelected: _handleMenu,
+                  ),
+                  index: 0,
+                ),
+                section(
+                  AssetHero(
+                    nw: nw,
+                    cycleNet: income - totalSpentValue,
+                    onTap: () => context.push('/accounts'),
+                  ),
+                  index: 1,
+                ),
+                section(
+                  AssetBreakdown(
+                      nw: nw, onTap: () => context.push('/accounts')),
+                  index: 2,
+                ),
+                if (status != BudgetStatus.ok)
+                  section(BudgetBanner(status: status), index: 3),
+                for (var i = 0; i < dueBanners.length; i++)
+                  section(dueBanners[i], index: 4 + i),
+                section(
+                  MonthStrip(
+                    totalSpent: totalSpentValue,
+                    income: income,
+                    daily: daily,
+                    todaySpend: expenses
+                        .where((e) =>
+                            e.date.year == now.year &&
+                            e.date.month == now.month &&
+                            e.date.day == now.day)
+                        .fold<int>(0, (a, e) => a + e.amount),
+                    cycleStart: cycle.start,
+                    cycleEndExclusive: cycle.endExclusive,
+                  ),
+                  index: 5,
+                ),
+                section(
+                  CardsPreview(
+                    cards: cards,
+                    onTap: () => context.push('/cards'),
+                  ),
+                  index: 6,
+                ),
+                section(
+                  HealthSnapshot(
+                    score: health,
+                    onTap: () => context.push('/insights'),
+                  ),
+                  index: 7,
+                ),
+                section(
+                  CategoryGrid(
+                    categories: categories.take(4).toList(),
+                    totals: byCat,
+                    onTap: () => context.push('/expenses'),
+                  ),
+                  index: 8,
+                ),
+                section(
+                  GoalsPreview(
+                    goals: goals,
+                    onTap: () => context.push('/goals'),
+                  ),
+                  index: 9,
+                ),
+                section(
+                  RecentList(
+                    recentAsync: recentAsync,
+                    household: household,
+                    onTap: () => context.push('/expenses'),
+                  ),
+                  index: 10,
+                ),
+              ],
             ),
           );
         },
@@ -236,6 +312,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         context.push('/members');
       case 'export':
         context.push('/export');
+      case 'settings':
+        context.push('/settings');
       case 'signout':
         ref.read(authRepositoryProvider).signOut();
     }

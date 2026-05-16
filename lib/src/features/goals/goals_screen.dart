@@ -64,7 +64,7 @@ class GoalsScreen extends ConsumerWidget {
                       const SizedBox(height: 6),
                       Text(
                         'dari ${Money.format(totalTarget)} target',
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: FtColors.ink3,
                           fontSize: 12,
                         ),
@@ -80,7 +80,7 @@ class GoalsScreen extends ConsumerWidget {
                   ),
                 ),
                 if (goals.isEmpty)
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.symmetric(vertical: 48),
                     child: Center(
                       child: Text(

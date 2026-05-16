@@ -164,6 +164,10 @@ class _RecordExpenseScreenState extends ConsumerState<RecordExpenseScreen> {
     final categories =
         household.categories.where((c) => !c.archived).toList()
           ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    // Default-select the first category so the form starts in a valid state.
+    if (_categoryId == null && categories.isNotEmpty) {
+      _categoryId = categories.first.id;
+    }
     final cashMethods = household.paymentMethods
         .where((p) => p.type != 'credit')
         .toList();
@@ -294,7 +298,6 @@ class _RecordExpenseScreenState extends ConsumerState<RecordExpenseScreen> {
                       const SizedBox(height: 14),
                       Text(
                         _error!,
-                        style: const TextStyle(color: FtColors.danger),
                       ),
                     ],
                   ],
@@ -334,7 +337,7 @@ class _SubmitDot extends StatelessWidget {
         ),
         alignment: Alignment.center,
         child: busy
-            ? const SizedBox(
+            ? SizedBox(
                 width: 16,
                 height: 16,
                 child: CircularProgressIndicator(
@@ -366,7 +369,7 @@ class _AmountDisplay extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            const Text(
+            Text(
               'Rp',
               style: TextStyle(
                 color: FtColors.ink3,
@@ -413,7 +416,8 @@ class _BlinkCursorState extends State<_BlinkCursor>
     super.initState();
     _ctrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 600),
+      // Matches design's `ft-pulse` 2.4s ease-in-out breath.
+      duration: const Duration(milliseconds: 2400),
     )..repeat(reverse: true);
   }
 
@@ -425,9 +429,19 @@ class _BlinkCursorState extends State<_BlinkCursor>
 
   @override
   Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: Tween(begin: 0.2, end: 1.0).animate(_ctrl),
-      child: Container(width: 2, height: 38, color: FtColors.clay),
+    final curve = CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut);
+    return AnimatedBuilder(
+      animation: curve,
+      builder: (_, _) {
+        final t = curve.value;
+        return Opacity(
+          opacity: 0.45 + (1 - t) * 0.55,
+          child: Transform.scale(
+            scaleY: 1 - t * 0.05,
+            child: Container(width: 2, height: 38, color: FtColors.clay),
+          ),
+        );
+      },
     );
   }
 }
@@ -654,7 +668,7 @@ class _CardPicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (cards.isEmpty) {
-      return const Text(
+      return Text(
         'Belum ada kartu. Tambah dari menu Kartu kredit.',
         style: TextStyle(color: FtColors.ink3, fontSize: 12),
       );
@@ -726,7 +740,7 @@ class _CardTile extends StatelessWidget {
                     card.label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: FtColors.ink,
                       fontSize: 11.5,
                       fontWeight: FontWeight.w500,
@@ -738,7 +752,7 @@ class _CardTile extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               '•••• ${card.last4}',
-              style: const TextStyle(
+              style: TextStyle(
                 color: FtColors.ink3,
                 fontSize: 10,
                 fontFeatures: [FontFeature.tabularFigures()],
@@ -759,7 +773,7 @@ class _CardTile extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               'Sisa ${Money.format(remaining).replaceFirst('Rp ', 'Rp')}',
-              style: const TextStyle(
+              style: TextStyle(
                 color: FtColors.ink3,
                 fontSize: 9.5,
                 fontFeatures: [FontFeature.tabularFigures()],
@@ -817,6 +831,13 @@ class _CicilanPlans extends StatelessWidget {
     required bool selected,
     required VoidCallback onTap,
   }) {
+    // Caption rules — design uses "penuh" for the 1-month full-payment plan,
+    // "0%" for interest-free installments, "{apr}% pa" for accruing plans.
+    final caption = label == 'Lunas'
+        ? 'penuh'
+        : apr == 0
+            ? '0%'
+            : '${(apr * 100).toStringAsFixed(0)}% pa';
     return FtTapScale(
       scale: 0.95,
       haptic: false,
@@ -847,7 +868,7 @@ class _CicilanPlans extends StatelessWidget {
             ),
             const SizedBox(height: 1),
             Text(
-              apr == 0 ? '0%' : '${(apr * 100).toStringAsFixed(0)}% pa',
+              caption,
               style: TextStyle(
                 color: selected ? FtColors.bg : FtColors.ink3,
                 fontSize: 9,
@@ -885,7 +906,7 @@ class _CicilanPreview extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
                   'Cicilan per bulan',
                   style: TextStyle(color: FtColors.ink3, fontSize: 11),
@@ -894,7 +915,7 @@ class _CicilanPreview extends StatelessWidget {
               Text.rich(
                 TextSpan(
                   text: Money.format(plan.monthly),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'Newsreader',
                     fontSize: 18,
                     fontWeight: FontWeight.w500,
@@ -903,7 +924,7 @@ class _CicilanPreview extends StatelessWidget {
                   children: [
                     TextSpan(
                       text: ' × $months bln',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 11,
                         fontWeight: FontWeight.w400,
@@ -918,7 +939,7 @@ class _CicilanPreview extends StatelessWidget {
           const SizedBox(height: 4),
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
                   'Total bayar',
                   style: TextStyle(color: FtColors.ink3, fontSize: 10),
@@ -926,7 +947,7 @@ class _CicilanPreview extends StatelessWidget {
               ),
               Text(
                 Money.format(plan.total),
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 10,
                   color: FtColors.ink3,
@@ -943,7 +964,7 @@ class _CicilanPreview extends StatelessWidget {
                   Expanded(
                     child: Text(
                       'Bunga (${(apr * 100).toStringAsFixed(1)}% pa)',
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: FtColors.ink3,
                         fontSize: 10,
                       ),
@@ -951,7 +972,7 @@ class _CicilanPreview extends StatelessWidget {
                   ),
                   Text(
                     '+${Money.format(plan.totalInterest)}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: FtColors.ink3,
                       fontSize: 10,
                       fontFeatures: [FontFeature.tabularFigures()],
@@ -996,7 +1017,7 @@ class _MetaRow extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.calendar_today_outlined,
                     size: 14,
                     color: FtColors.ink3,
@@ -1005,7 +1026,7 @@ class _MetaRow extends StatelessWidget {
                   Expanded(
                     child: Text(
                       Dates.short(date),
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: FtColors.ink,
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
@@ -1077,7 +1098,7 @@ class _Keypad extends StatelessWidget {
     if (keyboardOpen) return const SizedBox.shrink();
     return Container(
       padding: const EdgeInsets.fromLTRB(22, 12, 22, 24),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: FtColors.surfaceAlt,
         border: Border(top: BorderSide(color: FtColors.line, width: 0.5)),
       ),
@@ -1105,7 +1126,7 @@ class _Keypad extends StatelessWidget {
                   alignment: Alignment.center,
                   child: Text(
                     k,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'Newsreader',
                       fontSize: 22,
                       fontWeight: FontWeight.w400,

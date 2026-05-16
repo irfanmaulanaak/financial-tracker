@@ -23,9 +23,13 @@ class Money {
 class Dates {
   static final _short = DateFormat('d MMM y', 'id_ID');
   static final _grouped = DateFormat('EEEE, d MMM y', 'id_ID');
+  static final _monthYear = DateFormat('MMM y', 'id_ID');
+  static final _month = DateFormat('MMM', 'id_ID');
 
   static String short(DateTime d) => _short.format(d);
   static String grouped(DateTime d) => _grouped.format(d);
+  static String monthYear(DateTime d) => _monthYear.format(d);
+  static String month(DateTime d) => _month.format(d);
 
   /// Returns midnight of the local day for `d` (used to group expenses).
   static DateTime dayKey(DateTime d) => DateTime(d.year, d.month, d.day);

@@ -52,7 +52,7 @@ class HomeHeader extends StatelessWidget {
                   household.name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: FtColors.ink3,
                     fontSize: 11,
                     letterSpacing: 0.3,
@@ -75,6 +75,8 @@ class HomeHeader extends StatelessWidget {
             _MemberStackPill(members: household.members, onTap: onMembers),
             const SizedBox(width: 8),
           ],
+          _BellButton(),
+          const SizedBox(width: 8),
           _OverflowMenu(onSelected: onSelected),
         ],
       ),
@@ -99,7 +101,7 @@ class _ProfileAvatar extends StatelessWidget {
       alignment: Alignment.center,
       child: Text(
         initialsOf(displayName),
-        style: const TextStyle(
+        style: TextStyle(
           fontFamily: 'Newsreader',
           fontSize: 14,
           color: FtColors.ink,
@@ -169,7 +171,7 @@ class _MemberStackPill extends StatelessWidget {
             const SizedBox(width: 4),
             Text(
               '${members.length}',
-              style: const TextStyle(
+              style: TextStyle(
                 color: FtColors.ink3,
                 fontSize: 10.5,
                 fontWeight: FontWeight.w600,
@@ -178,6 +180,35 @@ class _MemberStackPill extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BellButton extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return FtTapScale(
+      scale: 0.92,
+      onTap: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Notifikasi: tidak ada yang baru.')),
+        );
+      },
+      child: Container(
+        width: 38,
+        height: 38,
+        decoration: BoxDecoration(
+          color: FtColors.surface,
+          shape: BoxShape.circle,
+          border: Border.all(color: FtColors.line, width: 0.5),
+        ),
+        alignment: Alignment.center,
+        child: Icon(
+          Icons.notifications_none_rounded,
+          color: FtColors.ink2,
+          size: 18,
         ),
       ),
     );
@@ -206,7 +237,7 @@ class _OverflowMenu extends StatelessWidget {
           border: Border.all(color: FtColors.line, width: 0.5),
         ),
         alignment: Alignment.center,
-        child: const Icon(
+        child: Icon(
           Icons.more_horiz_rounded,
           color: FtColors.ink2,
           size: 18,
@@ -216,7 +247,6 @@ class _OverflowMenu extends StatelessWidget {
       onSelected: onSelected,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
-        side: const BorderSide(color: FtColors.line, width: 0.5),
       ),
       color: FtColors.surface,
       itemBuilder: (_) => const [
@@ -237,7 +267,11 @@ class _OverflowMenu extends StatelessWidget {
           value: 'export',
           child: _MenuRow(icon: Icons.ios_share_rounded, label: 'Ekspor data'),
         ),
-        PopupMenuDivider(),
+        PopupMenuItem(
+          value: 'settings',
+          child: _MenuRow(icon: Icons.settings_rounded, label: 'Pengaturan'),
+        ),
+        const PopupMenuDivider(),
         PopupMenuItem(
           value: 'signout',
           child: _MenuRow(

@@ -8,6 +8,7 @@ import '../../theme.dart';
 import '../../ui/ft_ui.dart';
 import '../household/household.dart';
 import '../household/household_providers.dart';
+import '../home/widgets/home_formatters.dart';
 import '../household/name_format.dart';
 import 'expense.dart';
 import 'expense_repository.dart';
@@ -46,36 +47,44 @@ class _ExpenseLogScreenState extends ConsumerState<ExpenseLogScreen> {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: _FilterDropdown(
-                        label: 'Anggota',
-                        value: _filterMemberId,
-                        options: [
-                          const _FilterOption(value: null, label: 'Semua'),
-                          for (final m in household.members)
-                            _FilterOption(
-                                value: m.userId, label: prettyName(m.displayName)),
-                        ],
-                        onChanged: (v) => setState(() => _filterMemberId = v),
+                padding: const EdgeInsets.fromLTRB(16, 8, 0, 10),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _FilterPill(
+                        label: 'Semua Anggota',
+                        active: _filterMemberId == null,
+                        onTap: () => setState(() => _filterMemberId = null),
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _FilterDropdown(
-                        label: 'Kategori',
-                        value: _filterCategoryId,
-                        options: [
-                          const _FilterOption(value: null, label: 'Semua'),
-                          for (final c in household.categories)
-                            _FilterOption(value: c.id, label: c.label),
-                        ],
-                        onChanged: (v) => setState(() => _filterCategoryId = v),
+                      for (final m in household.members) ...[
+                        const SizedBox(width: 8),
+                        _FilterPill(
+                          label: prettyName(m.displayName),
+                          active: _filterMemberId == m.userId,
+                          color: parseColor(m.color),
+                          onTap: () => setState(
+                              () => _filterMemberId = m.userId),
+                        ),
+                      ],
+                      const SizedBox(width: 16),
+                      _FilterPill(
+                        label: 'Semua Kategori',
+                        active: _filterCategoryId == null,
+                        onTap: () => setState(() => _filterCategoryId = null),
                       ),
-                    ),
-                  ],
+                      for (final c in household.categories) ...[
+                        const SizedBox(width: 8),
+                        _FilterPill(
+                          label: c.label.split(' ').first,
+                          active: _filterCategoryId == c.id,
+                          color: parseColor(c.color),
+                          onTap: () => setState(
+                              () => _filterCategoryId = c.id),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
               ),
             Expanded(
@@ -103,7 +112,7 @@ class _ExpenseLogScreenState extends ConsumerState<ExpenseLogScreen> {
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.receipt_long_outlined,
                                 size: 48,
                                 color: FtColors.ink4,
@@ -112,7 +121,6 @@ class _ExpenseLogScreenState extends ConsumerState<ExpenseLogScreen> {
                               Text(
                                 'Belum ada pengeluaran di siklus ini\n(${Dates.short(cycle.start)} – ${Dates.short(cycle.endExclusive.subtract(const Duration(days: 1)))})',
                                 textAlign: TextAlign.center,
-                                style: const TextStyle(color: FtColors.ink3),
                               ),
                             ],
                           ),
@@ -155,7 +163,7 @@ class _ExpenseLogScreenState extends ConsumerState<ExpenseLogScreen> {
                                   ),
                                   Text(
                                     Money.format(dayTotal),
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       color: FtColors.ink3,
                                     ),
                                   ),
@@ -246,7 +254,7 @@ class _ExpenseTile extends ConsumerWidget {
               children: [
                 Text(
                   cat?.label ?? '-',
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: FtColors.ink,
                     fontWeight: FontWeight.w600,
                   ),
@@ -260,7 +268,6 @@ class _ExpenseTile extends ConsumerWidget {
                   ].join(' • '),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: FtColors.ink3, fontSize: 12),
                 ),
               ],
             ),
@@ -268,7 +275,7 @@ class _ExpenseTile extends ConsumerWidget {
           const SizedBox(width: 12),
           Text(
             Money.format(expense.amount),
-            style: const TextStyle(
+            style: TextStyle(
               color: FtColors.ink,
               fontWeight: FontWeight.bold,
             ),
@@ -313,79 +320,48 @@ IconData _iconFor(String name) => switch (name) {
   _ => Icons.category,
 };
 
-class _FilterOption {
-  const _FilterOption({required this.value, required this.label});
-  final String? value;
-  final String label;
-}
-
-/// Compact pill-styled dropdown that stays inside its cell — no overflow into
-/// neighbouring widgets even on small phones. Replaces the default
-/// `DropdownButtonFormField` which paints labels on top of the title bar.
-class _FilterDropdown extends StatelessWidget {
-  const _FilterDropdown({
+class _FilterPill extends StatelessWidget {
+  const _FilterPill({
     required this.label,
-    required this.value,
-    required this.options,
-    required this.onChanged,
+    required this.active,
+    required this.onTap,
+    this.color,
   });
-
   final String label;
-  final String? value;
-  final List<_FilterOption> options;
-  final ValueChanged<String?> onChanged;
+  final bool active;
+  final VoidCallback onTap;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(12, 6, 8, 6),
-      decoration: BoxDecoration(
-        color: FtColors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: FtColors.line, width: 0.5),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              color: FtColors.ink3,
-              fontSize: 10,
-              letterSpacing: 0.3,
-            ),
+    return FtTapScale(
+      scale: 0.96,
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: active
+              ? (color ?? FtColors.ink)
+              : FtColors.surface,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: active
+                ? (color ?? FtColors.ink)
+                : FtColors.line,
+            width: 0.5,
           ),
-          DropdownButtonHideUnderline(
-            child: DropdownButton<String?>(
-              value: value,
-              isExpanded: true,
-              isDense: true,
-              icon: const Icon(Icons.expand_more_rounded,
-                  size: 18, color: FtColors.ink3),
-              style: const TextStyle(
-                color: FtColors.ink,
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-              ),
-              dropdownColor: FtColors.surface,
-              borderRadius: BorderRadius.circular(12),
-              items: [
-                for (final o in options)
-                  DropdownMenuItem<String?>(
-                    value: o.value,
-                    child: Text(
-                      o.label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-              ],
-              onChanged: onChanged,
-            ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: active ? Colors.white : FtColors.ink2,
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
           ),
-        ],
+        ),
       ),
     );
   }
 }
+

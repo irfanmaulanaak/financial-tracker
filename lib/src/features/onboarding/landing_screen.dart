@@ -42,7 +42,7 @@ class LandingScreen extends ConsumerWidget {
                           width: 0.5,
                         ),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.account_balance_wallet_outlined,
                         size: 32,
                         color: FtColors.clay,
@@ -55,7 +55,7 @@ class LandingScreen extends ConsumerWidget {
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 8),
-                    const Text(
+                    Text(
                       'Buat rumah tangga baru, atau gabung dengan kode undangan.',
                       textAlign: TextAlign.center,
                       style: TextStyle(color: FtColors.ink3),

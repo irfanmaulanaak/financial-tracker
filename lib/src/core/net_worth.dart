@@ -31,14 +31,16 @@ class CardBalance {
 class NetWorth {
   final int cash;
   final int savings;
+  final int investments;
   final int debt;
   const NetWorth({
     required this.cash,
     required this.savings,
+    required this.investments,
     required this.debt,
   });
 
-  int get assets => cash + savings;
+  int get assets => cash + savings + investments;
   int get total => assets - debt;
 }
 
@@ -46,10 +48,12 @@ NetWorth computeNetWorth({
   required Iterable<AccountBalance> cash,
   required Iterable<AccountBalance> savings,
   required Iterable<CardBalance> cards,
+  int investments = 0,
 }) {
   return NetWorth(
     cash: cash.fold<int>(0, (a, b) => a + b.value),
     savings: savings.fold<int>(0, (a, b) => a + b.value),
+    investments: investments,
     debt: cards.fold<int>(0, (a, b) => a + b.used),
   );
 }

@@ -47,7 +47,7 @@ class IncomeLogScreen extends ConsumerWidget {
                   error: (e, _) => Center(child: Text('Gagal: $e')),
                   data: (items) {
                     if (items.isEmpty) {
-                      return const Center(
+                      return Center(
                         child: Padding(
                           padding: EdgeInsets.all(32),
                           child: Text(
@@ -102,7 +102,7 @@ class IncomeLogScreen extends ConsumerWidget {
                           },
                           child: Row(
                             children: [
-                              const CircleAvatar(
+                              CircleAvatar(
                                 backgroundColor: Color(0x1A5E7A64),
                                 child: Icon(
                                   Icons.arrow_downward,
@@ -116,7 +116,7 @@ class IncomeLogScreen extends ConsumerWidget {
                                   children: [
                                     Text(
                                       incomeSourceLabel(inc.source),
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         color: FtColors.ink,
                                         fontWeight: FontWeight.w600,
                                       ),
@@ -134,7 +134,7 @@ class IncomeLogScreen extends ConsumerWidget {
                                       ].join(' • '),
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         color: FtColors.ink3,
                                         fontSize: 12,
                                       ),
@@ -145,7 +145,7 @@ class IncomeLogScreen extends ConsumerWidget {
                               const SizedBox(width: 12),
                               Text(
                                 Money.format(inc.amount),
-                                style: const TextStyle(
+                                style: TextStyle(
                                   color: FtColors.sage,
                                   fontWeight: FontWeight.bold,
                                 ),

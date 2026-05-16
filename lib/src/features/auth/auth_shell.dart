@@ -72,7 +72,7 @@ class AuthShell extends StatelessWidget {
                       const SizedBox(height: 14),
                       Text(
                         subtitle,
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: FtColors.ink3,
                           fontSize: 14,
                           height: 1.55,
@@ -131,7 +131,7 @@ class _BrandMark extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 12),
-        const Column(
+        Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -179,12 +179,11 @@ class AuthErrorBanner extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.error_outline, color: FtColors.danger, size: 16),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               message,
-              style: const TextStyle(
+              style: TextStyle(
                 color: FtColors.danger,
                 fontSize: 12,
                 height: 1.4,
@@ -226,7 +225,7 @@ class AuthInfoBanner extends StatelessWidget {
           Expanded(
             child: Text(
               message,
-              style: const TextStyle(
+              style: TextStyle(
                 color: FtColors.moss,
                 fontSize: 12,
                 height: 1.5,
@@ -245,7 +244,7 @@ class OrDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
+    return Padding(
       padding: EdgeInsets.symmetric(vertical: 18),
       child: Row(
         children: [

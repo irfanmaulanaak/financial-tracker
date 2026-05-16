@@ -7,18 +7,32 @@ import '../../../ui/ft_ui.dart';
 import 'home_formatters.dart';
 
 class AssetHero extends StatelessWidget {
-  const AssetHero({super.key, required this.nw, required this.onTap});
+  const AssetHero({
+    super.key,
+    required this.nw,
+    required this.onTap,
+    this.cycleNet,
+  });
 
   final NetWorth nw;
   final VoidCallback onTap;
 
+  /// This cycle's net (income − spend). When non-null and assets > 0,
+  /// renders a green/red pill below the hero number.
+  final int? cycleNet;
+
   @override
   Widget build(BuildContext context) {
+    final showDelta = cycleNet != null && cycleNet != 0 && nw.total > 0;
+    final positive = (cycleNet ?? 0) >= 0;
+    final pctOfTotal = showDelta && nw.total > 0
+        ? ((cycleNet!.abs() / nw.total) * 100).toStringAsFixed(1)
+        : null;
     return FtTapScale(
       scale: 0.985,
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(22, 0, 22, 24),
+        padding: const EdgeInsets.fromLTRB(22, 0, 22, 18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -30,7 +44,7 @@ class AssetHero extends StatelessWidget {
               child: Text.rich(
                 TextSpan(
                   text: moneyNoSymbol(nw.total),
-                  children: const [
+                  children: [
                     TextSpan(
                       text: ' IDR',
                       style: TextStyle(
@@ -53,17 +67,71 @@ class AssetHero extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            const Text(
-              'Tunai + tabungan dikurangi utang kartu',
-              style: TextStyle(
-                color: FtColors.ink3,
-                fontSize: 11,
-                letterSpacing: 0.1,
+            if (showDelta)
+              Row(
+                children: [
+                  _DeltaPill(
+                      positive: positive,
+                      amount: cycleNet!.abs(),
+                      pct: pctOfTotal),
+                  const SizedBox(width: 10),
+                  Text(
+                    'siklus ini',
+                    style: TextStyle(
+                      color: FtColors.ink3,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              )
+            else
+              Text(
+                'Tunai + tabungan + investasi · dikurangi utang',
+                style: TextStyle(
+                  color: FtColors.ink3,
+                  fontSize: 11,
+                  letterSpacing: 0.1,
+                ),
               ),
-            ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _DeltaPill extends StatelessWidget {
+  const _DeltaPill({
+    required this.positive,
+    required this.amount,
+    required this.pct,
+  });
+  final bool positive;
+  final int amount;
+  final String? pct;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = positive ? FtColors.moss : FtColors.danger;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          positive ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
+          size: 12,
+          color: color,
+        ),
+        const SizedBox(width: 4),
+        Text(
+          '${positive ? '+' : '−'}${compactMoney(amount)}${pct != null ? ' · ${positive ? '+' : '−'}$pct%' : ''}',
+          style: TextStyle(
+            color: color,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -92,11 +160,20 @@ class AssetBreakdown extends StatelessWidget {
           ),
           const Divider(),
           _BreakdownRow(
-            'Utang kartu',
-            'mengurangi aset',
-            -nw.debt,
-            FtColors.plum,
+            'Investasi',
+            'reksadana, saham, emas',
+            nw.investments,
+            FtColors.clay,
           ),
+          if (nw.debt > 0) ...[
+            const Divider(),
+            _BreakdownRow(
+              'Utang kartu',
+              'mengurangi aset',
+              -nw.debt,
+              FtColors.plum,
+            ),
+          ],
         ],
       ),
     );
@@ -123,7 +200,7 @@ class _BreakdownRow extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: FtColors.ink,
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
@@ -132,7 +209,6 @@ class _BreakdownRow extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   hint,
-                  style: const TextStyle(color: FtColors.ink3, fontSize: 11),
                 ),
               ],
             ),

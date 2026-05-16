@@ -7,6 +7,8 @@ import '../theme.dart';
 import 'ft_haptics.dart';
 import 'ft_motion.dart';
 
+export 'ft_motion.dart';
+
 class FtCard extends StatelessWidget {
   const FtCard({
     super.key,
@@ -90,31 +92,75 @@ class FtSectionHeader extends StatelessWidget {
 }
 
 class FtProgressBar extends StatelessWidget {
-  const FtProgressBar({
+  FtProgressBar({
     super.key,
     required this.value,
     required this.max,
     required this.color,
     this.height = 4,
-    this.trackColor = FtColors.line,
+    this.trackColor,
+    this.overflowColor,
   });
 
   final num value;
   final num max;
   final Color color;
   final double height;
-  final Color trackColor;
+  final Color? trackColor;
+
+  /// When `value > max`, the visible track is split: filled portion = base color,
+  /// remaining = overflowColor (typically `FtColors.danger`). Matches design's
+  /// `Bar overflowColor={theme.danger}` from `screens-home.jsx`.
+  final Color? overflowColor;
 
   @override
   Widget build(BuildContext context) {
-    final pct = max <= 0 ? 0.0 : (value / max).clamp(0.0, 1.0).toDouble();
+    if (max <= 0) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(999),
+        child: LinearProgressIndicator(
+          value: 0,
+          minHeight: height,
+          backgroundColor: trackColor ?? FtColors.line,
+          valueColor: AlwaysStoppedAnimation(color),
+        ),
+      );
+    }
+    final raw = (value / max).toDouble();
+    final over = overflowColor != null && raw > 1.0;
+    if (!over) {
+      final pct = raw.clamp(0.0, 1.0);
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(999),
+        child: LinearProgressIndicator(
+          value: pct,
+          minHeight: height,
+          backgroundColor: trackColor ?? FtColors.line,
+          valueColor: AlwaysStoppedAnimation(color),
+        ),
+      );
+    }
+    // Two-segment fill: first part full of base color (representing the
+    // budgeted spend), then a small wedge of overflowColor for the excess.
+    // Total filled = 1.0 because spend is over-max; sized by the over-amount.
+    final overFraction = ((raw - 1.0) / raw).clamp(0.0, 1.0);
+    final baseFraction = 1.0 - overFraction;
     return ClipRRect(
       borderRadius: BorderRadius.circular(999),
-      child: LinearProgressIndicator(
-        value: pct,
-        minHeight: height,
-        backgroundColor: trackColor,
-        valueColor: AlwaysStoppedAnimation(color),
+      child: SizedBox(
+        height: height,
+        child: Row(
+          children: [
+            Expanded(
+              flex: (baseFraction * 1000).round().clamp(1, 1000),
+              child: Container(color: color),
+            ),
+            Expanded(
+              flex: (overFraction * 1000).round().clamp(1, 1000),
+              child: Container(color: overflowColor),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -139,16 +185,16 @@ class FtStatGrid extends StatelessWidget {
 }
 
 class FtStatItem extends StatelessWidget {
-  const FtStatItem({
+  FtStatItem({
     super.key,
     required this.label,
     required this.value,
-    this.color = FtColors.ink,
+    this.color,
   });
 
   final String label;
   final String value;
-  final Color color;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
@@ -159,7 +205,7 @@ class FtStatItem extends StatelessWidget {
           label,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
+          style: TextStyle(
             color: FtColors.ink3,
             fontSize: 10,
             letterSpacing: 0.3,
@@ -171,7 +217,7 @@ class FtStatItem extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
-            color: color,
+            color: color ?? FtColors.ink,
             fontSize: 12,
             fontWeight: FontWeight.w600,
             fontFeatures: const [FontFeature.tabularFigures()],
@@ -222,9 +268,8 @@ class FtAppChrome extends StatelessWidget {
 
 enum FtTab { home, spend, assets, goals, cards }
 
-/// Floating glass-pill bottom nav. 5 evenly-spaced tabs — matches the
-/// `claude-design` TabBar exactly. The "+" action lives on individual screens
-/// (MonthStrip on home, FtAddButton on sub-screens) — never in the nav itself.
+/// Floating glass-pill bottom nav with 5 evenly-spaced tabs. Mirrors the
+/// design's `TabBar` in `claude-design/app.jsx` — no central action button.
 class FtBottomNav extends StatelessWidget {
   const FtBottomNav({super.key, required this.current});
 
@@ -233,7 +278,6 @@ class FtBottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
-    // Adaptive label sizing — tiny phones (<360px) get smaller text.
     final compact = width < 360;
     final labelSize = compact ? 9.0 : 9.5;
     final iconSize = compact ? 19.0 : 20.0;
@@ -250,6 +294,20 @@ class FtBottomNav extends StatelessWidget {
       _FtNavItem(FtTab.cards, Icons.credit_card_rounded,
           Icons.credit_card_outlined, 'Utang', '/cards'),
     ];
+
+    final nav = Row(
+      children: [
+        for (final item in items)
+          Expanded(
+            child: _FtNavButton(
+              item: item,
+              active: current == item.tab,
+              labelSize: labelSize,
+              iconSize: iconSize,
+            ),
+          ),
+      ],
+    );
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(28),
@@ -269,19 +327,7 @@ class FtBottomNav extends StatelessWidget {
               ),
             ],
           ),
-          child: Row(
-            children: [
-              for (final item in items)
-                Expanded(
-                  child: _FtNavButton(
-                    item: item,
-                    active: current == item.tab,
-                    labelSize: labelSize,
-                    iconSize: iconSize,
-                  ),
-                ),
-            ],
-          ),
+          child: nav,
         ),
       ),
     );
@@ -411,7 +457,7 @@ class FtSubHeader extends StatelessWidget {
                 border: Border.all(color: FtColors.line, width: 0.5),
               ),
               alignment: Alignment.center,
-              child: const Icon(
+              child: Icon(
                 Icons.arrow_back_rounded,
                 size: 18,
                 color: FtColors.ink,
@@ -453,14 +499,84 @@ class FtAddButton extends StatelessWidget {
       child: Container(
         width: 38,
         height: 38,
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: FtColors.ink,
           shape: BoxShape.circle,
         ),
         alignment: Alignment.center,
-        child: const Icon(Icons.add_rounded, size: 20, color: FtColors.bg),
+        child: Icon(Icons.add_rounded, size: 20, color: FtColors.bg),
       ),
     );
     return tooltip == null ? child : Tooltip(message: tooltip!, child: child);
+  }
+}
+
+/// Skeleton shimmer loader. Shows a shifting gradient over placeholder blocks.
+class FtShimmer extends StatefulWidget {
+  const FtShimmer({super.key, required this.child});
+  final Widget child;
+
+  @override
+  State<FtShimmer> createState() => _FtShimmerState();
+}
+
+class _FtShimmerState extends State<FtShimmer>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _ctrl,
+      builder: (context, child) {
+        return ShaderMask(
+          shaderCallback: (bounds) {
+            return LinearGradient(
+              colors: [
+                FtColors.surfaceAlt,
+                FtColors.lineStrong,
+                FtColors.surfaceAlt,
+              ],
+              stops: const [0.0, 0.5, 1.0],
+              transform: _SlideGradientTransform(
+                percent: _ctrl.value,
+              ),
+            ).createShader(bounds);
+          },
+          blendMode: BlendMode.srcIn,
+          child: child,
+        );
+      },
+      child: widget.child,
+    );
+  }
+}
+
+class _SlideGradientTransform extends GradientTransform {
+  const _SlideGradientTransform({required this.percent});
+  final double percent;
+
+  @override
+  Matrix4? transform(Rect bounds, {TextDirection? textDirection}) {
+    return Matrix4.translationValues(
+      bounds.width * (percent * 2 - 0.5),
+      0,
+      0,
+    );
   }
 }

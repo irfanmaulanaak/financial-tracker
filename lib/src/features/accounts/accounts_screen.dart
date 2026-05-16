@@ -14,6 +14,8 @@ import '../investments/investments_screen.dart' show investmentsProvider;
 import 'account.dart';
 import 'accounts_repository.dart';
 import 'widgets/account_edit_sheet.dart';
+import 'widgets/alokasi_tab.dart';
+import 'widgets/investasi_list.dart';
 
 class AccountsScreen extends ConsumerStatefulWidget {
   const AccountsScreen({super.key});
@@ -24,7 +26,7 @@ class AccountsScreen extends ConsumerStatefulWidget {
 
 class _AccountsScreenState extends ConsumerState<AccountsScreen>
     with SingleTickerProviderStateMixin {
-  late final TabController _tabs = TabController(length: 2, vsync: this)
+  late final TabController _tabs = TabController(length: 3, vsync: this)
     ..addListener(() {
       if (mounted) setState(() {});
     });
@@ -62,7 +64,11 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen>
             FtSubHeader(
               title: 'Aset',
               trailing: FtAddButton(
-                tooltip: _tabs.index == 0 ? 'Tambah rekening' : 'Posisi baru',
+                tooltip: switch (_tabs.index) {
+                  0 => 'Tambah rekening',
+                  1 => 'Posisi baru',
+                  _ => '',
+                },
                 onTap: () => _onAdd(context, household),
               ),
             ),
@@ -120,7 +126,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen>
                   },
                   dividerColor: Colors.transparent,
                   indicatorPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  indicator: const BoxDecoration(
+                  indicator: BoxDecoration(
                     color: FtColors.ink,
                     borderRadius: BorderRadius.all(Radius.circular(10)),
                   ),
@@ -129,6 +135,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen>
                   tabs: const [
                     Tab(text: 'Rekening'),
                     Tab(text: 'Investasi'),
+                    Tab(text: 'Alokasi'),
                   ],
                 ),
               ),
@@ -138,11 +145,15 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen>
                 controller: _tabs,
                 children: [
                   _RekeningList(household: household),
-                  _InvestasiList(
+                  InvestasiList(
                     householdId: household.id,
                     items: investments,
                     isLoading: investmentsAsync.isLoading,
                     error: investmentsAsync.error,
+                  ),
+                  AlokasiTab(
+                    household: household,
+                    investments: investments,
                   ),
                 ],
               ),
@@ -169,10 +180,10 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen>
             value: result.value,
           );
     } else {
-      final draft = await showModalBottomSheet<_InvestmentDraft>(
+      final draft = await showModalBottomSheet<InvestmentDraft>(
         context: context,
         isScrollControlled: true,
-        builder: (_) => const _InvestmentEditSheet(),
+        builder: (_) => const InvestmentEditSheet(),
       );
       if (draft == null) return;
       await ref.read(investmentsRepositoryProvider).add(
@@ -198,7 +209,7 @@ class _RekeningList extends ConsumerWidget {
     ]..sort((a, b) => b.value.compareTo(a.value));
 
     if (all.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
           padding: EdgeInsets.all(32),
           child: Text(
@@ -253,7 +264,7 @@ class _RekeningList extends ConsumerWidget {
                             a.label,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: FtColors.ink,
                               fontWeight: FontWeight.w600,
                             ),
@@ -267,7 +278,7 @@ class _RekeningList extends ConsumerWidget {
                       const SizedBox(height: 2),
                       Text(
                         a.hint!,
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: FtColors.ink3,
                           fontSize: 11,
                         ),
@@ -278,7 +289,7 @@ class _RekeningList extends ConsumerWidget {
               ),
               Text(
                 Money.format(a.value),
-                style: const TextStyle(
+                style: TextStyle(
                   color: FtColors.ink,
                   fontWeight: FontWeight.w700,
                   fontSize: 13,
@@ -379,352 +390,4 @@ class _KindChip extends StatelessWidget {
   }
 }
 
-class _InvestasiList extends ConsumerWidget {
-  const _InvestasiList({
-    required this.householdId,
-    required this.items,
-    required this.isLoading,
-    required this.error,
-  });
-  final String householdId;
-  final List<Investment> items;
-  final bool isLoading;
-  final Object? error;
 
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    if (isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    if (error != null) {
-      return Center(child: Text('Gagal: $error'));
-    }
-    final summary = summarisePortfolio(items);
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(22, 4, 22, 120),
-      children: [
-        _InvestasiSummary(summary: summary),
-        const SizedBox(height: 14),
-        if (items.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 36),
-            child: Center(
-              child: Text(
-                'Belum ada investasi.\nTambah posisi via tombol "+".',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: FtColors.ink3),
-              ),
-            ),
-          )
-        else
-          for (final i in items)
-            _InvestmentTile(
-              inv: i,
-              onUpdate: () => _openUpdate(context, ref, i),
-              onDelete: () => _confirmDelete(context, ref, i),
-            ),
-      ],
-    );
-  }
-
-  Future<void> _openUpdate(
-      BuildContext context, WidgetRef ref, Investment i) async {
-    final ctrl = TextEditingController(text: i.currentValue.toString());
-    final v = await showModalBottomSheet<int>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => Padding(
-        padding: EdgeInsets.only(
-          left: 16,
-          right: 16,
-          top: 16,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Update ${i.label}',
-                style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 12),
-            TextField(
-              controller: ctrl,
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration: const InputDecoration(
-                labelText: 'Nilai sekarang',
-                prefixText: 'Rp ',
-              ),
-            ),
-            const SizedBox(height: 16),
-            FilledButton(
-              onPressed: () {
-                final v = int.tryParse(ctrl.text);
-                if (v == null) return;
-                Navigator.pop(context, v);
-              },
-              child: const Text('Simpan'),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (v != null) {
-      await ref
-          .read(investmentsRepositoryProvider)
-          .updateValue(hid: householdId, id: i.id, currentValue: v);
-    }
-  }
-
-  Future<void> _confirmDelete(
-      BuildContext context, WidgetRef ref, Investment i) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text('Hapus "${i.label}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Batal'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Hapus'),
-          ),
-        ],
-      ),
-    );
-    if (ok == true) {
-      await ref
-          .read(investmentsRepositoryProvider)
-          .delete(hid: householdId, id: i.id);
-    }
-  }
-}
-
-class _InvestasiSummary extends StatelessWidget {
-  const _InvestasiSummary({required this.summary});
-  final PortfolioSummary summary;
-
-  @override
-  Widget build(BuildContext context) {
-    final positive = summary.totalGain >= 0;
-    final color = positive ? FtColors.sage : FtColors.danger;
-    return FtCard(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Eyebrow('Total portofolio'),
-          const SizedBox(height: 6),
-          Text(
-            Money.format(summary.totalValue),
-            style: Theme.of(context).textTheme.headlineMedium,
-          ),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              Icon(
-                positive
-                    ? Icons.arrow_upward_rounded
-                    : Icons.arrow_downward_rounded,
-                size: 14,
-                color: color,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                '${positive ? '+' : ''}${Money.format(summary.totalGain)} (${(summary.gainPct * 100).toStringAsFixed(1)}%)',
-                style: TextStyle(color: color, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(width: 10),
-              Text(
-                '${summary.distinctTypes} jenis aset',
-                style: const TextStyle(color: FtColors.ink3, fontSize: 11),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _InvestmentTile extends StatelessWidget {
-  const _InvestmentTile({
-    required this.inv,
-    required this.onUpdate,
-    required this.onDelete,
-  });
-  final Investment inv;
-  final VoidCallback onUpdate;
-  final VoidCallback onDelete;
-
-  @override
-  Widget build(BuildContext context) {
-    final positive = inv.gain >= 0;
-    final color = positive ? FtColors.sage : FtColors.danger;
-    return FtCard(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      onTap: onUpdate,
-      onLongPress: onDelete,
-      child: Row(
-        children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: FtColors.clay.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                  color: FtColors.clay.withValues(alpha: 0.24), width: 0.5),
-            ),
-            child: const Icon(Icons.trending_up, color: FtColors.clay),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  inv.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: FtColors.ink,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '${investmentTypeLabel(inv.type)} • cost ${Money.format(inv.costBasis)}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: FtColors.ink3, fontSize: 12),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                Money.format(inv.currentValue),
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              Text(
-                '${positive ? '+' : ''}${(inv.gainPct * 100).toStringAsFixed(1)}%',
-                style: TextStyle(color: color, fontSize: 12),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _InvestmentDraft {
-  final String label;
-  final InvestmentType type;
-  final int currentValue;
-  final int costBasis;
-  const _InvestmentDraft(this.label, this.type, this.currentValue, this.costBasis);
-}
-
-class _InvestmentEditSheet extends StatefulWidget {
-  const _InvestmentEditSheet();
-  @override
-  State<_InvestmentEditSheet> createState() => _InvestmentEditSheetState();
-}
-
-class _InvestmentEditSheetState extends State<_InvestmentEditSheet> {
-  final _label = TextEditingController();
-  final _current = TextEditingController();
-  final _cost = TextEditingController();
-  InvestmentType _type = InvestmentType.reksadana;
-
-  @override
-  void dispose() {
-    _label.dispose();
-    _current.dispose();
-    _cost.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 16,
-        right: 16,
-        top: 16,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-      ),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text('Investasi baru',
-                style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _label,
-              textCapitalization: TextCapitalization.words,
-              decoration: const InputDecoration(
-                labelText: 'Nama',
-                hintText: 'mis. BBCA / Sucorinvest Sharia',
-              ),
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<InvestmentType>(
-              initialValue: _type,
-              items: [
-                for (final t in InvestmentType.values)
-                  DropdownMenuItem(
-                    value: t,
-                    child: Text(investmentTypeLabel(t)),
-                  ),
-              ],
-              onChanged: (v) =>
-                  setState(() => _type = v ?? InvestmentType.reksadana),
-              decoration: const InputDecoration(labelText: 'Jenis'),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _cost,
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration: const InputDecoration(
-                labelText: 'Modal (cost basis)',
-                prefixText: 'Rp ',
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _current,
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration: const InputDecoration(
-                labelText: 'Nilai saat ini',
-                prefixText: 'Rp ',
-              ),
-            ),
-            const SizedBox(height: 24),
-            FilledButton(
-              onPressed: () {
-                final label = _label.text.trim();
-                final cv = int.tryParse(_current.text) ?? 0;
-                final cb = int.tryParse(_cost.text) ?? 0;
-                if (label.isEmpty || cv < 0 || cb < 0) return;
-                Navigator.pop(
-                    context, _InvestmentDraft(label, _type, cv, cb));
-              },
-              child: const Text('Simpan'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

@@ -25,7 +25,7 @@ Future<T?> showFtActionSheet<T>({
         curve: Curves.easeOutCubic,
         padding: EdgeInsets.only(bottom: viewInsets.bottom),
         child: Container(
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             color: FtColors.bg,
             borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
           ),
@@ -202,7 +202,7 @@ class _ActionTile extends StatelessWidget {
                   const SizedBox(height: 3),
                   Text(
                     action.detail,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: FtColors.ink3,
                       fontSize: 11.5,
                       height: 1.3,
@@ -211,7 +211,7 @@ class _ActionTile extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(
+            Icon(
               Icons.chevron_right_rounded,
               size: 18,
               color: FtColors.ink4,
