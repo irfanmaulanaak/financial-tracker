@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
+import '../../theme.dart';
 import 'auth_repository.dart';
 
-/// "Lanjutkan dengan Google" button. Handles its own busy state + surfacing
-/// errors via `onError` callback (parent typically sets a banner). User
-/// dismissal (canceled) is treated as a no-op silently.
+/// "Lanjutkan dengan Google" — outlined button on cream surface with the
+/// official 4-color "G" mark drawn via [CustomPaint] (no extra asset needed).
 class GoogleSignInButton extends ConsumerStatefulWidget {
   const GoogleSignInButton({
     super.key,
@@ -32,7 +32,6 @@ class _GoogleSignInButtonState extends ConsumerState<GoogleSignInButton> {
     setState(() => _busy = true);
     try {
       await ref.read(authRepositoryProvider).signInWithGoogle();
-      // Router redirect takes over from here.
     } on GoogleSignInException catch (e) {
       if (e.code == GoogleSignInExceptionCode.canceled) return;
       widget.onError(_friendlyGoogleError(e));
@@ -47,20 +46,69 @@ class _GoogleSignInButtonState extends ConsumerState<GoogleSignInButton> {
 
   @override
   Widget build(BuildContext context) {
-    return OutlinedButton.icon(
+    return OutlinedButton(
       onPressed: (widget.enabled && !_busy) ? _go : null,
-      icon: _busy
-          ? const SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(strokeWidth: 2))
-          : const Icon(Icons.g_mobiledata, size: 28),
-      label: Text(widget.label),
-      style: OutlinedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 14),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          _busy
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: FtColors.ink2,
+                  ),
+                )
+              : const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CustomPaint(painter: _GoogleGPainter()),
+                ),
+          const SizedBox(width: 12),
+          Text(widget.label),
+        ],
       ),
     );
   }
+}
+
+/// Hand-drawn approximation of the Google "G" logo (4-color). Good enough for
+/// an internal app; avoids bundling an asset.
+class _GoogleGPainter extends CustomPainter {
+  const _GoogleGPainter();
+  @override
+  void paint(Canvas canvas, Size size) {
+    final cx = size.width / 2;
+    final cy = size.height / 2;
+    final r = size.width / 2;
+    final inner = r * 0.55;
+
+    void arc(double startDeg, double sweepDeg, Color color) {
+      final paint = Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = r - inner;
+      final rect = Rect.fromCircle(
+          center: Offset(cx, cy), radius: (r + inner) / 2);
+      canvas.drawArc(rect, startDeg * 3.1415926535 / 180,
+          sweepDeg * 3.1415926535 / 180, false, paint);
+    }
+
+    // Red top, Yellow left, Green bottom, Blue right (clockwise from -90°)
+    arc(-90, 90, const Color(0xFFEA4335)); // red
+    arc(180, 90, const Color(0xFFFBBC05)); // yellow
+    arc(90, 90, const Color(0xFF34A853)); // green
+    arc(0, 90, const Color(0xFF4285F4)); // blue
+
+    // Horizontal bar (right side of the G)
+    final bar = Paint()..color = const Color(0xFF4285F4);
+    final barRect = Rect.fromLTWH(cx, cy - 1.6, r, 3.2);
+    canvas.drawRect(barRect, bar);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 String _friendlyGoogleError(GoogleSignInException e) => switch (e.code) {

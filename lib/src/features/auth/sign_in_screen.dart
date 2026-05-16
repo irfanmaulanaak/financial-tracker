@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../theme.dart';
 import 'auth_repository.dart';
+import 'auth_shell.dart';
 import 'google_sign_in_button.dart';
 
 class SignInScreen extends ConsumerStatefulWidget {
@@ -18,6 +20,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   final _email = TextEditingController();
   final _password = TextEditingController();
   bool _busy = false;
+  bool _obscure = true;
   String? _error;
 
   @override
@@ -38,7 +41,6 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
             email: _email.text.trim(),
             password: _password.text,
           );
-      // Router redirect takes over.
     } on FirebaseAuthException catch (e) {
       setState(() => _error = _friendlyAuthError(e));
     } finally {
@@ -48,79 +50,103 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Masuk')),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text('Selamat datang kembali',
-                    style: Theme.of(context).textTheme.headlineSmall),
-                const SizedBox(height: 24),
-                TextFormField(
+    return AuthShell(
+      eyebrow: 'Masuk',
+      headline: 'Selamat datang\nkembali.',
+      subtitle:
+          'Lanjutkan mengatur keuangan keluarga di tempat yang sama.',
+      quietFooter: Wrap(
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          const Text(
+            'Belum punya akun?',
+            style: TextStyle(color: FtColors.ink3, fontSize: 13),
+          ),
+          TextButton(
+            onPressed: _busy ? null : () => context.go('/sign-up'),
+            style: TextButton.styleFrom(
+              minimumSize: Size.zero,
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: Text(
+              'Daftar',
+              style: TextStyle(
+                color: FtColors.clay,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
+      ),
+      children: [
+        Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              LabeledField(
+                label: 'Email',
+                child: TextFormField(
                   controller: _email,
                   keyboardType: TextInputType.emailAddress,
                   autocorrect: false,
-                  decoration: const InputDecoration(labelText: 'Email'),
-                  validator: (v) =>
-                      (v == null || !v.contains('@')) ? 'Email tidak valid' : null,
+                  textInputAction: TextInputAction.next,
+                  decoration:
+                      const InputDecoration(hintText: 'kamu@email.com'),
+                  validator: (v) => (v == null || !v.contains('@'))
+                      ? 'Email tidak valid'
+                      : null,
                 ),
-                const SizedBox(height: 12),
-                TextFormField(
+              ),
+              LabeledField(
+                label: 'Password',
+                child: TextFormField(
                   controller: _password,
-                  obscureText: true,
-                  decoration: const InputDecoration(labelText: 'Password'),
-                  validator: (v) =>
-                      (v == null || v.length < 6) ? 'Minimal 6 karakter' : null,
-                ),
-                if (_error != null) ...[
-                  const SizedBox(height: 12),
-                  Text(_error!,
-                      style:
-                          TextStyle(color: Theme.of(context).colorScheme.error)),
-                ],
-                const SizedBox(height: 24),
-                FilledButton(
-                  onPressed: _busy ? null : _submit,
-                  child: _busy
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Text('Masuk'),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    const Expanded(child: Divider()),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      child: Text('atau',
-                          style:
-                              TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                  obscureText: _obscure,
+                  textInputAction: TextInputAction.done,
+                  onFieldSubmitted: (_) => _submit(),
+                  decoration: InputDecoration(
+                    hintText: '••••••',
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                        size: 18,
+                        color: FtColors.ink3,
+                      ),
+                      onPressed: () =>
+                          setState(() => _obscure = !_obscure),
                     ),
-                    const Expanded(child: Divider()),
-                  ],
+                  ),
+                  validator: (v) => (v == null || v.length < 6)
+                      ? 'Minimal 6 karakter'
+                      : null,
                 ),
-                const SizedBox(height: 16),
-                GoogleSignInButton(
-                  enabled: !_busy,
-                  onError: (msg) => setState(() => _error = msg),
-                ),
-                const SizedBox(height: 12),
-                TextButton(
-                  onPressed: _busy ? null : () => context.go('/sign-up'),
-                  child: const Text('Belum punya akun? Daftar'),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
-      ),
+        if (_error != null) AuthErrorBanner(message: _error!),
+        FilledButton(
+          onPressed: _busy ? null : _submit,
+          child: _busy
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: FtColors.bg,
+                  ),
+                )
+              : const Text('Masuk'),
+        ),
+        const OrDivider(),
+        GoogleSignInButton(
+          enabled: !_busy,
+          onError: (msg) => setState(() => _error = msg),
+        ),
+      ],
     );
   }
 }
@@ -133,5 +159,7 @@ String _friendlyAuthError(FirebaseAuthException e) => switch (e.code) {
       'email-already-in-use' => 'Email sudah digunakan',
       'weak-password' => 'Password terlalu lemah',
       'network-request-failed' => 'Tidak ada koneksi internet',
+      'configuration-not-found' || 'operation-not-allowed' =>
+        'Provider belum diaktifkan di Firebase Console',
       _ => 'Gagal: ${e.message ?? e.code}',
     };

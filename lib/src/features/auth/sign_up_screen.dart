@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../theme.dart';
 import 'auth_repository.dart';
+import 'auth_shell.dart';
 import 'google_sign_in_button.dart';
 
 class SignUpScreen extends ConsumerStatefulWidget {
@@ -19,6 +21,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   final _email = TextEditingController();
   final _password = TextEditingController();
   bool _busy = false;
+  bool _obscure = true;
   String? _error;
 
   @override
@@ -50,85 +53,128 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Daftar')),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                TextFormField(
+    return AuthShell(
+      eyebrow: 'Daftar',
+      headline: 'Atur keuangan,\nbersama keluarga.',
+      subtitle:
+          'Buat akun untuk mulai mencatat pengeluaran, tabungan, dan tujuan.',
+      quietFooter: Wrap(
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          const Text(
+            'Sudah punya akun?',
+            style: TextStyle(color: FtColors.ink3, fontSize: 13),
+          ),
+          TextButton(
+            onPressed: _busy ? null : () => context.go('/sign-in'),
+            style: TextButton.styleFrom(
+              minimumSize: Size.zero,
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: Text(
+              'Masuk',
+              style: TextStyle(
+                color: FtColors.clay,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
+      ),
+      children: [
+        Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              LabeledField(
+                label: 'Nama panggilan',
+                child: TextFormField(
                   controller: _name,
-                  decoration: const InputDecoration(labelText: 'Nama panggilan'),
                   textCapitalization: TextCapitalization.words,
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? 'Wajib diisi' : null,
+                  textInputAction: TextInputAction.next,
+                  decoration: const InputDecoration(hintText: 'Mis. Irfan'),
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? 'Wajib diisi'
+                      : null,
                 ),
-                const SizedBox(height: 12),
-                TextFormField(
+              ),
+              LabeledField(
+                label: 'Email',
+                child: TextFormField(
                   controller: _email,
                   keyboardType: TextInputType.emailAddress,
                   autocorrect: false,
-                  decoration: const InputDecoration(labelText: 'Email'),
-                  validator: (v) =>
-                      (v == null || !v.contains('@')) ? 'Email tidak valid' : null,
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _password,
-                  obscureText: true,
+                  textInputAction: TextInputAction.next,
                   decoration:
-                      const InputDecoration(labelText: 'Password (min 6 huruf)'),
-                  validator: (v) =>
-                      (v == null || v.length < 6) ? 'Minimal 6 karakter' : null,
+                      const InputDecoration(hintText: 'kamu@email.com'),
+                  validator: (v) => (v == null || !v.contains('@'))
+                      ? 'Email tidak valid'
+                      : null,
                 ),
-                if (_error != null) ...[
-                  const SizedBox(height: 12),
-                  Text(_error!,
-                      style:
-                          TextStyle(color: Theme.of(context).colorScheme.error)),
-                ],
-                const SizedBox(height: 24),
-                FilledButton(
-                  onPressed: _busy ? null : _submit,
-                  child: _busy
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Text('Buat akun'),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    const Expanded(child: Divider()),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      child: Text('atau',
-                          style:
-                              TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+              ),
+              LabeledField(
+                label: 'Password',
+                child: TextFormField(
+                  controller: _password,
+                  obscureText: _obscure,
+                  textInputAction: TextInputAction.done,
+                  onFieldSubmitted: (_) => _submit(),
+                  decoration: InputDecoration(
+                    hintText: 'Minimal 6 karakter',
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                        size: 18,
+                        color: FtColors.ink3,
+                      ),
+                      onPressed: () =>
+                          setState(() => _obscure = !_obscure),
                     ),
-                    const Expanded(child: Divider()),
-                  ],
+                  ),
+                  validator: (v) => (v == null || v.length < 6)
+                      ? 'Minimal 6 karakter'
+                      : null,
                 ),
-                const SizedBox(height: 16),
-                GoogleSignInButton(
-                  enabled: !_busy,
-                  onError: (msg) => setState(() => _error = msg),
-                ),
-                const SizedBox(height: 12),
-                TextButton(
-                  onPressed: _busy ? null : () => context.go('/sign-in'),
-                  child: const Text('Sudah punya akun? Masuk'),
-                ),
-              ],
+              ),
+            ],
+          ),
+        ),
+        if (_error != null) AuthErrorBanner(message: _error!),
+        FilledButton(
+          onPressed: _busy ? null : _submit,
+          child: _busy
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: FtColors.bg,
+                  ),
+                )
+              : const Text('Buat akun'),
+        ),
+        const OrDivider(),
+        GoogleSignInButton(
+          enabled: !_busy,
+          onError: (msg) => setState(() => _error = msg),
+        ),
+        const SizedBox(height: 14),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Text(
+            'Dengan mendaftar, kamu menyetujui penggunaan data sesuai kebijakan internal aplikasi.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: FtColors.ink4,
+              fontSize: 11,
+              height: 1.5,
             ),
           ),
         ),
-      ),
+      ],
     );
   }
 }
@@ -138,5 +184,7 @@ String _friendlyAuthError(FirebaseAuthException e) => switch (e.code) {
       'email-already-in-use' => 'Email sudah digunakan',
       'weak-password' => 'Password terlalu lemah',
       'network-request-failed' => 'Tidak ada koneksi internet',
+      'configuration-not-found' || 'operation-not-allowed' =>
+        'Provider Email/Password belum diaktifkan di Firebase Console',
       _ => 'Gagal: ${e.message ?? e.code}',
     };
