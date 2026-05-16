@@ -36,3 +36,24 @@ Use below list for durable project notes. Keep each item concise and remove stal
 ## Project Notes
 Update this section as the project evolves.
 
+### Stack
+- Flutter 3.41.9 stable (Dart) — `flutter doctor` green except Xcode simulator runtimes (install via Xcode → Settings → Platforms)
+- Firebase: Auth + Firestore (cloud-first; household sync from day 1)
+- Targets: iOS + Android primary; web optional (Flutter web later)
+- Locale: id-ID; IDR only
+- TBD: state mgmt (Riverpod likely), routing (go_router), charts (fl_chart + CustomPainter)
+
+### Product Model (locked)
+- Household-first; one household per user (MVP)
+- Expenses: family-owned, attributed to spender, counted vs shared budget
+- Income: family-owned, lands in destination account
+- Cards: per-member owned, visible to household
+- Categories & budgets: shared; seeded defaults + user-added (icon + color)
+- Goals: shared OR personal (both)
+- Assets: pooled (no per-member breakdown)
+- Health score: household level
+- Roles (Istri/Suami/Anak): labels only, no permission gating
+
+### References
+- `claude-design/` → visual/UX reference only (JSX prototype; not portable code)
+- `PLAN.md` → phased roadmap + open decisions
