@@ -1,0 +1,174 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+import '../account.dart';
+
+class AccountDraft {
+  final AccountKind kind;
+  final String label;
+  final String? hint;
+  final int value;
+  final bool deltaMode;
+  const AccountDraft({
+    required this.kind,
+    required this.label,
+    required this.hint,
+    required this.value,
+    this.deltaMode = false,
+  });
+}
+
+class AccountEditSheet extends StatefulWidget {
+  const AccountEditSheet({super.key, this.initial});
+  final Account? initial;
+
+  @override
+  State<AccountEditSheet> createState() => _AccountEditSheetState();
+}
+
+class _AccountEditSheetState extends State<AccountEditSheet> {
+  late final _label = TextEditingController(text: widget.initial?.label ?? '');
+  late final _hint = TextEditingController(text: widget.initial?.hint ?? '');
+  late final _value = TextEditingController(
+    text: widget.initial != null ? widget.initial!.value.toString() : '',
+  );
+  late final _delta = TextEditingController();
+  AccountKind _kind = AccountKind.cash;
+  bool _deltaMode = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _kind = widget.initial?.kind ?? AccountKind.cash;
+  }
+
+  @override
+  void dispose() {
+    _label.dispose();
+    _hint.dispose();
+    _value.dispose();
+    _delta.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    final label = _label.text.trim();
+    if (label.isEmpty && widget.initial == null) return;
+    final hint = _hint.text.trim().isEmpty ? null : _hint.text.trim();
+
+    if (_deltaMode) {
+      final raw = _delta.text.trim();
+      if (raw.isEmpty) return;
+      final delta = int.tryParse(raw);
+      if (delta == null) return;
+      Navigator.pop(
+        context,
+        AccountDraft(
+          kind: _kind,
+          label: label,
+          hint: hint,
+          value: delta,
+          deltaMode: true,
+        ),
+      );
+    } else {
+      final value =
+          int.tryParse(_value.text.replaceAll(RegExp(r'\D'), '')) ?? 0;
+      Navigator.pop(
+        context,
+        AccountDraft(kind: _kind, label: label, hint: hint, value: value),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isEdit = widget.initial != null;
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        top: 16,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              isEdit ? 'Edit akun' : 'Akun baru',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 16),
+            if (!isEdit) ...[
+              SegmentedButton<AccountKind>(
+                segments: const [
+                  ButtonSegment(
+                    value: AccountKind.cash,
+                    label: Text('Tunai/Debit'),
+                  ),
+                  ButtonSegment(
+                    value: AccountKind.savings,
+                    label: Text('Tabungan'),
+                  ),
+                ],
+                selected: {_kind},
+                onSelectionChanged: (s) => setState(() => _kind = s.first),
+              ),
+              const SizedBox(height: 12),
+            ],
+            TextField(
+              controller: _label,
+              textCapitalization: TextCapitalization.words,
+              decoration: const InputDecoration(labelText: 'Nama akun'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _hint,
+              decoration: const InputDecoration(
+                labelText: 'Catatan (opsional)',
+                hintText: 'mis. BCA 1234',
+              ),
+            ),
+            const SizedBox(height: 16),
+            if (isEdit)
+              SegmentedButton<bool>(
+                segments: const [
+                  ButtonSegment(value: false, label: Text('Set saldo')),
+                  ButtonSegment(value: true, label: Text('Tambah / kurang')),
+                ],
+                selected: {_deltaMode},
+                onSelectionChanged: (s) => setState(() => _deltaMode = s.first),
+              ),
+            const SizedBox(height: 12),
+            if (_deltaMode)
+              TextField(
+                controller: _delta,
+                keyboardType: const TextInputType.numberWithOptions(signed: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'-?\d*')),
+                ],
+                decoration: const InputDecoration(
+                  labelText: 'Delta',
+                  prefixText: 'Rp ',
+                  helperText: 'gunakan tanda minus untuk kurang',
+                ),
+              )
+            else
+              TextField(
+                controller: _value,
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                decoration: const InputDecoration(
+                  labelText: 'Saldo',
+                  prefixText: 'Rp ',
+                ),
+              ),
+            const SizedBox(height: 24),
+            FilledButton(onPressed: _save, child: const Text('Simpan')),
+          ],
+        ),
+      ),
+    );
+  }
+}

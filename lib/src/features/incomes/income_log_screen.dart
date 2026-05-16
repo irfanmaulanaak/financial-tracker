@@ -76,7 +76,7 @@ class IncomeLogScreen extends ConsumerWidget {
                               builder: (_) => AlertDialog(
                                 title: const Text('Hapus pemasukan?'),
                                 content: const Text(
-                                  'Saldo akun tidak akan otomatis dikurangi. Sesuaikan manual lewat menu Akun.',
+                                  'Saldo akun tujuan akan otomatis dikurangi sebesar pemasukan ini.',
                                 ),
                                 actions: [
                                   TextButton(

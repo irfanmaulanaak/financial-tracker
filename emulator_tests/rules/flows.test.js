@@ -120,6 +120,7 @@ async function joinWithInvite(db, { code, userId, displayName }) {
     tx.update(householdRef, {
       memberIds: [...data.memberIds, userId],
       members: [...data.members, newMember],
+      claimedInvite: code,
     });
     tx.update(inviteRef, {
       consumed: true,

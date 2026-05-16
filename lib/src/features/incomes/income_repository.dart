@@ -85,14 +85,49 @@ class IncomeRepository {
     return incomeRef.id;
   }
 
+  /// Deletes the income and atomically reverses the destination account by
+  /// the same amount (clamped at zero). If the original destination account
+  /// no longer exists, deletes the row only.
   Future<void> delete({
     required String householdId,
     required String incomeId,
   }) async {
-    // Deletion does NOT reverse the destination-account bump in MVP. Users
-    // can adjust manually via the edit-account sheet. (Reversal would need
-    // the original destination + amount; trade-off for simplicity.)
-    await _incomes(householdId).doc(incomeId).delete();
+    final incomeRef = _incomes(householdId).doc(incomeId);
+    final householdRef = _householdDoc(householdId);
+    await _db.runTransaction((tx) async {
+      final iSnap = await tx.get(incomeRef);
+      if (!iSnap.exists) return;
+      final income = Income.fromSnapshot(iSnap);
+      final hSnap = await tx.get(householdRef);
+      if (hSnap.exists) {
+        final household = Household.fromSnapshot(hSnap);
+        final inCash = household.cashAccounts
+            .where((a) => a.id == income.destinationAccountId)
+            .toList();
+        final inSavings = household.savingsAccounts
+            .where((a) => a.id == income.destinationAccountId)
+            .toList();
+        if (inCash.isNotEmpty || inSavings.isNotEmpty) {
+          final kind =
+              inCash.isNotEmpty ? AccountKind.cash : AccountKind.savings;
+          final list = kind == AccountKind.cash
+              ? household.cashAccounts
+              : household.savingsAccounts;
+          final updated = list
+              .map((a) => a.id == income.destinationAccountId
+                  ? a.copyWith(
+                      value: (a.value - income.amount).clamp(0, 1 << 31))
+                  : a)
+              .toList();
+          final field =
+              kind == AccountKind.cash ? 'cashAccounts' : 'savingsAccounts';
+          tx.update(householdRef, {
+            field: updated.map((a) => a.toMap()).toList(),
+          });
+        }
+      }
+      tx.delete(incomeRef);
+    });
   }
 }
 

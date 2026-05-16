@@ -7,8 +7,10 @@ rules_version = '2';
 // Trust model: internal app, 2-5 known users, distributed via TestFlight/APK.
 // Household root doc is readable by any authed user (so a joiner can validate
 // an invite); per-household subcollections (expenses, etc.) remain
-// member-gated. Random Firestore IDs + single-use 6-digit invites are the
-// discovery + access controls.
+// member-gated. Self-join requires the joiner to reference a valid invite
+// via the `claimedInvite` field — the rule resolves that to the actual
+// invite doc and checks it targets THIS household, is unconsumed, and is
+// not expired.
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -24,18 +26,27 @@ service cloud.firestore {
                     && request.auth.uid == request.resource.data.creatorId
                     && request.auth.uid in request.resource.data.memberIds;
 
-      // Update allowed for existing members; OR for a joiner who is adding
-      // exactly themselves to memberIds (size grows by 1, joiner now in it,
-      // joiner wasn't there before). Combined with single-use invites this
-      // bounds who can self-join.
+      // Existing-member update: free-form (subject to subcollection rules).
       allow update: if request.auth != null
-                    && (request.auth.uid in resource.data.memberIds
-                        || (
-                          !(request.auth.uid in resource.data.memberIds)
-                          && request.auth.uid in request.resource.data.memberIds
-                          && request.resource.data.memberIds.size() ==
-                             resource.data.memberIds.size() + 1
-                        ));
+                    && request.auth.uid in resource.data.memberIds;
+
+      // Non-member self-join: must add only themselves AND reference a valid,
+      // unconsumed invite for THIS household. The `claimedInvite` field on
+      // the household carries the code so the rule can resolve the invite.
+      allow update: if request.auth != null
+                    && !(request.auth.uid in resource.data.memberIds)
+                    && request.auth.uid in request.resource.data.memberIds
+                    && request.resource.data.memberIds.size() ==
+                       resource.data.memberIds.size() + 1
+                    && request.resource.data.creatorId == resource.data.creatorId
+                    && request.resource.data.claimedInvite is string
+                    && exists(/databases/$(database)/documents/invites/$(request.resource.data.claimedInvite))
+                    && get(/databases/$(database)/documents/invites/$(request.resource.data.claimedInvite))
+                         .data.householdId == hid
+                    && get(/databases/$(database)/documents/invites/$(request.resource.data.claimedInvite))
+                         .data.consumed == false
+                    && get(/databases/$(database)/documents/invites/$(request.resource.data.claimedInvite))
+                         .data.expiresAt > request.time;
 
       allow delete: if request.auth != null
                     && request.auth.uid in resource.data.memberIds;
@@ -50,13 +61,25 @@ service cloud.firestore {
     }
 
     // Invite codes: 6-digit, single-use. Any authed user can read (to validate
-    // a code); only the generator can create or delete; update allowed only
-    // while unconsumed (the consume happens during the join transaction).
+    // a code). Only the generator can create; they must mark it unconsumed.
+    // Consume = a single false→true transition that binds `consumedBy` to the
+    // caller; immutable fields (householdId, generatedBy, expiresAt) must
+    // stay unchanged. After consumption no further updates allowed.
     match /invites/{code} {
       allow read: if request.auth != null;
+
       allow create: if request.auth != null
-                    && request.auth.uid == request.resource.data.generatedBy;
-      allow update: if request.auth != null && resource.data.consumed == false;
+                    && request.auth.uid == request.resource.data.generatedBy
+                    && request.resource.data.consumed == false;
+
+      allow update: if request.auth != null
+                    && resource.data.consumed == false
+                    && request.resource.data.consumed == true
+                    && request.resource.data.consumedBy == request.auth.uid
+                    && request.resource.data.householdId == resource.data.householdId
+                    && request.resource.data.generatedBy == resource.data.generatedBy
+                    && request.resource.data.expiresAt == resource.data.expiresAt;
+
       allow delete: if request.auth != null
                     && request.auth.uid == resource.data.generatedBy;
     }

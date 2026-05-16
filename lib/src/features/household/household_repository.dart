@@ -173,6 +173,9 @@ class HouseholdRepository {
       tx.update(householdRef, {
         'memberIds': updatedIds,
         'members': updatedMembers,
+        // Required by Firestore rules to prove a valid invite was claimed
+        // (see `firestore.rules` → households self-join rule).
+        'claimedInvite': code,
       });
       tx.update(inviteRef, {
         'consumed': true,
@@ -185,44 +188,60 @@ class HouseholdRepository {
   }
 
   /// Removes a member from the household. If creator leaves, the next member
-  /// becomes creator. If the household becomes empty, it (and the doc) is
-  /// deleted along with its subcollections (caller-driven cleanup beyond MVP).
+  /// becomes creator. If the household becomes empty, the household + all
+  /// its subcollections (expenses, incomes, cards + nested installments,
+  /// goals, investments) are deleted.
   Future<void> leave({
     required String householdId,
     required String userId,
   }) async {
+    final ref = _households.doc(householdId);
+
+    // Read membership outside the transaction first so we can decide whether
+    // we need the subcollection cascade (which cannot run inside a single
+    // transaction — see _purgeSubcollections).
+    final initial = await ref.get();
+    if (!initial.exists) throw StateError('household_missing');
+    final household = Household.fromSnapshot(initial);
+    final remainingIds =
+        household.memberIds.where((id) => id != userId).toList();
+    final isLastLeaver = remainingIds.isEmpty;
+
+    if (isLastLeaver) {
+      // Purge subcollections BEFORE deleting the root doc. Rules grant
+      // member-only access via the root doc; once it's gone, the orphaned
+      // children would be unreachable from the client.
+      await _purgeSubcollections(householdId);
+    }
+
     await _db.runTransaction((tx) async {
-      final ref = _households.doc(householdId);
       final snap = await tx.get(ref);
       if (!snap.exists) throw StateError('household_missing');
-      final household = Household.fromSnapshot(snap);
+      final h = Household.fromSnapshot(snap);
+      final ids = h.memberIds.where((id) => id != userId).toList();
+      final members = h.members.where((m) => m.userId != userId).toList();
 
-      final remainingIds =
-          household.memberIds.where((id) => id != userId).toList();
-      final remainingMembers =
-          household.members.where((m) => m.userId != userId).toList();
-
-      if (remainingIds.isEmpty) {
+      if (ids.isEmpty) {
         tx.delete(ref);
       } else {
         // Promote first remaining member to creator if leaver was creator.
         final wasCreator =
-            household.creatorId == userId || remainingMembers.first.isCreator;
+            h.creatorId == userId || members.first.isCreator;
         final newMembers = wasCreator
             ? [
                 Member(
-                  userId: remainingMembers.first.userId,
-                  displayName: remainingMembers.first.displayName,
-                  role: remainingMembers.first.role,
-                  color: remainingMembers.first.color,
-                  joinedAt: remainingMembers.first.joinedAt,
+                  userId: members.first.userId,
+                  displayName: members.first.displayName,
+                  role: members.first.role,
+                  color: members.first.color,
+                  joinedAt: members.first.joinedAt,
                   isCreator: true,
                 ),
-                ...remainingMembers.skip(1),
+                ...members.skip(1),
               ]
-            : remainingMembers;
+            : members;
         tx.update(ref, {
-          'memberIds': remainingIds,
+          'memberIds': ids,
           'members': newMembers.map((m) => m.toMap()).toList(),
           if (wasCreator) 'creatorId': newMembers.first.userId,
         });
@@ -233,6 +252,38 @@ class HouseholdRepository {
         SetOptions(merge: true),
       );
     });
+  }
+
+  /// Deletes every doc in the household's subcollections. Batched (≤500
+  /// writes per commit). Called only on last-member leave so the household
+  /// disappears completely instead of leaving orphaned children.
+  Future<void> _purgeSubcollections(String householdId) async {
+    final root = _households.doc(householdId);
+    const flatSubs = ['expenses', 'incomes', 'goals', 'investments'];
+    for (final sub in flatSubs) {
+      await _deleteAllDocs(root.collection(sub));
+    }
+    // Cards have a nested `installments` subcollection; clear those first.
+    final cards = await root.collection('cards').get();
+    for (final card in cards.docs) {
+      await _deleteAllDocs(card.reference.collection('installments'));
+    }
+    await _deleteAllDocs(root.collection('cards'));
+  }
+
+  Future<void> _deleteAllDocs(
+    CollectionReference<Map<String, dynamic>> col,
+  ) async {
+    while (true) {
+      final snap = await col.limit(400).get();
+      if (snap.docs.isEmpty) return;
+      final batch = _db.batch();
+      for (final d in snap.docs) {
+        batch.delete(d.reference);
+      }
+      await batch.commit();
+      if (snap.docs.length < 400) return;
+    }
   }
 
   Future<void> updateCategories({

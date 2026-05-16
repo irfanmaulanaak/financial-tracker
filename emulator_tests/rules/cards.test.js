@@ -165,6 +165,43 @@ async function payFull(db, hid, cardId) {
   });
 }
 
+/** Mirrors ExpenseRepository.delete (reverses card.used / removes installment). */
+async function deleteExpense(db, hid, expenseId) {
+  const expenseRef = doc(db, 'households', hid, 'expenses', expenseId);
+  await runTransaction(db, async (tx) => {
+    const eSnap = await tx.get(expenseRef);
+    if (!eSnap.exists()) return;
+    const exp = eSnap.data();
+    if (exp.cardId && exp.installmentPlanId) {
+      const instRef = doc(
+        db,
+        'households',
+        hid,
+        'cards',
+        exp.cardId,
+        'installments',
+        exp.installmentPlanId
+      );
+      const cardRef = doc(db, 'households', hid, 'cards', exp.cardId);
+      const cardSnap = await tx.get(cardRef);
+      const instSnap = await tx.get(instRef);
+      if (cardSnap.exists() && instSnap.exists()) {
+        const next = Math.max(0, (cardSnap.data().used || 0) - instSnap.data().total);
+        tx.update(cardRef, { used: next });
+      }
+      if (instSnap.exists()) tx.delete(instRef);
+    } else if (exp.cardId) {
+      const cardRef = doc(db, 'households', hid, 'cards', exp.cardId);
+      const cardSnap = await tx.get(cardRef);
+      if (cardSnap.exists()) {
+        const next = Math.max(0, (cardSnap.data().used || 0) - exp.amount);
+        tx.update(cardRef, { used: next });
+      }
+    }
+    tx.delete(expenseRef);
+  });
+}
+
 describe('flows / card CRUD + rules', () => {
   before(async () => getTestEnv());
   afterEach(async () => clearData());
@@ -351,5 +388,77 @@ describe('flows / card payments', () => {
     });
     const after = await getDoc(instRef);
     expect(after.data().monthsPaid).to.equal(1);
+  });
+});
+
+describe('flows / expense delete reverses derived balances', () => {
+  before(async () => getTestEnv());
+  afterEach(async () => clearData());
+  after(async () => disposeAll());
+
+  it('deleting CC expense reverses card.used by amount', async () => {
+    const alice = await dbAs('alice');
+    await seedWithoutRules(async (db) => {
+      await setDoc(doc(db, 'households/h1'), buildHousehold('alice'));
+      await setDoc(doc(db, 'households/h1/cards/c1'), baseCard());
+    });
+    const id = await addCardExpense(alice, 'h1', {
+      cardId: 'c1', amount: 250000, spentBy: 'alice',
+    });
+    let card = await getDoc(doc(alice, 'households/h1/cards/c1'));
+    expect(card.data().used).to.equal(250000);
+
+    await deleteExpense(alice, 'h1', id);
+    card = await getDoc(doc(alice, 'households/h1/cards/c1'));
+    expect(card.data().used).to.equal(0);
+  });
+
+  it('deleting cicilan expense reverses card.used by plan.total + removes installment', async () => {
+    const alice = await dbAs('alice');
+    await seedWithoutRules(async (db) => {
+      await setDoc(doc(db, 'households/h1'), buildHousehold('alice'));
+      await setDoc(doc(db, 'households/h1/cards/c1'), baseCard());
+    });
+    const r = await addCicilanExpense(alice, 'h1', {
+      cardId: 'c1', principal: 10000000, months: 12, apr: 0.18, spentBy: 'alice',
+    });
+    let card = await getDoc(doc(alice, 'households/h1/cards/c1'));
+    expect(card.data().used).to.equal(11800000);
+
+    await deleteExpense(alice, 'h1', r.expenseId);
+    card = await getDoc(doc(alice, 'households/h1/cards/c1'));
+    expect(card.data().used).to.equal(0);
+
+    const inst = await getDoc(
+      doc(alice, 'households/h1/cards/c1/installments', r.installmentId)
+    );
+    expect(inst.exists()).to.equal(false);
+  });
+
+  it('reversal clamps card.used at zero (handles stale data)', async () => {
+    const alice = await dbAs('alice');
+    await seedWithoutRules(async (db) => {
+      await setDoc(doc(db, 'households/h1'), buildHousehold('alice'));
+      await setDoc(
+        doc(db, 'households/h1/cards/c1'),
+        baseCard({ used: 100 })
+      );
+      // Pre-existing expense whose amount > card.used (e.g. user manually
+      // edited the card balance afterward).
+      await setDoc(doc(db, 'households/h1/expenses/e1'), {
+        amount: 500000,
+        categoryId: 'food',
+        paymentMethodId: 'cc',
+        spentBy: 'alice',
+        date: new Date(),
+        recurring: false,
+        cardId: 'c1',
+        createdAt: new Date(),
+        createdBy: 'alice',
+      });
+    });
+    await deleteExpense(alice, 'h1', 'e1');
+    const card = await getDoc(doc(alice, 'households/h1/cards/c1'));
+    expect(card.data().used).to.equal(0);
   });
 });

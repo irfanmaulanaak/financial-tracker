@@ -57,13 +57,43 @@ describe('rules / invites/{code}', () => {
     );
   });
 
-  it('update allowed while not consumed', async () => {
+  it('update allowed only as a single consume binding self as consumedBy', async () => {
     await seedWithoutRules(async (db) => {
       await setDoc(doc(db, 'invites/333333'), baseInvite('alice'));
     });
     const bobDb = await dbAs('bob');
     await assertSucceeds(
-      updateDoc(doc(bobDb, 'invites/333333'), { consumed: true, consumedBy: 'bob' })
+      updateDoc(doc(bobDb, 'invites/333333'), {
+        consumed: true,
+        consumedBy: 'bob',
+      })
+    );
+  });
+
+  it('update denied when binding consumedBy to someone else', async () => {
+    await seedWithoutRules(async (db) => {
+      await setDoc(doc(db, 'invites/333334'), baseInvite('alice'));
+    });
+    const bobDb = await dbAs('bob');
+    await assertFails(
+      updateDoc(doc(bobDb, 'invites/333334'), {
+        consumed: true,
+        consumedBy: 'carol',
+      })
+    );
+  });
+
+  it('update denied when changing immutable fields (householdId, generatedBy, expiresAt)', async () => {
+    await seedWithoutRules(async (db) => {
+      await setDoc(doc(db, 'invites/333335'), baseInvite('alice'));
+    });
+    const bobDb = await dbAs('bob');
+    await assertFails(
+      updateDoc(doc(bobDb, 'invites/333335'), {
+        consumed: true,
+        consumedBy: 'bob',
+        householdId: 'hijacked',
+      })
     );
   });
 
@@ -75,7 +105,9 @@ describe('rules / invites/{code}', () => {
       );
     });
     const eveDb = await dbAs('eve');
-    await assertFails(updateDoc(doc(eveDb, 'invites/444444'), { consumed: true }));
+    await assertFails(
+      updateDoc(doc(eveDb, 'invites/444444'), { consumed: true })
+    );
   });
 
   it('only generator can delete', async () => {

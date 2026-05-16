@@ -188,13 +188,50 @@ class ExpenseRepository {
     );
   }
 
+  /// Deletes an expense and reverses derived balances atomically:
+  /// - cash/debit/e-wallet expense: just removes the row
+  /// - credit-card expense: reverses `card.used` by the same `amount`
+  ///   (clamped at zero in case of stale data)
+  /// - cicilan expense: deletes the linked installment doc AND reverses
+  ///   `card.used` by the plan's `total` (the full remaining debt was added
+  ///   to the card when the plan was created, so we reverse the same way)
   Future<void> delete({
     required String householdId,
     required String expenseId,
   }) async {
-    // NOTE: deletion does not reverse card.used or installment plan. Phase 5
-    // can add a "void" action that fully reverses.
-    await _col(householdId).doc(expenseId).delete();
+    final expenseRef = _col(householdId).doc(expenseId);
+    await _db.runTransaction((tx) async {
+      final eSnap = await tx.get(expenseRef);
+      if (!eSnap.exists) return;
+      final expense = Expense.fromSnapshot(eSnap);
+
+      // Cicilan: reverse via the installment plan total (matches the add
+      // path that bumps card.used by plan.total).
+      if (expense.cardId != null && expense.installmentPlanId != null) {
+        final instRef =
+            _installments(householdId, expense.cardId!).doc(expense.installmentPlanId!);
+        final instSnap = await tx.get(instRef);
+        final cardRef = _cardDoc(householdId, expense.cardId!);
+        final cardSnap = await tx.get(cardRef);
+        if (cardSnap.exists && instSnap.exists) {
+          final card = CreditCard.fromSnapshot(cardSnap);
+          final plan = Installment.fromSnapshot(instSnap, expense.cardId!);
+          final next = (card.used - plan.total).clamp(0, 1 << 31);
+          tx.update(cardRef, {'used': next});
+        }
+        if (instSnap.exists) tx.delete(instRef);
+      } else if (expense.cardId != null) {
+        // Plain CC expense.
+        final cardRef = _cardDoc(householdId, expense.cardId!);
+        final cardSnap = await tx.get(cardRef);
+        if (cardSnap.exists) {
+          final card = CreditCard.fromSnapshot(cardSnap);
+          final next = (card.used - expense.amount).clamp(0, 1 << 31);
+          tx.update(cardRef, {'used': next});
+        }
+      }
+      tx.delete(expenseRef);
+    });
   }
 }
 

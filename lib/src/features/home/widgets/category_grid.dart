@@ -1,0 +1,119 @@
+import 'package:flutter/material.dart';
+
+import '../../../theme.dart';
+import '../../../ui/ft_ui.dart';
+import '../../household/household.dart';
+import 'home_formatters.dart';
+
+class CategoryGrid extends StatelessWidget {
+  const CategoryGrid({
+    super.key,
+    required this.categories,
+    required this.totals,
+    required this.onTap,
+  });
+
+  final List<Category> categories;
+  final Map<String, int> totals;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    if (categories.isEmpty) return const SizedBox.shrink();
+    return Column(
+      children: [
+        FtSectionHeader(
+          title: 'Pengeluaran Bulan Ini',
+          actionLabel: 'Lihat semua',
+          onAction: onTap,
+        ),
+        FtCard(
+          margin: const EdgeInsets.fromLTRB(22, 0, 22, 16),
+          child: GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 1.45,
+            children: [
+              for (final c in categories)
+                _CategoryCell(category: c, spent: totals[c.id] ?? 0),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CategoryCell extends StatelessWidget {
+  const _CategoryCell({required this.category, required this.spent});
+
+  final Category category;
+  final int spent;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = parseColor(category.color);
+    final budget = category.monthlyBudget;
+    final pct = budget > 0 ? (spent / budget * 100).round() : 0;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: FtColors.surfaceAlt,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: FtColors.line, width: 0.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(iconFor(category.icon), size: 15, color: color),
+              const SizedBox(width: 7),
+              Expanded(
+                child: Text(
+                  category.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: FtColors.ink2,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 11,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const Spacer(),
+          Text(
+            compactMoney(spent),
+            style: const TextStyle(
+              color: FtColors.ink,
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 8),
+          FtProgressBar(
+            value: spent,
+            max: budget <= 0 ? 1 : budget,
+            color: color,
+            height: 3,
+          ),
+          const SizedBox(height: 5),
+          Text(
+            budget > 0 ? '$pct% terpakai' : 'tanpa budget',
+            style: TextStyle(
+              color: budget > 0 && spent > budget
+                  ? FtColors.danger
+                  : FtColors.ink3,
+              fontSize: 10,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

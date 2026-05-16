@@ -116,24 +116,93 @@ describe('rules / households/{hid}', () => {
     );
   });
 
-  it('non-member self-join update is permitted (joins by adding self to memberIds)', async () => {
+  it('non-member self-join requires a valid claimed invite for THIS household', async () => {
     await seedWithoutRules(async (db) => {
       await setDoc(doc(db, 'households/h1'), baseHousehold('alice', ['alice']));
+      await setDoc(doc(db, 'invites/111111'), {
+        householdId: 'h1',
+        generatedBy: 'alice',
+        generatedAt: new Date(),
+        expiresAt: new Date(Date.now() + 24 * 3600 * 1000),
+        consumed: false,
+      });
     });
     const bobDb = await dbAs('bob');
     await assertSucceeds(
-      updateDoc(doc(bobDb, 'households/h1'), { memberIds: ['alice', 'bob'] })
+      updateDoc(doc(bobDb, 'households/h1'), {
+        memberIds: ['alice', 'bob'],
+        claimedInvite: '111111',
+      })
     );
   });
 
-  it('non-member cannot add someone else to memberIds', async () => {
+  it('non-member self-join is denied without claimedInvite', async () => {
     await seedWithoutRules(async (db) => {
       await setDoc(doc(db, 'households/h1'), baseHousehold('alice', ['alice']));
     });
     const bobDb = await dbAs('bob');
     await assertFails(
+      updateDoc(doc(bobDb, 'households/h1'), { memberIds: ['alice', 'bob'] })
+    );
+  });
+
+  it('non-member self-join is denied when claimedInvite is consumed', async () => {
+    await seedWithoutRules(async (db) => {
+      await setDoc(doc(db, 'households/h1'), baseHousehold('alice', ['alice']));
+      await setDoc(doc(db, 'invites/222222'), {
+        householdId: 'h1',
+        generatedBy: 'alice',
+        generatedAt: new Date(),
+        expiresAt: new Date(Date.now() + 24 * 3600 * 1000),
+        consumed: true,
+        consumedBy: 'carol',
+      });
+    });
+    const bobDb = await dbAs('bob');
+    await assertFails(
+      updateDoc(doc(bobDb, 'households/h1'), {
+        memberIds: ['alice', 'bob'],
+        claimedInvite: '222222',
+      })
+    );
+  });
+
+  it('non-member self-join is denied when claimedInvite targets a different household', async () => {
+    await seedWithoutRules(async (db) => {
+      await setDoc(doc(db, 'households/h1'), baseHousehold('alice', ['alice']));
+      await setDoc(doc(db, 'invites/333333'), {
+        householdId: 'other',
+        generatedBy: 'alice',
+        generatedAt: new Date(),
+        expiresAt: new Date(Date.now() + 24 * 3600 * 1000),
+        consumed: false,
+      });
+    });
+    const bobDb = await dbAs('bob');
+    await assertFails(
+      updateDoc(doc(bobDb, 'households/h1'), {
+        memberIds: ['alice', 'bob'],
+        claimedInvite: '333333',
+      })
+    );
+  });
+
+  it('non-member cannot add someone else to memberIds even with a valid invite', async () => {
+    await seedWithoutRules(async (db) => {
+      await setDoc(doc(db, 'households/h1'), baseHousehold('alice', ['alice']));
+      await setDoc(doc(db, 'invites/444444'), {
+        householdId: 'h1',
+        generatedBy: 'alice',
+        generatedAt: new Date(),
+        expiresAt: new Date(Date.now() + 24 * 3600 * 1000),
+        consumed: false,
+      });
+    });
+    const bobDb = await dbAs('bob');
+    await assertFails(
       updateDoc(doc(bobDb, 'households/h1'), {
         memberIds: ['alice', 'carol'],
+        claimedInvite: '444444',
       })
     );
   });
