@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'auth_repository.dart';
+import 'google_sign_in_button.dart';
 
 class SignInScreen extends ConsumerStatefulWidget {
   const SignInScreen({super.key});
@@ -91,6 +92,24 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                           width: 20,
                           child: CircularProgressIndicator(strokeWidth: 2))
                       : const Text('Masuk'),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    const Expanded(child: Divider()),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Text('atau',
+                          style:
+                              TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                    ),
+                    const Expanded(child: Divider()),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                GoogleSignInButton(
+                  enabled: !_busy,
+                  onError: (msg) => setState(() => _error = msg),
                 ),
                 const SizedBox(height: 12),
                 TextButton(

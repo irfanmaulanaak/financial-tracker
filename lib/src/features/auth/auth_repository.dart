@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../core/providers.dart';
 
@@ -19,13 +20,12 @@ class AuthRepository {
       password: password,
     );
     await cred.user!.updateDisplayName(displayName);
-    await _db.collection('users').doc(cred.user!.uid).set({
-      'email': email,
-      'displayName': displayName,
-      'photoURL': null,
-      'householdId': null,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
+    await _ensureUserDoc(
+      uid: cred.user!.uid,
+      email: email,
+      displayName: displayName,
+      photoURL: null,
+    );
     return cred;
   }
 
@@ -39,7 +39,62 @@ class AuthRepository {
     );
   }
 
-  Future<void> signOut() => _auth.signOut();
+  /// Google sign-in (and sign-up — Firebase auto-creates the auth user on
+  /// first credential exchange). Also upserts the `users/{uid}` profile doc
+  /// so the router can detect "no household → onboarding" cleanly.
+  ///
+  /// Throws `FirebaseAuthException` for credential issues, or
+  /// `GoogleSignInException(code: canceled)` if the user dismisses the sheet.
+  /// Per AGENTS.md (fail LOUD): we do NOT swallow either.
+  Future<UserCredential> signInWithGoogle() async {
+    final googleUser = await GoogleSignIn.instance.authenticate();
+    final idToken = googleUser.authentication.idToken;
+    if (idToken == null) {
+      throw FirebaseAuthException(
+        code: 'missing-id-token',
+        message: 'Google did not return an ID token.',
+      );
+    }
+    final credential = GoogleAuthProvider.credential(idToken: idToken);
+    final result = await _auth.signInWithCredential(credential);
+    final user = result.user!;
+    await _ensureUserDoc(
+      uid: user.uid,
+      email: user.email ?? googleUser.email,
+      displayName: user.displayName ?? googleUser.displayName ?? '',
+      photoURL: user.photoURL,
+    );
+    return result;
+  }
+
+  /// Idempotent: only writes when the user doc is missing, so subsequent
+  /// Google sign-ins don't clobber an existing `householdId`.
+  Future<void> _ensureUserDoc({
+    required String uid,
+    required String email,
+    required String displayName,
+    required String? photoURL,
+  }) async {
+    final ref = _db.collection('users').doc(uid);
+    final snap = await ref.get();
+    if (snap.exists) return;
+    await ref.set({
+      'email': email,
+      'displayName': displayName,
+      'photoURL': photoURL,
+      'householdId': null,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> signOut() async {
+    // Best-effort Google sign-out; safe to ignore failures (user might not be
+    // signed in via Google).
+    try {
+      await GoogleSignIn.instance.signOut();
+    } catch (_) {}
+    await _auth.signOut();
+  }
 }
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
