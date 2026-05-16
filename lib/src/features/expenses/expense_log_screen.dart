@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/formatters.dart';
 import '../../core/payday.dart';
+import '../../theme.dart';
+import '../../ui/ft_ui.dart';
 import '../household/household.dart';
 import '../household/household_providers.dart';
 import 'expense.dart';
@@ -30,65 +32,73 @@ class _ExpenseLogScreenState extends ConsumerState<ExpenseLogScreen> {
     final expensesStream = ref.watch(_expensesProvider(household.id));
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Pengeluaran'),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(56),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: DropdownButtonFormField<String?>(
-                    initialValue: _filterMemberId,
-                    isExpanded: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Anggota',
-                      isDense: true,
-                    ),
-                    items: [
-                      const DropdownMenuItem(value: null, child: Text('Semua')),
-                      ...household.members.map((m) => DropdownMenuItem(
-                            value: m.userId,
-                            child: Text(m.displayName),
-                          )),
-                    ],
-                    onChanged: (v) => setState(() => _filterMemberId = v),
-                  ),
+      backgroundColor: FtColors.bg,
+      body: SafeArea(
+        child: FtAppChrome(
+          current: FtTab.spend,
+          child: Column(
+            children: [
+              FtSubHeader(
+                title: 'Pengeluaran',
+                trailing: IconButton.filled(
+                  tooltip: 'Catat pengeluaran',
+                  onPressed: () => context.push('/expenses/new'),
+                  icon: const Icon(Icons.add, size: 18),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: DropdownButtonFormField<String?>(
-                    initialValue: _filterCategoryId,
-                    isExpanded: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Kategori',
-                      isDense: true,
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: DropdownButtonFormField<String?>(
+                        initialValue: _filterMemberId,
+                        isExpanded: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Anggota',
+                          isDense: true,
+                        ),
+                        items: [
+                          const DropdownMenuItem(
+                              value: null, child: Text('Semua')),
+                          ...household.members.map((m) => DropdownMenuItem(
+                                value: m.userId,
+                                child: Text(m.displayName),
+                              )),
+                        ],
+                        onChanged: (v) => setState(() => _filterMemberId = v),
+                      ),
                     ),
-                    items: [
-                      const DropdownMenuItem(value: null, child: Text('Semua')),
-                      ...household.categories.map((c) => DropdownMenuItem(
-                            value: c.id,
-                            child: Text(c.label),
-                          )),
-                    ],
-                    onChanged: (v) => setState(() => _filterCategoryId = v),
-                  ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: DropdownButtonFormField<String?>(
+                        initialValue: _filterCategoryId,
+                        isExpanded: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Kategori',
+                          isDense: true,
+                        ),
+                        items: [
+                          const DropdownMenuItem(
+                              value: null, child: Text('Semua')),
+                          ...household.categories.map((c) => DropdownMenuItem(
+                                value: c.id,
+                                child: Text(c.label),
+                              )),
+                        ],
+                        onChanged: (v) =>
+                            setState(() => _filterCategoryId = v),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-        ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/expenses/new'),
-        icon: const Icon(Icons.add),
-        label: const Text('Catat'),
-      ),
-      body: expensesStream.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Gagal: $e')),
-        data: (all) {
+              ),
+              Expanded(
+                child: expensesStream.when(
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (e, _) => Center(child: Text('Gagal: $e')),
+                  data: (all) {
           final filtered = all.where((e) {
             if (_filterMemberId != null && e.spentBy != _filterMemberId) {
               return false;
@@ -106,13 +116,13 @@ class _ExpenseLogScreenState extends ConsumerState<ExpenseLogScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.receipt_long_outlined,
-                        size: 48, color: Colors.grey.shade400),
+                    const Icon(Icons.receipt_long_outlined,
+                        size: 48, color: FtColors.ink4),
                     const SizedBox(height: 8),
                     Text(
                       'Belum ada pengeluaran di siklus ini\n(${Dates.short(cycle.start)} – ${Dates.short(cycle.endExclusive.subtract(const Duration(days: 1)))})',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.grey.shade600),
+                      style: const TextStyle(color: FtColors.ink3),
                     ),
                   ],
                 ),
@@ -129,7 +139,7 @@ class _ExpenseLogScreenState extends ConsumerState<ExpenseLogScreen> {
             ..sort((a, b) => b.compareTo(a));
 
           return ListView.builder(
-            padding: const EdgeInsets.only(top: 8, bottom: 96),
+            padding: const EdgeInsets.only(top: 2, bottom: 112),
             itemCount: days.length,
             itemBuilder: (_, dayIdx) {
               final day = days[dayIdx];
@@ -140,8 +150,7 @@ class _ExpenseLogScreenState extends ConsumerState<ExpenseLogScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Padding(
-                    padding:
-                        const EdgeInsets.fromLTRB(16, 16, 16, 4),
+                    padding: const EdgeInsets.fromLTRB(22, 16, 22, 8),
                     child: Row(
                       children: [
                         Expanded(
@@ -152,8 +161,7 @@ class _ExpenseLogScreenState extends ConsumerState<ExpenseLogScreen> {
                           ),
                         ),
                         Text(Money.format(dayTotal),
-                            style: TextStyle(
-                                color: Theme.of(context).colorScheme.outline)),
+                            style: const TextStyle(color: FtColors.ink3)),
                       ],
                     ),
                   ),
@@ -167,7 +175,12 @@ class _ExpenseLogScreenState extends ConsumerState<ExpenseLogScreen> {
               );
             },
           );
-        },
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -212,28 +225,47 @@ class _ExpenseTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cat = category;
-    return ListTile(
-      leading: CircleAvatar(
-        backgroundColor: cat != null
-            ? _parseColor(cat.color).withValues(alpha: 0.15)
-            : Colors.grey.shade100,
-        child: Icon(_iconFor(cat?.icon ?? 'category'),
-            color: cat != null ? _parseColor(cat.color) : Colors.grey),
-      ),
-      title: Text(cat?.label ?? '-'),
-      subtitle: Text([
-        if (spender != null) spender!.displayName,
-        if (expense.note != null && expense.note!.isNotEmpty) expense.note!,
-      ].join(' • ')),
-      trailing: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        mainAxisAlignment: MainAxisAlignment.center,
+    return FtCard(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      padding: const EdgeInsets.all(14),
+      onLongPress: onDelete,
+      child: Row(
         children: [
+          CircleAvatar(
+            backgroundColor: cat != null
+                ? _parseColor(cat.color).withValues(alpha: 0.15)
+                : FtColors.surfaceAlt,
+            child: Icon(_iconFor(cat?.icon ?? 'category'),
+                color: cat != null ? _parseColor(cat.color) : FtColors.ink3),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(cat?.label ?? '-',
+                    style: const TextStyle(
+                        color: FtColors.ink, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 2),
+                Text(
+                  [
+                    if (spender != null) spender!.displayName,
+                    if (expense.note != null && expense.note!.isNotEmpty)
+                      expense.note!,
+                  ].join(' • '),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: FtColors.ink3, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
           Text(Money.format(expense.amount),
-              style: const TextStyle(fontWeight: FontWeight.bold)),
+              style: const TextStyle(
+                  color: FtColors.ink, fontWeight: FontWeight.bold)),
         ],
       ),
-      onLongPress: onDelete,
     );
   }
 }

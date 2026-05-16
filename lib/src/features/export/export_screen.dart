@@ -7,6 +7,8 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../core/csv_export.dart';
 import '../../core/payday.dart';
+import '../../theme.dart';
+import '../../ui/ft_ui.dart';
 import '../expenses/expense.dart';
 import '../expenses/expense_repository.dart';
 import '../household/household.dart';
@@ -107,33 +109,46 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
     final start = DateTime.now().subtract(const Duration(days: 90));
     final cycle = currentCycle(DateTime.now(), payday: household.payday);
     return Scaffold(
-      appBar: AppBar(title: const Text('Ekspor data')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Text('Format: CSV', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          Text(
-            'Pengeluaran: 90 hari terakhir (sejak ${_short(start)}).\nPemasukan: 500 catatan terbaru.\nSiklus aktif: ${_short(cycle.start)} – ${_short(cycle.endExclusive.subtract(const Duration(days: 1)))}.',
-            style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-          ),
-          const SizedBox(height: 24),
-          FilledButton.icon(
-            onPressed: _busy ? null : () => _exportExpenses(household),
-            icon: const Icon(Icons.download),
-            label: const Text('Ekspor pengeluaran (CSV)'),
-          ),
-          const SizedBox(height: 12),
-          FilledButton.tonalIcon(
-            onPressed: _busy ? null : () => _exportIncomes(household),
-            icon: const Icon(Icons.download),
-            label: const Text('Ekspor pemasukan (CSV)'),
-          ),
-          if (_busy) ...[
+      backgroundColor: FtColors.bg,
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+          children: [
+            const FtSubHeader(title: 'Ekspor data'),
+            FtCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Eyebrow('Format'),
+                  const SizedBox(height: 6),
+                  Text('CSV', style: Theme.of(context).textTheme.titleLarge),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Pengeluaran: 90 hari terakhir (sejak ${_short(start)}).\nPemasukan: 500 catatan terbaru.\nSiklus aktif: ${_short(cycle.start)} – ${_short(cycle.endExclusive.subtract(const Duration(days: 1)))}.',
+                    style:
+                        const TextStyle(color: FtColors.ink3, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 16),
-            const Center(child: CircularProgressIndicator()),
+            FilledButton.icon(
+              onPressed: _busy ? null : () => _exportExpenses(household),
+              icon: const Icon(Icons.download),
+              label: const Text('Ekspor pengeluaran (CSV)'),
+            ),
+            const SizedBox(height: 12),
+            FilledButton.tonalIcon(
+              onPressed: _busy ? null : () => _exportIncomes(household),
+              icon: const Icon(Icons.download),
+              label: const Text('Ekspor pemasukan (CSV)'),
+            ),
+            if (_busy) ...[
+              const SizedBox(height: 16),
+              const Center(child: CircularProgressIndicator()),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

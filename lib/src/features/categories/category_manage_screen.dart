@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/formatters.dart';
+import '../../theme.dart';
+import '../../ui/ft_ui.dart';
 import '../household/household.dart';
 import '../household/household_providers.dart';
 import '../household/household_repository.dart';
@@ -21,35 +23,38 @@ class CategoryManageScreen extends ConsumerWidget {
     final archived = household.categories.where((c) => c.archived).toList();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Kategori')),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _openAddSheet(context, ref, household),
-        icon: const Icon(Icons.add),
-        label: const Text('Tambah'),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        children: [
-          for (final c in active)
-            _CategoryTile(
-              category: c,
-              onEdit: () => _openEditSheet(context, ref, household, c),
-              onArchive: () => _archive(ref, household, c, true),
+      backgroundColor: FtColors.bg,
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+          children: [
+            FtSubHeader(
+              title: 'Kategori',
+              trailing: IconButton.filled(
+                tooltip: 'Tambah kategori',
+                onPressed: () => _openAddSheet(context, ref, household),
+                icon: const Icon(Icons.add, size: 18),
+              ),
             ),
-          if (archived.isNotEmpty) ...[
-            const Padding(
-              padding: EdgeInsets.fromLTRB(16, 16, 16, 4),
-              child: Text('Arsip', style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
-            for (final c in archived)
+            const FtSectionHeader(title: 'Aktif'),
+            for (final c in active)
               _CategoryTile(
                 category: c,
-                archived: true,
                 onEdit: () => _openEditSheet(context, ref, household, c),
-                onArchive: () => _archive(ref, household, c, false),
+                onArchive: () => _archive(ref, household, c, true),
               ),
+            if (archived.isNotEmpty) ...[
+              const FtSectionHeader(title: 'Arsip'),
+              for (final c in archived)
+                _CategoryTile(
+                  category: c,
+                  archived: true,
+                  onEdit: () => _openEditSheet(context, ref, household, c),
+                  onArchive: () => _archive(ref, household, c, false),
+                ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -127,24 +132,43 @@ class _CategoryTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: CircleAvatar(
-        backgroundColor: _parseColor(category.color).withValues(alpha: 0.15),
-        child: Icon(_iconFor(category.icon),
-            color: _parseColor(category.color), size: 22),
-      ),
-      title: Text(category.label),
-      subtitle: Text(Money.format(category.monthlyBudget)),
-      trailing: PopupMenuButton<String>(
-        onSelected: (v) {
-          if (v == 'edit') onEdit();
-          if (v == 'archive') onArchive();
-        },
-        itemBuilder: (_) => [
-          const PopupMenuItem(value: 'edit', child: Text('Edit')),
-          PopupMenuItem(
-            value: 'archive',
-            child: Text(archived ? 'Aktifkan' : 'Arsipkan'),
+    return FtCard(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(14),
+      child: Row(
+        children: [
+          CircleAvatar(
+            backgroundColor: _parseColor(category.color).withValues(alpha: 0.15),
+            child: Icon(_iconFor(category.icon),
+                color: _parseColor(category.color), size: 22),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(category.label,
+                    style: const TextStyle(
+                        color: FtColors.ink, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 2),
+                Text(Money.format(category.monthlyBudget),
+                    style: const TextStyle(
+                        color: FtColors.ink3, fontSize: 12)),
+              ],
+            ),
+          ),
+          PopupMenuButton<String>(
+            onSelected: (v) {
+              if (v == 'edit') onEdit();
+              if (v == 'archive') onArchive();
+            },
+            itemBuilder: (_) => [
+              const PopupMenuItem(value: 'edit', child: Text('Edit')),
+              PopupMenuItem(
+                value: 'archive',
+                child: Text(archived ? 'Aktifkan' : 'Arsipkan'),
+              ),
+            ],
           ),
         ],
       ),

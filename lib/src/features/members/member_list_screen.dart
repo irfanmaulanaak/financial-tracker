@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/formatters.dart';
 import '../../core/providers.dart';
+import '../../theme.dart';
+import '../../ui/ft_ui.dart';
 import '../household/household.dart';
 import '../household/household_providers.dart';
 import '../household/household_repository.dart';
@@ -64,51 +66,66 @@ class _MemberListScreenState extends ConsumerState<MemberListScreen> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     return Scaffold(
-      appBar: AppBar(title: const Text('Anggota')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Text(household.name,
-              style: Theme.of(context).textTheme.headlineSmall),
-          const SizedBox(height: 4),
-          Text('Payday tanggal ${household.payday} • ${Money.format(household.monthlyBudgetTotal)} / siklus',
-              style: Theme.of(context).textTheme.bodySmall),
-          const SizedBox(height: 16),
-          Card(
-            child: Column(
-              children: [
-                for (var i = 0; i < household.members.length; i++) ...[
-                  if (i > 0) const Divider(height: 1),
-                  _MemberTile(
-                    member: household.members[i],
-                    isSelf: household.members[i].userId == user.uid,
+      backgroundColor: FtColors.bg,
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+          children: [
+            const FtSubHeader(title: 'Anggota'),
+            FtCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Eyebrow('Rumah tangga'),
+                  const SizedBox(height: 6),
+                  Text(household.name,
+                      style: Theme.of(context).textTheme.headlineSmall),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Payday tanggal ${household.payday} • ${Money.format(household.monthlyBudgetTotal)} / siklus',
+                    style: const TextStyle(color: FtColors.ink3, fontSize: 12),
                   ),
                 ],
-              ],
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          if (_newInviteCode != null)
-            _InviteCodeCard(
-              code: _newInviteCode!,
-              onClose: () => setState(() => _newInviteCode = null),
-            )
-          else
-            OutlinedButton.icon(
-              onPressed: _busy
-                  ? null
-                  : () => _createInvite(household.id, user.uid),
-              icon: const Icon(Icons.person_add_outlined),
-              label: const Text('Undang anggota baru'),
+            const SizedBox(height: 16),
+            FtCard(
+              padding: EdgeInsets.zero,
+              child: Column(
+                children: [
+                  for (var i = 0; i < household.members.length; i++) ...[
+                    if (i > 0) const Divider(height: 1),
+                    _MemberTile(
+                      member: household.members[i],
+                      isSelf: household.members[i].userId == user.uid,
+                    ),
+                  ],
+                ],
+              ),
             ),
-          const SizedBox(height: 24),
-          TextButton.icon(
-            onPressed: () => _leave(household.id, user.uid),
-            icon: Icon(Icons.logout, color: Theme.of(context).colorScheme.error),
-            label: Text('Keluar dari rumah tangga',
-                style: TextStyle(color: Theme.of(context).colorScheme.error)),
-          ),
-        ],
+            const SizedBox(height: 16),
+            if (_newInviteCode != null)
+              _InviteCodeCard(
+                code: _newInviteCode!,
+                onClose: () => setState(() => _newInviteCode = null),
+              )
+            else
+              OutlinedButton.icon(
+                onPressed: _busy
+                    ? null
+                    : () => _createInvite(household.id, user.uid),
+                icon: const Icon(Icons.person_add_outlined),
+                label: const Text('Undang anggota baru'),
+              ),
+            const SizedBox(height: 24),
+            TextButton.icon(
+              onPressed: () => _leave(household.id, user.uid),
+              icon: const Icon(Icons.logout, color: FtColors.danger),
+              label: const Text('Keluar dari rumah tangga',
+                  style: TextStyle(color: FtColors.danger)),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -132,7 +149,8 @@ class _MemberTile extends StatelessWidget {
       title: Text(member.displayName + (isSelf ? ' (kamu)' : '')),
       subtitle: Text(roleToString(member.role)),
       trailing: member.isCreator
-          ? const Chip(label: Text('Creator'), visualDensity: VisualDensity.compact)
+          ? const Chip(
+              label: Text('Creator'), visualDensity: VisualDensity.compact)
           : null,
     );
   }
@@ -145,13 +163,8 @@ class _InviteCodeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: scheme.primaryContainer,
-        borderRadius: BorderRadius.circular(16),
-      ),
+    return FtCard(
+      backgroundColor: const Color(0xFFE9D9C8),
       child: Column(
         children: [
           Row(
@@ -166,10 +179,10 @@ class _InviteCodeCard extends StatelessWidget {
           SelectableText(
             code,
             style: TextStyle(
-              fontSize: 36,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 8,
-              color: scheme.onPrimaryContainer,
+            fontSize: 36,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 8,
+              color: FtColors.ink,
             ),
           ),
           const SizedBox(height: 4),

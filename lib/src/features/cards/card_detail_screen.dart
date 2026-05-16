@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/cicilan.dart';
 import '../../core/formatters.dart';
+import '../../theme.dart';
+import '../../ui/ft_ui.dart';
 import '../household/household_providers.dart';
 import 'credit_card.dart';
 import 'card_repository.dart';
@@ -36,136 +38,141 @@ class CardDetailScreen extends ConsumerWidget {
     final installmentsAsync =
         ref.watch(_installmentsProvider((hid: household.id, cardId: cardId)));
 
+    Future<void> editCard(CreditCard c) async {
+      final result = await showModalBottomSheet<CardDraft>(
+        context: context,
+        isScrollControlled: true,
+        builder: (_) => EditCardSheet(initial: c),
+      );
+      if (result == null) return;
+      await ref.read(cardRepositoryProvider).updateCard(
+            hid: household.id,
+            cardId: cardId,
+            label: result.label,
+            last4: result.last4,
+            limit: result.limit,
+            dueDay: result.dueDay,
+            apr: result.apr,
+            accent: result.accent,
+            minPaymentPct: result.minPaymentPct,
+          );
+    }
+
     return Scaffold(
-      appBar: AppBar(
-        title: cardAsync.when(
-          loading: () => const Text('Kartu'),
-          error: (_, _) => const Text('Kartu'),
-          data: (c) => Text(c?.label ?? 'Kartu'),
-        ),
-        actions: [
-          IconButton(
-            tooltip: 'Edit',
-            icon: const Icon(Icons.edit_outlined),
-            onPressed: () async {
-              final c = cardAsync.value;
-              if (c == null) return;
-              final result = await showModalBottomSheet<CardDraft>(
-                context: context,
-                isScrollControlled: true,
-                builder: (_) => EditCardSheet(initial: c),
-              );
-              if (result == null) return;
-              await ref.read(cardRepositoryProvider).updateCard(
-                    hid: household.id,
-                    cardId: cardId,
-                    label: result.label,
-                    last4: result.last4,
-                    limit: result.limit,
-                    dueDay: result.dueDay,
-                    apr: result.apr,
-                    accent: result.accent,
-                    minPaymentPct: result.minPaymentPct,
-                  );
-            },
-          ),
-        ],
-      ),
+      backgroundColor: FtColors.bg,
       body: cardAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Gagal: $e')),
         data: (card) {
           if (card == null) {
-            return const Center(child: Text('Kartu tidak ditemukan.'));
+            return const SafeArea(
+              child: Column(
+                children: [
+                  FtSubHeader(title: 'Kartu'),
+                  Expanded(child: Center(child: Text('Kartu tidak ditemukan.'))),
+                ],
+              ),
+            );
           }
           final minPay = minimumPayment(
               balance: card.used, minPaymentPct: card.minPaymentPct);
           final available = (card.limit - card.used).clamp(0, card.limit);
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              _Header(card: card, available: available),
-              const SizedBox(height: 16),
-              Row(
+          return SafeArea(
+            child: FtAppChrome(
+              current: FtTab.cards,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 112),
                 children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: card.used == 0
-                          ? null
-                          : () => _confirm(
-                                context,
-                                'Bayar minimum (${Money.format(minPay)})?',
-                                () async {
-                                  await ref
-                                      .read(cardRepositoryProvider)
-                                      .payMinimum(
-                                        hid: household.id,
-                                        cardId: cardId,
-                                      );
-                                },
-                              ),
-                      icon: const Icon(Icons.account_balance_wallet_outlined),
-                      label: Text('Bayar min: ${Money.format(minPay)}'),
+                  FtSubHeader(
+                    title: card.label,
+                    trailing: IconButton.filledTonal(
+                      tooltip: 'Edit',
+                      onPressed: () => editCard(card),
+                      icon: const Icon(Icons.edit_outlined, size: 18),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: FilledButton.icon(
-                      onPressed: card.used == 0
-                          ? null
-                          : () => _confirm(
-                                context,
-                                'Bayar lunas (${Money.format(card.used)})?',
-                                () async {
-                                  await ref
-                                      .read(cardRepositoryProvider)
-                                      .payFull(
-                                        hid: household.id,
-                                        cardId: cardId,
-                                      );
-                                },
-                              ),
-                      icon: const Icon(Icons.check),
-                      label: Text('Lunasi: ${Money.format(card.used)}'),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              Text('Cicilan aktif',
-                  style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 8),
-              ...installmentsAsync.maybeWhen(
-                data: (items) => items.isEmpty
-                    ? [
-                        Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Center(
-                            child: Text('Belum ada cicilan.',
-                                style: TextStyle(color: Colors.grey.shade600)),
-                          ),
-                        ),
-                      ]
-                    : items
-                        .map((i) => _InstallmentTile(
-                              inst: i,
-                              onPaidOne: () => ref
-                                  .read(cardRepositoryProvider)
-                                  .incrementInstallment(
-                                    hid: household.id,
-                                    cardId: cardId,
-                                    installmentId: i.id,
+                  _Header(card: card, available: available),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: card.used == 0
+                              ? null
+                              : () => _confirm(
+                                    context,
+                                    'Bayar minimum (${Money.format(minPay)})?',
+                                    () async {
+                                      await ref
+                                          .read(cardRepositoryProvider)
+                                          .payMinimum(
+                                            hid: household.id,
+                                            cardId: cardId,
+                                          );
+                                    },
                                   ),
-                            ))
-                        .toList(),
-                orElse: () => const [
-                  Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Center(child: CircularProgressIndicator()),
+                          icon:
+                              const Icon(Icons.account_balance_wallet_outlined),
+                          label: Text('Min ${Money.format(minPay)}'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: card.used == 0
+                              ? null
+                              : () => _confirm(
+                                    context,
+                                    'Bayar lunas (${Money.format(card.used)})?',
+                                    () async {
+                                      await ref
+                                          .read(cardRepositoryProvider)
+                                          .payFull(
+                                            hid: household.id,
+                                            cardId: cardId,
+                                          );
+                                    },
+                                  ),
+                          icon: const Icon(Icons.check),
+                          label: Text('Lunasi ${Money.format(card.used)}'),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  const FtSectionHeader(title: 'Cicilan aktif'),
+                  ...installmentsAsync.maybeWhen(
+                    data: (items) => items.isEmpty
+                        ? [
+                            const FtCard(
+                              child: Center(
+                                child: Text('Belum ada cicilan.',
+                                    style: TextStyle(color: FtColors.ink3)),
+                              ),
+                            ),
+                          ]
+                        : items
+                            .map((i) => _InstallmentTile(
+                                  inst: i,
+                                  onPaidOne: () => ref
+                                      .read(cardRepositoryProvider)
+                                      .incrementInstallment(
+                                        hid: household.id,
+                                        cardId: cardId,
+                                        installmentId: i.id,
+                                      ),
+                                ))
+                            .toList(),
+                    orElse: () => const [
+                      Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Center(child: CircularProgressIndicator()),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
+            ),
           );
         },
       ),
@@ -203,12 +210,9 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = _parseColor(card.accent);
     final pct = card.limit == 0 ? 0.0 : (card.used / card.limit).clamp(0.0, 1.0);
-    return Container(
+    return FtCard(
+      backgroundColor: color,
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(20),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -265,10 +269,10 @@ class _InstallmentTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pct = inst.monthsPaid / inst.monthsTotal;
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 6),
+    return FtCard(
+      margin: const EdgeInsets.only(bottom: 8),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: EdgeInsets.zero,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -285,11 +289,7 @@ class _InstallmentTile extends StatelessWidget {
             const SizedBox(height: 4),
             ClipRRect(
               borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: pct,
-                minHeight: 6,
-                backgroundColor: Colors.grey.shade200,
-              ),
+              child: FtProgressBar(value: pct, max: 1, color: FtColors.sky),
             ),
             const SizedBox(height: 8),
             Row(

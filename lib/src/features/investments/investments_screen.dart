@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/formatters.dart';
+import '../../theme.dart';
+import '../../ui/ft_ui.dart';
 import '../household/household_providers.dart';
 import 'investment.dart';
 import 'investments_repository.dart';
@@ -24,49 +26,64 @@ class InvestmentsScreen extends ConsumerWidget {
     final invAsync = ref.watch(investmentsProvider(household.id));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Investasi')),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _openAdd(context, ref, household.id),
-        icon: const Icon(Icons.add),
-        label: const Text('Posisi baru'),
-      ),
-      body: invAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Gagal: $e')),
-        data: (items) {
-          final summary = summarisePortfolio(items);
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+      backgroundColor: FtColors.bg,
+      body: SafeArea(
+        child: FtAppChrome(
+          current: FtTab.assets,
+          child: Column(
             children: [
-              _Summary(summary: summary),
-              const SizedBox(height: 16),
-              if (items.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 48),
-                  child: Center(
-                    child: Text(
-                      'Belum ada investasi.\nTambah posisi manual via tombol "+".',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.grey.shade600),
-                    ),
-                  ),
-                )
-              else
-                ...items.map((i) => _InvestmentTile(
-                      inv: i,
-                      onUpdate: () =>
-                          _openUpdateValue(context, ref, household.id, i),
-                      onDelete: () => _confirmDelete(context, ref, household.id, i),
-                    )),
+              FtSubHeader(
+                title: 'Investasi',
+                trailing: IconButton.filled(
+                  tooltip: 'Posisi baru',
+                  onPressed: () => _openAdd(context, ref, household.id),
+                  icon: const Icon(Icons.add, size: 18),
+                ),
+              ),
+              Expanded(
+                child: invAsync.when(
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (e, _) => Center(child: Text('Gagal: $e')),
+                  data: (items) {
+                    final summary = summarisePortfolio(items);
+                    return ListView(
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 112),
+                      children: [
+                        _Summary(summary: summary),
+                        const SizedBox(height: 16),
+                        if (items.isEmpty)
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 48),
+                            child: Center(
+                              child: Text(
+                                'Belum ada investasi.\nTambah posisi manual via tombol "+".',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(color: FtColors.ink3),
+                              ),
+                            ),
+                          )
+                        else
+                          ...items.map((i) => _InvestmentTile(
+                                inv: i,
+                                onUpdate: () => _openUpdateValue(
+                                    context, ref, household.id, i),
+                                onDelete: () => _confirmDelete(
+                                    context, ref, household.id, i),
+                              )),
+                      ],
+                    );
+                  },
+                ),
+              ),
             ],
-          );
-        },
+          ),
+        ),
       ),
     );
   }
 
-  Future<void> _openAdd(
-      BuildContext context, WidgetRef ref, String hid) async {
+  Future<void> _openAdd(BuildContext context, WidgetRef ref, String hid) async {
     final draft = await showModalBottomSheet<_Draft>(
       context: context,
       isScrollControlled: true,
@@ -144,9 +161,7 @@ class InvestmentsScreen extends ConsumerWidget {
       ),
     );
     if (ok == true) {
-      await ref
-          .read(investmentsRepositoryProvider)
-          .delete(hid: hid, id: i.id);
+      await ref.read(investmentsRepositoryProvider).delete(hid: hid, id: i.id);
     }
   }
 }
@@ -158,21 +173,19 @@ class _Summary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final positive = summary.totalGain >= 0;
-    final color = positive ? const Color(0xFF10B981) : const Color(0xFFEF4444);
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
-      ),
+    final color = positive ? FtColors.sage : FtColors.danger;
+    return FtCard(
+      backgroundColor:
+          positive ? const Color(0xFFEAF0EC) : const Color(0xFFF2E7E3),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Total portofolio',
-              style: TextStyle(color: Colors.grey.shade700, fontSize: 12)),
-          Text(Money.format(summary.totalValue),
-              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
+          const Eyebrow('Total portofolio'),
+          const SizedBox(height: 6),
+          Text(
+            Money.format(summary.totalValue),
+            style: Theme.of(context).textTheme.displaySmall,
+          ),
           const SizedBox(height: 6),
           Text(
             '${positive ? '+' : ''}${Money.format(summary.totalGain)} (${(summary.gainPct * 100).toStringAsFixed(1)}%)',
@@ -180,7 +193,7 @@ class _Summary extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text('Diversifikasi: ${summary.distinctTypes} jenis aset',
-              style: TextStyle(color: Colors.grey.shade700, fontSize: 12)),
+              style: const TextStyle(color: FtColors.ink3, fontSize: 12)),
         ],
       ),
     );
@@ -197,26 +210,55 @@ class _InvestmentTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final positive = inv.gain >= 0;
-    final color = positive ? const Color(0xFF10B981) : const Color(0xFFEF4444);
-    return Card(
-      child: ListTile(
-        onTap: onUpdate,
-        title: Text(inv.label),
-        subtitle: Text(
-            '${investmentTypeLabel(inv.type)} • cost ${Money.format(inv.costBasis)}'),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(Money.format(inv.currentValue),
-                style: const TextStyle(fontWeight: FontWeight.bold)),
-            Text(
-              '${positive ? '+' : ''}${(inv.gainPct * 100).toStringAsFixed(1)}%',
-              style: TextStyle(color: color, fontSize: 12),
+    final color = positive ? FtColors.sage : FtColors.danger;
+    return FtCard(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(14),
+      onTap: onUpdate,
+      onLongPress: onDelete,
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: FtColors.surfaceAlt,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: FtColors.line, width: 0.5),
             ),
-          ],
-        ),
-        onLongPress: onDelete,
+            child: const Icon(Icons.trending_up, color: FtColors.sky),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(inv.label,
+                    style: const TextStyle(
+                        color: FtColors.ink, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 2),
+                Text(
+                  '${investmentTypeLabel(inv.type)} • cost ${Money.format(inv.costBasis)}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: FtColors.ink3, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(Money.format(inv.currentValue),
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text(
+                '${positive ? '+' : ''}${(inv.gainPct * 100).toStringAsFixed(1)}%',
+                style: TextStyle(color: color, fontSize: 12),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
