@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/net_worth.dart';
 import '../../../theme.dart';
+import '../../../ui/ft_motion.dart';
 import '../../../ui/ft_ui.dart';
 import 'home_formatters.dart';
 
@@ -13,39 +14,52 @@ class AssetHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    return FtTapScale(
+      scale: 0.985,
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(22, 0, 22, 22),
+        padding: const EdgeInsets.fromLTRB(22, 0, 22, 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Eyebrow('Total Aset'),
             const SizedBox(height: 10),
-            Text.rich(
-              TextSpan(
-                text: moneyNoSymbol(nw.total),
-                children: const [
-                  TextSpan(
-                    text: ' IDR',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 16,
-                      color: FtColors.ink3,
-                      letterSpacing: 0,
+            FtFadeUp(
+              duration: const Duration(milliseconds: 420),
+              distance: 6,
+              child: Text.rich(
+                TextSpan(
+                  text: moneyNoSymbol(nw.total),
+                  children: const [
+                    TextSpan(
+                      text: ' IDR',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 16,
+                        color: FtColors.ink3,
+                        letterSpacing: 0,
+                        fontWeight: FontWeight.w400,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
+                style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                      fontSize: 46,
+                      height: 1,
+                      letterSpacing: -1.5,
+                      fontWeight: FontWeight.w500,
+                      color: FtColors.ink,
+                    ),
               ),
-              style: Theme.of(context)
-                  .textTheme
-                  .displayLarge
-                  ?.copyWith(fontSize: 46, height: 1),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
             const Text(
               'Tunai + tabungan dikurangi utang kartu',
-              style: TextStyle(color: FtColors.ink3, fontSize: 11),
+              style: TextStyle(
+                color: FtColors.ink3,
+                fontSize: 11,
+                letterSpacing: 0.1,
+              ),
             ),
           ],
         ),
@@ -111,7 +125,8 @@ class _BreakdownRow extends StatelessWidget {
                   label,
                   style: const TextStyle(
                     color: FtColors.ink,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -126,9 +141,10 @@ class _BreakdownRow extends StatelessWidget {
             compactMoney(value),
             style: TextStyle(
               color: color,
-              fontSize: 13,
+              fontSize: 13.5,
               fontWeight: FontWeight.w600,
               fontFeatures: const [FontFeature.tabularFigures()],
+              letterSpacing: -0.1,
             ),
           ),
         ],

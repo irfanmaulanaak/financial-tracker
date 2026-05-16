@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/formatters.dart';
 import '../../../theme.dart';
+import '../../../ui/ft_motion.dart';
 import '../../../ui/ft_ui.dart';
 import 'home_formatters.dart';
 
@@ -60,12 +61,22 @@ class MonthStrip extends StatelessWidget {
                   ],
                 ),
               ),
-              IconButton.filled(
-                onPressed: onAdd,
-                icon: const Icon(Icons.add),
-                style: IconButton.styleFrom(
-                  backgroundColor: FtColors.ink,
-                  foregroundColor: FtColors.bg,
+              FtTapScale(
+                scale: 0.92,
+                onTap: onAdd,
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: const BoxDecoration(
+                    color: FtColors.ink,
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: const Icon(
+                    Icons.add,
+                    size: 18,
+                    color: FtColors.bg,
+                  ),
                 ),
               ),
             ],

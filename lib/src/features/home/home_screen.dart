@@ -10,6 +10,7 @@ import '../../core/payday.dart';
 import '../../core/providers.dart';
 import '../../core/recurring_runner.dart';
 import '../../theme.dart';
+import '../../ui/ft_motion.dart';
 import '../../ui/ft_ui.dart';
 import '../auth/auth_repository.dart';
 import '../cards/credit_card.dart';
@@ -166,9 +167,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
           return FtAppChrome(
             current: FtTab.home,
-            child: ListView(
-              padding: const EdgeInsets.only(bottom: 120),
-              children: [
+            child: FtFadeUp(
+              duration: const Duration(milliseconds: 360),
+              distance: 10,
+              child: ListView(
+                padding: const EdgeInsets.only(bottom: 120),
+                physics: const BouncingScrollPhysics(
+                  parent: AlwaysScrollableScrollPhysics(),
+                ),
+                children: [
                 HomeHeader(
                   household: household,
                   displayName: user?.displayName?.trim().isNotEmpty == true
@@ -211,7 +218,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   household: household,
                   onTap: () => context.push('/expenses'),
                 ),
-              ],
+                ],
+              ),
             ),
           );
         },

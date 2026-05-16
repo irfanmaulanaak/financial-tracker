@@ -23,6 +23,17 @@ class FinancialTrackerApp extends ConsumerWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
+      builder: (context, child) {
+        final mq = MediaQuery.of(context);
+        final clamped = mq.textScaler.clamp(
+          minScaleFactor: 0.9,
+          maxScaleFactor: 1.2,
+        );
+        return MediaQuery(
+          data: mq.copyWith(textScaler: clamped),
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
     );
   }
 }
