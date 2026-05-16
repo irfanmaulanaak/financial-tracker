@@ -1,1 +1,48 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"financial-tracker-4791d","appId":"1:361266947064:android:02c32583510662114dec0d","fileOutput":"android/app/google-services.json"}},"ios":{"default":{"projectId":"financial-tracker-4791d","appId":"1:361266947064:ios:260e4b383f9a9f7c4dec0d","uploadDebugSymbols":false,"fileOutput":"ios/Runner/GoogleService-Info.plist"}},"dart":{"lib/firebase_options.dart":{"projectId":"financial-tracker-4791d","configurations":{"android":"1:361266947064:android:02c32583510662114dec0d","ios":"1:361266947064:ios:260e4b383f9a9f7c4dec0d","web":"1:361266947064:web:9b2fe309a87f4ec24dec0d"}}}}}}
+{
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "emulators": {
+    "auth": {
+      "port": 9099
+    },
+    "firestore": {
+      "port": 8080
+    },
+    "ui": {
+      "enabled": true,
+      "port": 4000
+    },
+    "singleProjectMode": true
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "financial-tracker-4791d",
+          "appId": "1:361266947064:android:02c32583510662114dec0d",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "ios": {
+        "default": {
+          "projectId": "financial-tracker-4791d",
+          "appId": "1:361266947064:ios:260e4b383f9a9f7c4dec0d",
+          "uploadDebugSymbols": false,
+          "fileOutput": "ios/Runner/GoogleService-Info.plist"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "financial-tracker-4791d",
+          "configurations": {
+            "android": "1:361266947064:android:02c32583510662114dec0d",
+            "ios": "1:361266947064:ios:260e4b383f9a9f7c4dec0d",
+            "web": "1:361266947064:web:9b2fe309a87f4ec24dec0d"
+          }
+        }
+      }
+    }
+  }
+}

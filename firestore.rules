@@ -1,0 +1,64 @@
+rules_version = '2';
+
+// Financial Tracker — Firestore rules
+// Model: 1 user ↔ 1 household. Household members[].userId is mirrored to
+// memberIds[] for rule evaluation. Both arrays kept in sync on join/leave.
+//
+// Trust model: internal app, 2-5 known users, distributed via TestFlight/APK.
+// Household root doc is readable by any authed user (so a joiner can validate
+// an invite); per-household subcollections (expenses, etc.) remain
+// member-gated. Random Firestore IDs + single-use 6-digit invites are the
+// discovery + access controls.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Per-user profile. Only the owner can read/write.
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    match /households/{hid} {
+      allow read: if request.auth != null;
+
+      allow create: if request.auth != null
+                    && request.auth.uid == request.resource.data.creatorId
+                    && request.auth.uid in request.resource.data.memberIds;
+
+      // Update allowed for existing members; OR for a joiner who is adding
+      // exactly themselves to memberIds (size grows by 1, joiner now in it,
+      // joiner wasn't there before). Combined with single-use invites this
+      // bounds who can self-join.
+      allow update: if request.auth != null
+                    && (request.auth.uid in resource.data.memberIds
+                        || (
+                          !(request.auth.uid in resource.data.memberIds)
+                          && request.auth.uid in request.resource.data.memberIds
+                          && request.resource.data.memberIds.size() ==
+                             resource.data.memberIds.size() + 1
+                        ));
+
+      allow delete: if request.auth != null
+                    && request.auth.uid in resource.data.memberIds;
+
+      // All household subcollections (expenses, incomes, cards, goals, etc.)
+      // are member-only.
+      match /{document=**} {
+        allow read, write: if request.auth != null
+          && request.auth.uid in
+            get(/databases/$(database)/documents/households/$(hid)).data.memberIds;
+      }
+    }
+
+    // Invite codes: 6-digit, single-use. Any authed user can read (to validate
+    // a code); only the generator can create or delete; update allowed only
+    // while unconsumed (the consume happens during the join transaction).
+    match /invites/{code} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+                    && request.auth.uid == request.resource.data.generatedBy;
+      allow update: if request.auth != null && resource.data.consumed == false;
+      allow delete: if request.auth != null
+                    && request.auth.uid == resource.data.generatedBy;
+    }
+  }
+}

@@ -43,3 +43,9 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Emulator integration tests
+/emulator_tests/node_modules/
+/emulator_tests/package-lock.json
+/firestore-debug.log
+/firebase-debug.log
