@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import '../../core/formatters.dart';
 import '../../core/providers.dart';
 import '../../core/seeded_data.dart';
+import '../../theme.dart';
+import '../../ui/ft_ui.dart';
 import '../household/household.dart';
 import '../household/household_repository.dart';
 
@@ -13,7 +15,8 @@ class CreatorWizardScreen extends ConsumerStatefulWidget {
   const CreatorWizardScreen({super.key});
 
   @override
-  ConsumerState<CreatorWizardScreen> createState() => _CreatorWizardScreenState();
+  ConsumerState<CreatorWizardScreen> createState() =>
+      _CreatorWizardScreenState();
 }
 
 class _CreatorWizardScreenState extends ConsumerState<CreatorWizardScreen> {
@@ -62,7 +65,9 @@ class _CreatorWizardScreenState extends ConsumerState<CreatorWizardScreen> {
           if (Money.parse(entry.value.text) != null)
             entry.key: Money.parse(entry.value.text)!,
       };
-      final hid = await ref.read(householdRepositoryProvider).create(
+      final hid = await ref
+          .read(householdRepositoryProvider)
+          .create(
             creatorUid: user.uid,
             creatorName: user.displayName ?? user.email ?? 'Saya',
             creatorRole: _role,
@@ -91,7 +96,9 @@ class _CreatorWizardScreenState extends ConsumerState<CreatorWizardScreen> {
       _error = null;
     });
     try {
-      final code = await ref.read(householdRepositoryProvider).createInvite(
+      final code = await ref
+          .read(householdRepositoryProvider)
+          .createInvite(
             householdId: _createdHouseholdId!,
             generatedBy: user.uid,
           );
@@ -106,24 +113,28 @@ class _CreatorWizardScreenState extends ConsumerState<CreatorWizardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Buat rumah tangga'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: _step == 0 || _step == 3
-              ? () => context.go(_step == 3 ? '/home' : '/')
-              : () => setState(() => _step--),
-        ),
-      ),
+      backgroundColor: FtColors.bg,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: switch (_step) {
-            0 => _stepName(),
-            1 => _stepBudget(),
-            2 => _stepCategories(),
-            _ => _stepInvite(),
-          },
+        child: Column(
+          children: [
+            FtSubHeader(
+              title: 'Buat rumah tangga',
+              onBack: _step == 0 || _step == 3
+                  ? () => context.go(_step == 3 ? '/home' : '/')
+                  : () => setState(() => _step--),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                child: switch (_step) {
+                  0 => _stepName(),
+                  1 => _stepBudget(),
+                  2 => _stepCategories(),
+                  _ => _stepInvite(),
+                },
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -133,8 +144,12 @@ class _CreatorWizardScreenState extends ConsumerState<CreatorWizardScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('Nama rumah tangga',
-            style: Theme.of(context).textTheme.titleLarge),
+        const Eyebrow('Langkah 1'),
+        const SizedBox(height: 6),
+        Text(
+          'Nama rumah tangga',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
         const SizedBox(height: 16),
         TextField(
           controller: _nameCtrl,
@@ -145,13 +160,14 @@ class _CreatorWizardScreenState extends ConsumerState<CreatorWizardScreen> {
           ),
         ),
         const SizedBox(height: 24),
-        Text('Peran kamu',
-            style: Theme.of(context).textTheme.titleMedium),
+        Text('Peran kamu', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
         DropdownButtonFormField<MemberRole>(
           initialValue: _role,
           items: MemberRole.values
-              .map((r) => DropdownMenuItem(value: r, child: Text(roleToString(r))))
+              .map(
+                (r) => DropdownMenuItem(value: r, child: Text(roleToString(r))),
+              )
               .toList(),
           onChanged: (v) => setState(() => _role = v ?? _role),
         ),
@@ -168,8 +184,9 @@ class _CreatorWizardScreenState extends ConsumerState<CreatorWizardScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('Budget bulanan',
-            style: Theme.of(context).textTheme.titleLarge),
+        const Eyebrow('Langkah 2'),
+        const SizedBox(height: 6),
+        Text('Budget bulanan', style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 16),
         TextField(
           controller: _budgetCtrl,
@@ -181,8 +198,7 @@ class _CreatorWizardScreenState extends ConsumerState<CreatorWizardScreen> {
           ),
         ),
         const SizedBox(height: 24),
-        Text('Tanggal gajian',
-            style: Theme.of(context).textTheme.titleMedium),
+        Text('Tanggal gajian', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
         Row(
           children: [
@@ -198,16 +214,18 @@ class _CreatorWizardScreenState extends ConsumerState<CreatorWizardScreen> {
             ),
             SizedBox(
               width: 40,
-              child: Text('$_payday',
-                  textAlign: TextAlign.right,
-                  style: Theme.of(context).textTheme.titleMedium),
+              child: Text(
+                '$_payday',
+                textAlign: TextAlign.right,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
             ),
           ],
         ),
         const SizedBox(height: 8),
         const Text(
           'Jika gajian jatuh di Sabtu/Minggu, akan otomatis mundur ke Jumat.',
-          style: TextStyle(fontSize: 12),
+          style: TextStyle(color: FtColors.ink3, fontSize: 12),
         ),
         const Spacer(),
         FilledButton(
@@ -222,11 +240,16 @@ class _CreatorWizardScreenState extends ConsumerState<CreatorWizardScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('Kategori (opsional)',
-            style: Theme.of(context).textTheme.titleLarge),
+        const Eyebrow('Langkah 3'),
+        const SizedBox(height: 6),
+        Text(
+          'Kategori (opsional)',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
         const SizedBox(height: 4),
         const Text(
           'Isi budget per kategori sekarang, atau lewati dan atur nanti.',
+          style: TextStyle(color: FtColors.ink3),
         ),
         const SizedBox(height: 12),
         Expanded(
@@ -249,8 +272,7 @@ class _CreatorWizardScreenState extends ConsumerState<CreatorWizardScreen> {
         ),
         if (_error != null) ...[
           const SizedBox(height: 8),
-          Text(_error!,
-              style: TextStyle(color: Theme.of(context).colorScheme.error)),
+          Text(_error!, style: const TextStyle(color: FtColors.danger)),
         ],
         const SizedBox(height: 16),
         FilledButton(
@@ -259,7 +281,8 @@ class _CreatorWizardScreenState extends ConsumerState<CreatorWizardScreen> {
               ? const SizedBox(
                   height: 20,
                   width: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2))
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
               : const Text('Buat rumah tangga'),
         ),
       ],
@@ -270,12 +293,13 @@ class _CreatorWizardScreenState extends ConsumerState<CreatorWizardScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Icon(Icons.check_circle_outline,
-            size: 56, color: Colors.green),
+        const Icon(Icons.check_circle_outline, size: 56, color: FtColors.sage),
         const SizedBox(height: 8),
-        Text('Rumah tangga dibuat!',
-            style: Theme.of(context).textTheme.titleLarge,
-            textAlign: TextAlign.center),
+        Text(
+          'Rumah tangga dibuat!',
+          style: Theme.of(context).textTheme.titleLarge,
+          textAlign: TextAlign.center,
+        ),
         const SizedBox(height: 24),
         if (_inviteCode == null)
           Column(
@@ -297,8 +321,7 @@ class _CreatorWizardScreenState extends ConsumerState<CreatorWizardScreen> {
           _InviteCodeCard(code: _inviteCode!),
         if (_error != null) ...[
           const SizedBox(height: 8),
-          Text(_error!,
-              style: TextStyle(color: Theme.of(context).colorScheme.error)),
+          Text(_error!, style: const TextStyle(color: FtColors.danger)),
         ],
         const Spacer(),
         FilledButton(
@@ -316,13 +339,9 @@ class _InviteCodeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
+    return FtCard(
+      backgroundColor: const Color(0xFFE9D9C8),
       padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-      decoration: BoxDecoration(
-        color: scheme.primaryContainer,
-        borderRadius: BorderRadius.circular(16),
-      ),
       child: Column(
         children: [
           const Text('Kode undangan'),
@@ -333,7 +352,7 @@ class _InviteCodeCard extends StatelessWidget {
               fontSize: 36,
               fontWeight: FontWeight.bold,
               letterSpacing: 8,
-              color: scheme.onPrimaryContainer,
+              color: FtColors.ink,
             ),
           ),
           const SizedBox(height: 8),
@@ -341,9 +360,9 @@ class _InviteCodeCard extends StatelessWidget {
             tooltip: 'Salin',
             onPressed: () {
               Clipboard.setData(ClipboardData(text: code));
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Kode disalin')),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('Kode disalin')));
             },
             icon: const Icon(Icons.copy),
           ),

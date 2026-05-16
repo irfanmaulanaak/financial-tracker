@@ -344,7 +344,8 @@ class FtSubHeader extends StatelessWidget {
       child: Row(
         children: [
           IconButton.filledTonal(
-            onPressed: onBack ??
+            onPressed:
+                onBack ??
                 () {
                   if (Navigator.of(context).canPop()) {
                     context.pop();

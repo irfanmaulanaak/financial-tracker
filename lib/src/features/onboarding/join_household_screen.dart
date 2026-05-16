@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/invite_code.dart';
 import '../../core/providers.dart';
+import '../../theme.dart';
+import '../../ui/ft_ui.dart';
 import '../household/household.dart';
 import '../household/household_repository.dart';
 
@@ -41,7 +43,9 @@ class _JoinHouseholdScreenState extends ConsumerState<JoinHouseholdScreen> {
       _error = null;
     });
     try {
-      await ref.read(householdRepositoryProvider).joinWithInvite(
+      await ref
+          .read(householdRepositoryProvider)
+          .joinWithInvite(
             code: code,
             userId: user.uid,
             displayName: user.displayName ?? user.email ?? 'Saya',
@@ -60,70 +64,84 @@ class _JoinHouseholdScreenState extends ConsumerState<JoinHouseholdScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Gabung rumah tangga'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/'),
-        ),
-      ),
+      backgroundColor: FtColors.bg,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text('Masukkan kode undangan',
-                  style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _codeCtrl,
-                keyboardType: TextInputType.number,
-                maxLength: 6,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                style: const TextStyle(
-                  fontSize: 28,
-                  letterSpacing: 8,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-                decoration: const InputDecoration(
-                  hintText: '000000',
-                  counterText: '',
-                ),
+        child: Column(
+          children: [
+            FtSubHeader(
+              title: 'Gabung rumah tangga',
+              onBack: () => context.go('/'),
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                children: [
+                  FtCard(
+                    child: Column(
+                      children: [
+                        const Eyebrow('Kode undangan'),
+                        const SizedBox(height: 10),
+                        TextField(
+                          controller: _codeCtrl,
+                          keyboardType: TextInputType.number,
+                          maxLength: 6,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                          ],
+                          style: const TextStyle(
+                            fontSize: 28,
+                            letterSpacing: 8,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                          decoration: const InputDecoration(
+                            hintText: '000000',
+                            counterText: '',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Peran kamu',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<MemberRole>(
+                    initialValue: _role,
+                    items: MemberRole.values
+                        .map(
+                          (r) => DropdownMenuItem(
+                            value: r,
+                            child: Text(roleToString(r)),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (v) => setState(() => _role = v ?? _role),
+                  ),
+                  if (_error != null) ...[
+                    const SizedBox(height: 16),
+                    Text(
+                      _error!,
+                      style: const TextStyle(color: FtColors.danger),
+                    ),
+                  ],
+                  const SizedBox(height: 24),
+                  FilledButton(
+                    onPressed: _busy ? null : _join,
+                    child: _busy
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text('Gabung'),
+                  ),
+                ],
               ),
-              const SizedBox(height: 24),
-              Text('Peran kamu',
-                  style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<MemberRole>(
-                initialValue: _role,
-                items: MemberRole.values
-                    .map((r) => DropdownMenuItem(
-                          value: r,
-                          child: Text(roleToString(r)),
-                        ))
-                    .toList(),
-                onChanged: (v) => setState(() => _role = v ?? _role),
-              ),
-              if (_error != null) ...[
-                const SizedBox(height: 16),
-                Text(_error!,
-                    style: TextStyle(
-                        color: Theme.of(context).colorScheme.error)),
-              ],
-              const SizedBox(height: 24),
-              FilledButton(
-                onPressed: _busy ? null : _join,
-                child: _busy
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Text('Gabung'),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -131,11 +149,11 @@ class _JoinHouseholdScreenState extends ConsumerState<JoinHouseholdScreen> {
 }
 
 String _friendlyError(String code) => switch (code) {
-      'invite_not_found' => 'Kode tidak ditemukan',
-      'invite_consumed' => 'Kode sudah pernah dipakai',
-      'invite_expired' => 'Kode sudah kedaluwarsa',
-      'household_missing' => 'Rumah tangga tidak ditemukan',
-      'user_already_in_household' => 'Kamu sudah tergabung di rumah tangga',
-      'already_member' => 'Kamu sudah menjadi anggota',
-      _ => 'Gagal: $code',
-    };
+  'invite_not_found' => 'Kode tidak ditemukan',
+  'invite_consumed' => 'Kode sudah pernah dipakai',
+  'invite_expired' => 'Kode sudah kedaluwarsa',
+  'household_missing' => 'Rumah tangga tidak ditemukan',
+  'user_already_in_household' => 'Kamu sudah tergabung di rumah tangga',
+  'already_member' => 'Kamu sudah menjadi anggota',
+  _ => 'Gagal: $code',
+};

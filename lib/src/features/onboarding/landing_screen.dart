@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../theme.dart';
+import '../../ui/ft_ui.dart';
 import '../auth/auth_repository.dart';
 
 class LandingScreen extends ConsumerWidget {
@@ -10,33 +12,56 @@ class LandingScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      appBar: AppBar(
-        actions: [
-          IconButton(
-            tooltip: 'Keluar',
-            onPressed: () => ref.read(authRepositoryProvider).signOut(),
-            icon: const Icon(Icons.logout),
-          ),
-        ],
-      ),
+      backgroundColor: FtColors.bg,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.account_balance_wallet_outlined, size: 64),
-              const SizedBox(height: 16),
-              Text(
-                'Selamat datang!',
-                style: Theme.of(context).textTheme.headlineSmall,
-                textAlign: TextAlign.center,
+              Align(
+                alignment: Alignment.centerRight,
+                child: IconButton.filledTonal(
+                  tooltip: 'Keluar',
+                  onPressed: () => ref.read(authRepositoryProvider).signOut(),
+                  icon: const Icon(Icons.logout, size: 18),
+                ),
               ),
-              const SizedBox(height: 8),
-              const Text(
-                'Buat rumah tangga baru, atau gabung dengan kode undangan.',
-                textAlign: TextAlign.center,
+              const Spacer(),
+              FtCard(
+                child: Column(
+                  children: [
+                    Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        color: FtColors.clay.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(
+                          color: FtColors.lineStrong,
+                          width: 0.5,
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.account_balance_wallet_outlined,
+                        size: 32,
+                        color: FtColors.clay,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Selamat datang!',
+                      style: Theme.of(context).textTheme.headlineSmall,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Buat rumah tangga baru, atau gabung dengan kode undangan.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: FtColors.ink3),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 32),
               FilledButton.icon(
@@ -50,6 +75,7 @@ class LandingScreen extends ConsumerWidget {
                 icon: const Icon(Icons.group_add_outlined),
                 label: const Text('Gabung dengan kode'),
               ),
+              const Spacer(),
             ],
           ),
         ),
