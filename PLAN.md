@@ -2,6 +2,15 @@
 
 Household financial tracker for Indonesian families. Flutter + Firebase. iOS + Android.
 
+## Setup Status (current)
+- ✅ Flutter project scaffolded (`financial_tracker`, org `com.irfanmaulanaakbar`)
+- ✅ Firebase project: `financial-tracker-4791d` — Android + iOS + Web apps registered
+- ✅ `lib/firebase_options.dart` generated (committed; safe by design — protection comes from Rules)
+- ✅ Packages installed: firebase_core, firebase_auth, cloud_firestore, google_sign_in, flutter_riverpod, go_router, intl
+- ✅ `main.dart` initializes Firebase + Riverpod ProviderScope
+- ✅ `flutter analyze` clean
+- ⏭ Next: deploy Firestore Security Rules → routing scaffold → auth screen → onboarding wizard
+
 ## Stack
 - Flutter 3.41.9 stable
 - Firebase: Auth (email/password + Google) + Firestore
@@ -47,16 +56,19 @@ Household financial tracker for Indonesian families. Flutter + Firebase. iOS + A
 ## Phases
 
 ### Phase 0 — Skeleton (~2 days)
-- `flutter create` + `flutterfire configure`
-- Firebase Auth: email/password + Google sign-in
-- Creator onboarding wizard:
+- ✅ `flutter create` + `flutterfire configure`
+- ✅ Firebase packages + main.dart init
+- ⏭ Deploy Firestore Security Rules (from SCHEMA.md)
+- ⏭ go_router scaffold
+- ⏭ Firebase Auth: email/password + Google sign-in
+- ⏭ Creator onboarding wizard:
   1. Household name
   2. Total monthly budget + payday (default 30)
   3. Review seeded categories (toggle + optional per-category budget; skippable)
   4. Invite first member (show one-time 6-digit code; skippable)
-- Invited member: enter code → auto-join → home
-- Invite codes: 6-digit numeric, unique, single-use, regenerated per invite
-- Member list screen
+- ⏭ Invited member: enter code → auto-join → home
+- ⏭ Invite codes: 6-digit numeric, unique, single-use, regenerated per invite
+- ⏭ Member list screen
 
 ### Phase 1 — Core Ledger (~1 week)
 - Seeded categories + user-added (icon + color)
@@ -103,9 +115,9 @@ Household financial tracker for Indonesian families. Flutter + Firebase. iOS + A
 - Flutter web build
 
 ## Open Decisions (remaining)
-- Firestore collection layout (households embed vs subcollection; expense + member + invite structure) — **next step**
-- State management pick — default Riverpod; confirm during scaffolding
+- ~~Firestore collection layout~~ → captured in `SCHEMA.md`
+- ~~State management~~ → Riverpod (3.x) locked in
 - Offline storage — skip local DB; rely on Firestore built-in offline cache (sufficient for 2-5 users)
 
 ## Next Step
-Sketch Firestore data model for Phase 0 + 1, then `flutter create` + `flutterfire configure`.
+Deploy Firestore Security Rules from `SCHEMA.md`, then build go_router scaffold + auth screen.

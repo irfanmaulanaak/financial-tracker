@@ -38,10 +38,13 @@ Update this section as the project evolves.
 
 ### Stack
 - Flutter 3.41.9 stable (Dart) — `flutter doctor` green except Xcode simulator runtimes (install via Xcode → Settings → Platforms)
-- Firebase: Auth + Firestore (cloud-first; household sync from day 1)
-- Targets: iOS + Android primary; web optional (Flutter web later)
+- Firebase: Auth + Firestore (cloud-first; household sync from day 1) — project `financial-tracker-4791d`
+- Targets: iOS + Android primary; web also wired (optional)
 - Locale: id-ID; IDR only
-- TBD: state mgmt (Riverpod likely), routing (go_router), charts (fl_chart + CustomPainter)
+- State: flutter_riverpod 3.x
+- Routing: go_router
+- Charts: TBD (fl_chart + CustomPainter likely, Phase 4)
+- Note: `flutterfire` CLI at `$HOME/.pub-cache/bin/flutterfire` — not on PATH by default
 
 ### Product Model (locked)
 - Household-first; one household per user (MVP)
