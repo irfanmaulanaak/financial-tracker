@@ -28,17 +28,15 @@ class IncomeLogScreen extends ConsumerWidget {
     final incomes = ref.watch(_incomesProvider(household.id));
     return Scaffold(
       backgroundColor: FtColors.bg,
-      body: SafeArea(
-        child: FtAppChrome(
-          current: FtTab.assets,
-          child: Column(
-            children: [
+      body: FtAppChrome(
+        current: FtTab.assets,
+        child: Column(
+          children: [
               FtSubHeader(
                 title: 'Pemasukan',
-                trailing: IconButton.filled(
+                trailing: FtAddButton(
                   tooltip: 'Catat pemasukan',
-                  onPressed: () => context.push('/incomes/new'),
-                  icon: const Icon(Icons.add, size: 18),
+                  onTap: () => context.push('/incomes/new'),
                 ),
               ),
               Expanded(
@@ -59,7 +57,7 @@ class IncomeLogScreen extends ConsumerWidget {
                       );
                     }
                     return ListView.builder(
-                      padding: const EdgeInsets.only(bottom: 112),
+                      padding: const EdgeInsets.only(bottom: 120),
                       itemCount: items.length,
                       itemBuilder: (_, i) {
                         final inc = items[i];
@@ -159,8 +157,7 @@ class IncomeLogScreen extends ConsumerWidget {
                   },
                 ),
               ),
-            ],
-          ),
+          ],
         ),
       ),
     );

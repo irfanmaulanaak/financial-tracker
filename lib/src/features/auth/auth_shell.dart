@@ -4,6 +4,9 @@ import '../../theme.dart';
 import '../../ui/ft_motion.dart';
 
 /// Shared editorial chrome for sign-in / sign-up / email-link screens.
+///
+/// Responsive: scales typography and vertical rhythm based on the available
+/// height — tiny phones get a more compact treatment, larger phones stretch.
 class AuthShell extends StatelessWidget {
   const AuthShell({
     super.key,
@@ -27,56 +30,62 @@ class AuthShell extends StatelessWidget {
       body: SafeArea(
         child: LayoutBuilder(
           builder: (ctx, box) {
-            final tight = box.maxHeight < 720;
-            return Center(
-              child: SingleChildScrollView(
-                physics: const ClampingScrollPhysics(),
-                padding: EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: tight ? 20 : 36,
+            final h = box.maxHeight;
+            // Three responsive tiers — keeps everything visible on a 5.5" SE
+            // and breathes on a 6.7" Pro Max.
+            final tight = h < 640;
+            final cozy = h < 760;
+            final headlineSize = tight ? 34.0 : (cozy ? 40.0 : 46.0);
+            final verticalGap = tight ? 18.0 : (cozy ? 26.0 : 36.0);
+            final brandGap = tight ? 24.0 : (cozy ? 32.0 : 44.0);
+
+            return SingleChildScrollView(
+              physics: const ClampingScrollPhysics(),
+              padding: EdgeInsets.fromLTRB(24, tight ? 12 : 20, 24, 24),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: h - (tight ? 36 : 44),
+                  maxWidth: 440,
                 ),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 440),
-                  child: FtFadeUp(
-                    duration: const Duration(milliseconds: 360),
-                    distance: 12,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const _BrandMark(),
-                        SizedBox(height: tight ? 36 : 48),
-                        Eyebrow(eyebrow, color: FtColors.clay),
-                        const SizedBox(height: 14),
-                        Text(
-                          headline,
-                          style: Theme.of(context)
-                              .textTheme
-                              .displaySmall
-                              ?.copyWith(
-                                fontSize: tight ? 38 : 44,
-                                height: 1.05,
-                                letterSpacing: -1.4,
-                                color: FtColors.ink,
-                              ),
+                child: FtFadeUp(
+                  duration: const Duration(milliseconds: 360),
+                  distance: 12,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const _BrandMark(),
+                      SizedBox(height: brandGap),
+                      Eyebrow(eyebrow, color: FtColors.clay),
+                      const SizedBox(height: 14),
+                      Text(
+                        headline,
+                        style: Theme.of(context)
+                            .textTheme
+                            .displaySmall
+                            ?.copyWith(
+                              fontSize: headlineSize,
+                              height: 1.05,
+                              letterSpacing: -1.4,
+                              color: FtColors.ink,
+                            ),
+                      ),
+                      const SizedBox(height: 14),
+                      Text(
+                        subtitle,
+                        style: const TextStyle(
+                          color: FtColors.ink3,
+                          fontSize: 14,
+                          height: 1.55,
                         ),
-                        const SizedBox(height: 14),
-                        Text(
-                          subtitle,
-                          style: const TextStyle(
-                            color: FtColors.ink3,
-                            fontSize: 14,
-                            height: 1.55,
-                          ),
-                        ),
-                        SizedBox(height: tight ? 28 : 36),
-                        ...children,
-                        if (quietFooter != null) ...[
-                          const SizedBox(height: 28),
-                          Center(child: quietFooter!),
-                        ],
-                        const SizedBox(height: 12),
+                      ),
+                      SizedBox(height: verticalGap),
+                      ...children,
+                      if (quietFooter != null) ...[
+                        SizedBox(height: tight ? 20 : 28),
+                        Center(child: quietFooter!),
                       ],
-                    ),
+                      const SizedBox(height: 12),
+                    ],
                   ),
                 ),
               ),
@@ -96,18 +105,25 @@ class _BrandMark extends StatelessWidget {
     return Row(
       children: [
         Container(
-          width: 42,
-          height: 42,
+          width: 44,
+          height: 44,
           decoration: BoxDecoration(
             color: FtColors.surface,
             shape: BoxShape.circle,
             border: Border.all(color: FtColors.lineStrong, width: 0.5),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x0A000000),
+                blurRadius: 8,
+                offset: Offset(0, 2),
+              ),
+            ],
           ),
           alignment: Alignment.center,
           child: Text(
             'ft',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontSize: 17,
+                  fontSize: 18,
                   letterSpacing: 0.3,
                   color: FtColors.clay,
                   height: 1,
@@ -115,15 +131,15 @@ class _BrandMark extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 12),
-        Column(
+        const Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
+          children: [
             Text(
               'Financial Tracker',
               style: TextStyle(
                 color: FtColors.ink,
-                fontSize: 13.5,
+                fontSize: 14,
                 fontWeight: FontWeight.w500,
                 letterSpacing: -0.2,
               ),
@@ -229,10 +245,10 @@ class OrDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 20),
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 18),
       child: Row(
-        children: const [
+        children: [
           Expanded(child: Divider(color: FtColors.line, thickness: 0.5)),
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 14),

@@ -29,20 +29,18 @@ class InvestmentsScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: FtColors.bg,
-      body: SafeArea(
-        child: FtAppChrome(
-          current: FtTab.assets,
-          child: Column(
-            children: [
-              FtSubHeader(
-                title: 'Investasi',
-                trailing: IconButton.filled(
-                  tooltip: 'Posisi baru',
-                  onPressed: () => _openAdd(context, ref, household.id),
-                  icon: const Icon(Icons.add, size: 18),
-                ),
+      body: FtAppChrome(
+        current: FtTab.assets,
+        child: Column(
+          children: [
+            FtSubHeader(
+              title: 'Investasi',
+              trailing: FtAddButton(
+                tooltip: 'Posisi baru',
+                onTap: () => _openAdd(context, ref, household.id),
               ),
-              Expanded(
+            ),
+            Expanded(
                 child: invAsync.when(
                   loading: () =>
                       const Center(child: CircularProgressIndicator()),
@@ -50,7 +48,7 @@ class InvestmentsScreen extends ConsumerWidget {
                   data: (items) {
                     final summary = summarisePortfolio(items);
                     return ListView(
-                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 112),
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 120),
                       children: [
                         _Summary(summary: summary),
                         const SizedBox(height: 16),
@@ -83,9 +81,8 @@ class InvestmentsScreen extends ConsumerWidget {
                     );
                   },
                 ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

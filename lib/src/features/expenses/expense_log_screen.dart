@@ -33,17 +33,15 @@ class _ExpenseLogScreenState extends ConsumerState<ExpenseLogScreen> {
 
     return Scaffold(
       backgroundColor: FtColors.bg,
-      body: SafeArea(
-        child: FtAppChrome(
-          current: FtTab.spend,
-          child: Column(
-            children: [
+      body: FtAppChrome(
+        current: FtTab.spend,
+        child: Column(
+          children: [
               FtSubHeader(
                 title: 'Pengeluaran',
-                trailing: IconButton.filled(
+                trailing: FtAddButton(
                   tooltip: 'Catat pengeluaran',
-                  onPressed: () => context.push('/expenses/new'),
-                  icon: const Icon(Icons.add, size: 18),
+                  onTap: () => context.push('/expenses/new'),
                 ),
               ),
               Padding(
@@ -100,8 +98,8 @@ class _ExpenseLogScreenState extends ConsumerState<ExpenseLogScreen> {
                   ],
                 ),
               ),
-              Expanded(
-                child: expensesStream.when(
+            Expanded(
+              child: expensesStream.when(
                   loading: () =>
                       const Center(child: CircularProgressIndicator()),
                   error: (e, _) => Center(child: Text('Gagal: $e')),
@@ -151,7 +149,7 @@ class _ExpenseLogScreenState extends ConsumerState<ExpenseLogScreen> {
                       ..sort((a, b) => b.compareTo(a));
 
                     return ListView.builder(
-                      padding: const EdgeInsets.only(top: 2, bottom: 112),
+                      padding: const EdgeInsets.only(top: 2, bottom: 120),
                       itemCount: days.length,
                       itemBuilder: (_, dayIdx) {
                         final day = days[dayIdx];
@@ -199,8 +197,7 @@ class _ExpenseLogScreenState extends ConsumerState<ExpenseLogScreen> {
                   },
                 ),
               ),
-            ],
-          ),
+          ],
         ),
       ),
     );

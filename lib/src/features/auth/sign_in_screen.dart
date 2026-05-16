@@ -131,10 +131,36 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                     ? 'Minimal 6 karakter'
                     : null,
               ),
+              const SizedBox(height: 6),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: _busy
+                      ? null
+                      : () {
+                          FtHaptics.tap();
+                          context.push('/sign-in-link');
+                        },
+                  style: TextButton.styleFrom(
+                    minimumSize: Size.zero,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: const Text(
+                    'Lupa password?',
+                    style: TextStyle(
+                      color: FtColors.ink3,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
-        const SizedBox(height: 18),
+        const SizedBox(height: 14),
         if (_error != null) AuthErrorBanner(message: _error!),
         FilledButton(
           onPressed: _busy ? null : _submit,
@@ -156,17 +182,6 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
             FtHaptics.error();
             setState(() => _error = msg);
           },
-        ),
-        const SizedBox(height: 10),
-        OutlinedButton.icon(
-          onPressed: _busy
-              ? null
-              : () {
-                  FtHaptics.tap();
-                  context.push('/sign-in-link');
-                },
-          icon: const Icon(Icons.link, size: 18, color: FtColors.ink2),
-          label: const Text('Masuk tanpa password'),
         ),
       ],
     );

@@ -110,11 +110,10 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
     final cycle = currentCycle(DateTime.now(), payday: household.payday);
     return Scaffold(
       backgroundColor: FtColors.bg,
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-          children: [
-            const FtSubHeader(title: 'Ekspor data'),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+        children: [
+          const FtSubHeader(title: 'Ekspor data'),
             FtCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -142,12 +141,11 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
               icon: const Icon(Icons.download),
               label: const Text('Ekspor pemasukan (CSV)'),
             ),
-            if (_busy) ...[
-              const SizedBox(height: 16),
-              const Center(child: CircularProgressIndicator()),
-            ],
+          if (_busy) ...[
+            const SizedBox(height: 16),
+            const Center(child: CircularProgressIndicator()),
           ],
-        ),
+        ],
       ),
     );
   }

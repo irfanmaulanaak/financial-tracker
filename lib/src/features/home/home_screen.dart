@@ -194,7 +194,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   daily: daily,
                   cycleStart: cycle.start,
                   cycleEndExclusive: cycle.endExclusive,
-                  onAdd: () => context.push('/expenses/new'),
                 ),
                 CardsPreview(
                   cards: cards,
@@ -231,20 +230,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     switch (v) {
       case 'insights':
         context.push('/insights');
-      case 'goals':
-        context.push('/goals');
       case 'investments':
         context.push('/investments');
-      case 'members':
-        context.push('/members');
-      case 'categories':
-        context.push('/categories');
-      case 'accounts':
-        context.push('/accounts');
-      case 'cards':
-        context.push('/cards');
       case 'incomes':
         context.push('/incomes');
+      case 'categories':
+        context.push('/categories');
+      case 'members':
+        context.push('/members');
       case 'export':
         context.push('/export');
       case 'signout':

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../theme.dart';
 import '../../../ui/ft_haptics.dart';
+import '../../../ui/ft_motion.dart';
 import '../../household/household.dart';
 import 'home_formatters.dart';
 
@@ -29,28 +30,37 @@ class HomeHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final topInset = MediaQuery.paddingOf(context).top;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(22, 54, 18, 22),
+      padding: EdgeInsets.fromLTRB(
+        22,
+        // Status-bar safe; matches design's 54px on iOS frame.
+        topInset > 0 ? topInset + 10 : 24,
+        18,
+        22,
+      ),
       child: Row(
         children: [
           _ProfileAvatar(displayName: displayName),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  '${_greeting()},',
+                  household.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: FtColors.ink3,
                     fontSize: 11,
                     letterSpacing: 0.3,
                   ),
                 ),
-                const SizedBox(height: 1),
+                const SizedBox(height: 2),
                 Text(
-                  displayName,
+                  '${_greeting()}, $displayName',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -61,9 +71,11 @@ class HomeHeader extends StatelessWidget {
               ],
             ),
           ),
-          _MemberStackPill(members: household.members, onTap: onMembers),
-          const SizedBox(width: 8),
-          _BellMenu(onSelected: onSelected),
+          if (household.members.isNotEmpty) ...[
+            _MemberStackPill(members: household.members, onTap: onMembers),
+            const SizedBox(width: 8),
+          ],
+          _OverflowMenu(onSelected: onSelected),
         ],
       ),
     );
@@ -87,11 +99,13 @@ class _ProfileAvatar extends StatelessWidget {
       alignment: Alignment.center,
       child: Text(
         initialsOf(displayName),
-        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontSize: 14,
-              color: FtColors.ink,
-              letterSpacing: 0.5,
-            ),
+        style: const TextStyle(
+          fontFamily: 'Newsreader',
+          fontSize: 14,
+          color: FtColors.ink,
+          letterSpacing: 0.5,
+          fontWeight: FontWeight.w500,
+        ),
       ),
     );
   }
@@ -106,15 +120,13 @@ class _MemberStackPill extends StatelessWidget {
   Widget build(BuildContext context) {
     if (members.isEmpty) return const SizedBox.shrink();
     final shown = members.take(3).toList();
-    final stackW = 18.0 + (shown.length - 1) * 14.0;
+    final stackW = 22.0 + (shown.length - 1) * 14.0;
 
-    return GestureDetector(
-      onTap: () {
-        FtHaptics.tap();
-        onTap();
-      },
+    return FtTapScale(
+      scale: 0.95,
+      onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(4, 4, 8, 4),
+        padding: const EdgeInsets.fromLTRB(4, 4, 9, 4),
         decoration: BoxDecoration(
           color: FtColors.surface,
           border: Border.all(color: FtColors.line, width: 0.5),
@@ -162,6 +174,7 @@ class _MemberStackPill extends StatelessWidget {
                 fontSize: 10.5,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.3,
+                fontFeatures: [FontFeature.tabularFigures()],
               ),
             ),
           ],
@@ -171,18 +184,34 @@ class _MemberStackPill extends StatelessWidget {
   }
 }
 
-class _BellMenu extends StatelessWidget {
-  const _BellMenu({required this.onSelected});
+/// Profile / overflow menu. Items kept short — most actions moved to bottom nav
+/// or the central "+" chooser.
+class _OverflowMenu extends StatelessWidget {
+  const _OverflowMenu({required this.onSelected});
   final ValueChanged<String> onSelected;
 
   @override
   Widget build(BuildContext context) {
     return PopupMenuButton<String>(
-      tooltip: 'Lainnya',
-      iconSize: 18,
+      tooltip: 'Menu',
+      iconSize: 20,
       splashRadius: 22,
-      offset: const Offset(0, 44),
-      icon: const Icon(Icons.notifications_outlined, color: FtColors.ink2),
+      offset: const Offset(0, 46),
+      icon: Container(
+        width: 38,
+        height: 38,
+        decoration: BoxDecoration(
+          color: FtColors.surface,
+          shape: BoxShape.circle,
+          border: Border.all(color: FtColors.line, width: 0.5),
+        ),
+        alignment: Alignment.center,
+        child: const Icon(
+          Icons.more_horiz_rounded,
+          color: FtColors.ink2,
+          size: 18,
+        ),
+      ),
       onOpened: FtHaptics.select,
       onSelected: onSelected,
       shape: RoundedRectangleBorder(
@@ -191,18 +220,72 @@ class _BellMenu extends StatelessWidget {
       ),
       color: FtColors.surface,
       itemBuilder: (_) => const [
-        PopupMenuItem(value: 'insights', child: Text('Insight')),
-        PopupMenuItem(value: 'goals', child: Text('Tujuan')),
-        PopupMenuItem(value: 'investments', child: Text('Investasi')),
+        PopupMenuItem(
+          value: 'insights',
+          child: _MenuRow(icon: Icons.insights_rounded, label: 'Insight'),
+        ),
+        PopupMenuItem(
+          value: 'investments',
+          child:
+              _MenuRow(icon: Icons.trending_up_rounded, label: 'Investasi'),
+        ),
+        PopupMenuItem(
+          value: 'incomes',
+          child:
+              _MenuRow(icon: Icons.south_west_rounded, label: 'Riwayat Pemasukan'),
+        ),
         PopupMenuDivider(),
-        PopupMenuItem(value: 'accounts', child: Text('Akun')),
-        PopupMenuItem(value: 'cards', child: Text('Kartu kredit')),
-        PopupMenuItem(value: 'incomes', child: Text('Pemasukan')),
-        PopupMenuItem(value: 'categories', child: Text('Kategori')),
-        PopupMenuItem(value: 'members', child: Text('Anggota')),
+        PopupMenuItem(
+          value: 'categories',
+          child:
+              _MenuRow(icon: Icons.category_rounded, label: 'Kategori'),
+        ),
+        PopupMenuItem(
+          value: 'members',
+          child:
+              _MenuRow(icon: Icons.group_rounded, label: 'Anggota'),
+        ),
+        PopupMenuItem(
+          value: 'export',
+          child:
+              _MenuRow(icon: Icons.ios_share_rounded, label: 'Ekspor data'),
+        ),
         PopupMenuDivider(),
-        PopupMenuItem(value: 'export', child: Text('Ekspor data')),
-        PopupMenuItem(value: 'signout', child: Text('Keluar')),
+        PopupMenuItem(
+          value: 'signout',
+          child: _MenuRow(
+            icon: Icons.logout_rounded,
+            label: 'Keluar',
+            danger: true,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MenuRow extends StatelessWidget {
+  const _MenuRow({
+    required this.icon,
+    required this.label,
+    this.danger = false,
+  });
+  final IconData icon;
+  final String label;
+  final bool danger;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = danger ? FtColors.danger : FtColors.ink2;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 16, color: color),
+        const SizedBox(width: 10),
+        Text(
+          label,
+          style: TextStyle(color: color, fontSize: 13),
+        ),
       ],
     );
   }

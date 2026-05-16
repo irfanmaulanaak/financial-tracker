@@ -171,18 +171,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
             setState(() => _error = msg);
           },
         ),
-        const SizedBox(height: 10),
-        OutlinedButton.icon(
-          onPressed: _busy
-              ? null
-              : () {
-                  FtHaptics.tap();
-                  context.push('/sign-in-link');
-                },
-          icon: const Icon(Icons.link, size: 18, color: FtColors.ink2),
-          label: const Text('Daftar lewat link email'),
-        ),
-        const SizedBox(height: 18),
+        const SizedBox(height: 16),
         const Text(
           'Dengan mendaftar, kamu menyetujui penggunaan data sesuai kebijakan internal aplikasi.',
           textAlign: TextAlign.center,

@@ -24,37 +24,34 @@ class CategoryManageScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: FtColors.bg,
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-          children: [
-            FtSubHeader(
-              title: 'Kategori',
-              trailing: IconButton.filled(
-                tooltip: 'Tambah kategori',
-                onPressed: () => _openAddSheet(context, ref, household),
-                icon: const Icon(Icons.add, size: 18),
-              ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+        children: [
+          FtSubHeader(
+            title: 'Kategori',
+            trailing: FtAddButton(
+              tooltip: 'Tambah kategori',
+              onTap: () => _openAddSheet(context, ref, household),
             ),
-            const FtSectionHeader(title: 'Aktif'),
-            for (final c in active)
+          ),
+          const FtSectionHeader(title: 'Aktif'),
+          for (final c in active)
+            _CategoryTile(
+              category: c,
+              onEdit: () => _openEditSheet(context, ref, household, c),
+              onArchive: () => _archive(ref, household, c, true),
+            ),
+          if (archived.isNotEmpty) ...[
+            const FtSectionHeader(title: 'Arsip'),
+            for (final c in archived)
               _CategoryTile(
                 category: c,
+                archived: true,
                 onEdit: () => _openEditSheet(context, ref, household, c),
-                onArchive: () => _archive(ref, household, c, true),
+                onArchive: () => _archive(ref, household, c, false),
               ),
-            if (archived.isNotEmpty) ...[
-              const FtSectionHeader(title: 'Arsip'),
-              for (final c in archived)
-                _CategoryTile(
-                  category: c,
-                  archived: true,
-                  onEdit: () => _openEditSheet(context, ref, household, c),
-                  onArchive: () => _archive(ref, household, c, false),
-                ),
-            ],
           ],
-        ),
+        ],
       ),
     );
   }

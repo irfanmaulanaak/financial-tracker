@@ -38,9 +38,9 @@ class AccountsScreen extends ConsumerWidget {
             children: [
               FtSubHeader(
                 title: 'Aset',
-                trailing: IconButton.filled(
-                  onPressed: () => _openAddSheet(context, ref, household),
-                  icon: const Icon(Icons.add),
+                trailing: FtAddButton(
+                  tooltip: 'Tambah akun',
+                  onTap: () => _openAddSheet(context, ref, household),
                 ),
               ),
               FtCard(

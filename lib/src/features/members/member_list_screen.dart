@@ -68,11 +68,10 @@ class _MemberListScreenState extends ConsumerState<MemberListScreen> {
     }
     return Scaffold(
       backgroundColor: FtColors.bg,
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-          children: [
-            const FtSubHeader(title: 'Anggota'),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+        children: [
+          const FtSubHeader(title: 'Anggota'),
             FtCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -121,16 +120,15 @@ class _MemberListScreenState extends ConsumerState<MemberListScreen> {
                 label: const Text('Undang anggota baru'),
               ),
             const SizedBox(height: 24),
-            TextButton.icon(
-              onPressed: () => _leave(household.id, user.uid),
-              icon: const Icon(Icons.logout, color: FtColors.danger),
-              label: const Text(
-                'Keluar dari rumah tangga',
-                style: TextStyle(color: FtColors.danger),
-              ),
+          TextButton.icon(
+            onPressed: () => _leave(household.id, user.uid),
+            icon: const Icon(Icons.logout, color: FtColors.danger),
+            label: const Text(
+              'Keluar dari rumah tangga',
+              style: TextStyle(color: FtColors.danger),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../theme.dart';
+import 'ft_action_sheet.dart';
 import 'ft_haptics.dart';
 import 'ft_motion.dart';
 
@@ -182,6 +183,8 @@ class FtStatItem extends StatelessWidget {
   }
 }
 
+/// App chrome: keeps the floating bottom nav above the screen body.
+/// Pads bottom of [child] (use `bottomPadding` to override).
 class FtAppChrome extends StatelessWidget {
   const FtAppChrome({
     super.key,
@@ -201,10 +204,17 @@ class FtAppChrome extends StatelessWidget {
         Positioned.fill(child: child),
         if (showNav)
           Positioned(
-            left: 12,
-            right: 12,
-            bottom: 22,
-            child: FtBottomNav(current: current),
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: SafeArea(
+              top: false,
+              minimum: const EdgeInsets.only(bottom: 10),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                child: FtBottomNav(current: current),
+              ),
+            ),
           ),
       ],
     );
@@ -213,6 +223,9 @@ class FtAppChrome extends StatelessWidget {
 
 enum FtTab { home, spend, assets, goals, cards }
 
+/// Floating glass-pill bottom nav with a central "+" that opens the
+/// `ActionChooserSheet`. Adapts label sizing on smaller widths so labels never
+/// truncate.
 class FtBottomNav extends StatelessWidget {
   const FtBottomNav({super.key, required this.current});
 
@@ -220,50 +233,102 @@ class FtBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final items = [
-      _FtNavItem(FtTab.home, Icons.home_outlined, 'Beranda', '/home'),
-      _FtNavItem(
-        FtTab.spend,
-        Icons.donut_large_outlined,
-        'Keluar',
-        '/expenses',
-      ),
-      _FtNavItem(
-        FtTab.assets,
-        Icons.account_balance_wallet_outlined,
-        'Aset',
-        '/accounts',
-      ),
-      _FtNavItem(FtTab.goals, Icons.flag_outlined, 'Tujuan', '/goals'),
-      _FtNavItem(FtTab.cards, Icons.credit_card_outlined, 'Utang', '/cards'),
+    final width = MediaQuery.sizeOf(context).width;
+    // Adaptive label sizing — tiny phones (<360px) get smaller text.
+    final compact = width < 360;
+    final labelSize = compact ? 9.0 : 10.0;
+    final iconSize = compact ? 19.0 : 20.0;
+
+    final items = const [
+      _FtNavItem(FtTab.home, Icons.home_rounded, Icons.home_outlined,
+          'Beranda', '/home'),
+      _FtNavItem(FtTab.spend, Icons.donut_large_rounded,
+          Icons.donut_large_outlined, 'Keluar', '/expenses'),
+      // Center slot intentionally empty (replaced by the + FAB).
+      _FtNavItem(FtTab.assets, Icons.pie_chart_rounded,
+          Icons.pie_chart_outline_rounded, 'Aset', '/accounts'),
+      _FtNavItem(FtTab.goals, Icons.flag_rounded, Icons.flag_outlined,
+          'Tujuan', '/goals'),
+      _FtNavItem(FtTab.cards, Icons.credit_card_rounded,
+          Icons.credit_card_outlined, 'Utang', '/cards'),
     ];
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(28),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-        child: Container(
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            color: FtColors.surface.withValues(alpha: 0.86),
-            borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: FtColors.lineStrong, width: 0.5),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x14000000),
-                blurRadius: 24,
-                offset: Offset(0, 8),
+    return Stack(
+      clipBehavior: Clip.none,
+      alignment: Alignment.center,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(28),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+            child: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: FtColors.surface.withValues(alpha: 0.88),
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(color: FtColors.lineStrong, width: 0.5),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x1A000000),
+                    blurRadius: 24,
+                    offset: Offset(0, 8),
+                  ),
+                ],
               ),
-            ],
+              child: Row(
+                children: [
+                  for (var i = 0; i < items.length; i++) ...[
+                    Expanded(
+                      child: _FtNavButton(
+                        item: items[i],
+                        active: current == items[i].tab,
+                        labelSize: labelSize,
+                        iconSize: iconSize,
+                      ),
+                    ),
+                    if (i == 1) const SizedBox(width: 56),
+                  ],
+                ],
+              ),
+            ),
           ),
-          child: Row(
-            children: [
-              for (final item in items)
-                Expanded(
-                  child: _FtNavButton(item: item, active: current == item.tab),
-                ),
-            ],
-          ),
+        ),
+        // Central + FAB — opens action chooser. Positioned to overlap nav.
+        Positioned(
+          top: -22,
+          child: _FtNavAddButton(),
+        ),
+      ],
+    );
+  }
+}
+
+class _FtNavAddButton extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return FtTapScale(
+      scale: 0.92,
+      onTap: () => ActionChooserSheet.show(context),
+      child: Container(
+        width: 54,
+        height: 54,
+        decoration: BoxDecoration(
+          color: FtColors.ink,
+          shape: BoxShape.circle,
+          border: Border.all(color: FtColors.bg, width: 3),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x33000000),
+              blurRadius: 18,
+              offset: Offset(0, 8),
+            ),
+          ],
+        ),
+        alignment: Alignment.center,
+        child: const Icon(
+          Icons.add_rounded,
+          size: 24,
+          color: FtColors.bg,
         ),
       ),
     );
@@ -271,15 +336,22 @@ class FtBottomNav extends StatelessWidget {
 }
 
 class _FtNavButton extends StatelessWidget {
-  const _FtNavButton({required this.item, required this.active});
+  const _FtNavButton({
+    required this.item,
+    required this.active,
+    required this.labelSize,
+    required this.iconSize,
+  });
 
   final _FtNavItem item;
   final bool active;
+  final double labelSize;
+  final double iconSize;
 
   @override
   Widget build(BuildContext context) {
     return FtTapScale(
-      scale: 0.94,
+      scale: 0.92,
       haptic: false,
       onTap: active
           ? null
@@ -288,9 +360,9 @@ class _FtNavButton extends StatelessWidget {
               context.go(item.path);
             },
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+        duration: const Duration(milliseconds: 220),
         curve: Curves.easeOutCubic,
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
         decoration: BoxDecoration(
           color: active ? FtColors.bg : Colors.transparent,
           borderRadius: BorderRadius.circular(22),
@@ -299,19 +371,23 @@ class _FtNavButton extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              item.icon,
-              size: 20,
+              active ? item.iconActive : item.icon,
+              size: iconSize,
               color: active ? FtColors.ink : FtColors.ink3,
             ),
-            const SizedBox(height: 2),
-            Text(
-              item.label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: active ? FtColors.ink : FtColors.ink3,
-                fontSize: 9.5,
-                fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+            const SizedBox(height: 3),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                item.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: active ? FtColors.ink : FtColors.ink3,
+                  fontSize: labelSize,
+                  fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+                  letterSpacing: 0.1,
+                ),
               ),
             ),
           ],
@@ -322,14 +398,23 @@ class _FtNavButton extends StatelessWidget {
 }
 
 class _FtNavItem {
-  const _FtNavItem(this.tab, this.icon, this.label, this.path);
+  const _FtNavItem(
+    this.tab,
+    this.iconActive,
+    this.icon,
+    this.label,
+    this.path,
+  );
 
   final FtTab tab;
+  final IconData iconActive;
   final IconData icon;
   final String label;
   final String path;
 }
 
+/// Sub-screen header: cream back button + serif title + optional trailing.
+/// Honors top safe area (avoids status bar collision on phones without notch).
 class FtSubHeader extends StatelessWidget {
   const FtSubHeader({
     super.key,
@@ -344,13 +429,16 @@ class FtSubHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Add system top inset so the header is never under the status bar — works
+    // whether or not the parent screen wrapped us in a SafeArea.
+    final topPad = MediaQuery.paddingOf(context).top;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 10),
+      padding: EdgeInsets.fromLTRB(16, topPad + 10, 16, 10),
       child: Row(
         children: [
-          IconButton.filledTonal(
-            onPressed:
-                onBack ??
+          FtTapScale(
+            scale: 0.9,
+            onTap: onBack ??
                 () {
                   if (Navigator.of(context).canPop()) {
                     context.pop();
@@ -358,20 +446,65 @@ class FtSubHeader extends StatelessWidget {
                     context.go('/home');
                   }
                 },
-            icon: const Icon(Icons.arrow_back, size: 18),
+            child: Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: FtColors.surface,
+                shape: BoxShape.circle,
+                border: Border.all(color: FtColors.line, width: 0.5),
+              ),
+              alignment: Alignment.center,
+              child: const Icon(
+                Icons.arrow_back_rounded,
+                size: 18,
+                color: FtColors.ink,
+              ),
+            ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
               title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.titleLarge,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontSize: 19,
+                    letterSpacing: -0.3,
+                  ),
             ),
           ),
           ?trailing,
         ],
       ),
     );
+  }
+}
+
+/// Small "+" pill used by sub-screens (cards, goals, accounts, etc.) — dark
+/// circular button with light icon, matches the design's add affordance.
+class FtAddButton extends StatelessWidget {
+  const FtAddButton({super.key, required this.onTap, this.tooltip});
+
+  final VoidCallback onTap;
+  final String? tooltip;
+
+  @override
+  Widget build(BuildContext context) {
+    final child = FtTapScale(
+      scale: 0.9,
+      onTap: onTap,
+      child: Container(
+        width: 38,
+        height: 38,
+        decoration: const BoxDecoration(
+          color: FtColors.ink,
+          shape: BoxShape.circle,
+        ),
+        alignment: Alignment.center,
+        child: const Icon(Icons.add_rounded, size: 20, color: FtColors.bg),
+      ),
+    );
+    return tooltip == null ? child : Tooltip(message: tooltip!, child: child);
   }
 }

@@ -43,10 +43,10 @@ class GoalsScreen extends ConsumerWidget {
               children: [
                 FtSubHeader(
                   title: 'Tujuan',
-                  trailing: IconButton.filled(
-                    onPressed: () =>
+                  trailing: FtAddButton(
+                    tooltip: 'Tambah tujuan',
+                    onTap: () =>
                         _openSheet(context, ref, household.id, user.uid),
-                    icon: const Icon(Icons.add),
                   ),
                 ),
                 FtCard(

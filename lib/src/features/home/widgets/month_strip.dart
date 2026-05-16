@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/formatters.dart';
 import '../../../theme.dart';
+import '../../../ui/ft_action_sheet.dart';
 import '../../../ui/ft_motion.dart';
 import '../../../ui/ft_ui.dart';
 import 'home_formatters.dart';
@@ -14,7 +15,6 @@ class MonthStrip extends StatelessWidget {
     required this.daily,
     required this.cycleStart,
     required this.cycleEndExclusive,
-    required this.onAdd,
   });
 
   final int totalSpent;
@@ -22,7 +22,6 @@ class MonthStrip extends StatelessWidget {
   final int daily;
   final DateTime cycleStart;
   final DateTime cycleEndExclusive;
-  final VoidCallback onAdd;
 
   @override
   Widget build(BuildContext context) {
@@ -61,21 +60,23 @@ class MonthStrip extends StatelessWidget {
                   ],
                 ),
               ),
-              FtTapScale(
-                scale: 0.92,
-                onTap: onAdd,
-                child: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: const BoxDecoration(
-                    color: FtColors.ink,
-                    shape: BoxShape.circle,
-                  ),
-                  alignment: Alignment.center,
-                  child: const Icon(
-                    Icons.add,
-                    size: 18,
-                    color: FtColors.bg,
+              Builder(
+                builder: (ctx) => FtTapScale(
+                  scale: 0.92,
+                  onTap: () => ActionChooserSheet.show(ctx),
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: const BoxDecoration(
+                      color: FtColors.ink,
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: const Icon(
+                      Icons.add_rounded,
+                      size: 20,
+                      color: FtColors.bg,
+                    ),
                   ),
                 ),
               ),

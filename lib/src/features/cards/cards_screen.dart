@@ -49,14 +49,14 @@ class CardsScreen extends ConsumerWidget {
               children: [
                 FtSubHeader(
                   title: 'Utang & Kartu Kredit',
-                  trailing: IconButton.filled(
-                    onPressed: () => _openAddSheet(
+                  trailing: FtAddButton(
+                    tooltip: 'Tambah kartu',
+                    onTap: () => _openAddSheet(
                       context,
                       ref,
                       household.id,
                       household.members.first.userId,
                     ),
-                    icon: const Icon(Icons.add),
                   ),
                 ),
                 FtCard(

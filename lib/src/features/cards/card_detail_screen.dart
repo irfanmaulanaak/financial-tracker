@@ -93,7 +93,7 @@ class CardDetailScreen extends ConsumerWidget {
             child: FtAppChrome(
               current: FtTab.cards,
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 112),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 120),
                 children: [
                   FtSubHeader(
                     title: card.label,
