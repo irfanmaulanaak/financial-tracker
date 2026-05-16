@@ -24,13 +24,12 @@ class InsightsScreen extends ConsumerWidget {
     }
     final cycleExpensesAsync = ref.watch(cycleExpensesProvider);
     final prevAsync = ref.watch(previousCyclesExpensesProvider(3));
-    final incomeAsync = ref.watch(currentCycleIncomeTotalProvider);
+    final income = ref.watch(currentCycleIncomeTotalProvider);
     final cardsAsync = ref.watch(cardsProvider(household.id));
     final investmentsAsync = ref.watch(investmentsProvider(household.id));
 
     final cycleExpenses = cycleExpensesAsync.value ?? const <Expense>[];
     final prevCycles = prevAsync.value ?? const <List<Expense>>[];
-    final income = incomeAsync.value ?? 0;
     final cards = cardsAsync.value ?? const [];
     final investments = investmentsAsync.value ?? const [];
 

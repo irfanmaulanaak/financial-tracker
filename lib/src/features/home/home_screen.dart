@@ -13,6 +13,7 @@ import '../expenses/expense.dart';
 import '../expenses/expense_providers.dart';
 import '../household/household.dart';
 import '../household/household_providers.dart';
+import '../incomes/income_providers.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -96,10 +97,13 @@ class HomeScreen extends ConsumerWidget {
                   ))
               .toList();
           final totalSpentValue = totalSpent(records);
+          final cycleIncome = ref.watch(currentCycleIncomeTotalProvider);
           final byCat = spentByCategory(records);
+          final cycleDays = cycleLengthDays(cycle);
+          // Daily "budget" is now derived from income, not a static config.
           final daily = dailyBudget(
-            monthlyBudget: household.monthlyBudgetTotal,
-            cycleDays: cycleLengthDays(cycle),
+            monthlyBudget: cycleIncome,
+            cycleDays: cycleDays,
           );
           final activeCats = household.categories
               .where((c) => !c.archived)
@@ -129,7 +133,7 @@ class HomeScreen extends ConsumerWidget {
           );
           final status = budgetStatus(
             totalSpent: totalSpentValue,
-            monthlyBudget: household.monthlyBudgetTotal,
+            monthlyBudget: cycleIncome,
           );
           final dueBanners = <Widget>[];
           for (final c in cards) {
@@ -150,7 +154,7 @@ class HomeScreen extends ConsumerWidget {
               const SizedBox(height: 12),
               _BudgetCard(
                 totalSpent: totalSpentValue,
-                monthlyBudget: household.monthlyBudgetTotal,
+                income: cycleIncome,
                 daily: daily,
                 cycleStart: cycle.start,
                 cycleEndExclusive: cycle.endExclusive,
@@ -291,13 +295,13 @@ class _MetricCell extends StatelessWidget {
 class _BudgetCard extends StatelessWidget {
   const _BudgetCard({
     required this.totalSpent,
-    required this.monthlyBudget,
+    required this.income,
     required this.daily,
     required this.cycleStart,
     required this.cycleEndExclusive,
   });
   final int totalSpent;
-  final int monthlyBudget;
+  final int income;
   final int daily;
   final DateTime cycleStart;
   final DateTime cycleEndExclusive;
@@ -305,8 +309,10 @@ class _BudgetCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final pct = monthlyBudget == 0 ? 0.0 : (totalSpent / monthlyBudget).clamp(0.0, 1.0);
-    final over = monthlyBudget > 0 && totalSpent > monthlyBudget;
+    final hasIncome = income > 0;
+    final pct = hasIncome ? (totalSpent / income).clamp(0.0, 1.0) : 0.0;
+    final over = hasIncome && totalSpent > income;
+    final pctLabel = hasIncome ? (totalSpent / income * 100).round() : 0;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -317,7 +323,7 @@ class _BudgetCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Siklus ${Dates.short(cycleStart)} – ${Dates.short(cycleEndExclusive.subtract(const Duration(days: 1)))}',
+            'Pengeluaran · ${Dates.short(cycleStart)} – ${Dates.short(cycleEndExclusive.subtract(const Duration(days: 1)))}',
             style: TextStyle(color: scheme.onPrimaryContainer, fontSize: 12),
           ),
           const SizedBox(height: 4),
@@ -330,8 +336,11 @@ class _BudgetCard extends StatelessWidget {
             ),
           ),
           Text(
-            'dari ${Money.format(monthlyBudget)}',
-            style: TextStyle(color: scheme.onPrimaryContainer.withValues(alpha: 0.8)),
+            hasIncome
+                ? 'dari ${Money.format(income)} pendapatan'
+                : 'Belum ada pemasukan tercatat',
+            style: TextStyle(
+                color: scheme.onPrimaryContainer.withValues(alpha: 0.8)),
           ),
           const SizedBox(height: 12),
           ClipRRect(
@@ -339,16 +348,40 @@ class _BudgetCard extends StatelessWidget {
             child: LinearProgressIndicator(
               value: pct,
               minHeight: 8,
-              backgroundColor: scheme.onPrimaryContainer.withValues(alpha: 0.15),
+              backgroundColor:
+                  scheme.onPrimaryContainer.withValues(alpha: 0.15),
               valueColor: AlwaysStoppedAnimation(
                   over ? scheme.error : scheme.onPrimaryContainer),
             ),
           ),
           const SizedBox(height: 8),
-          Text(
-            'Budget harian: ${Money.format(daily)}',
-            style: TextStyle(color: scheme.onPrimaryContainer, fontSize: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                hasIncome
+                    ? '$pctLabel% pendapatan terpakai'
+                    : 'Catat pemasukan untuk lihat rasio',
+                style: TextStyle(
+                    color: scheme.onPrimaryContainer, fontSize: 12),
+              ),
+              if (hasIncome)
+                Text(
+                  'Sisa: ${Money.format((income - totalSpent).clamp(0, income))}',
+                  style: TextStyle(
+                      color: scheme.onPrimaryContainer, fontSize: 12),
+                ),
+            ],
           ),
+          if (hasIncome) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Anggaran harian dari pendapatan: ${Money.format(daily)}',
+              style: TextStyle(
+                  color: scheme.onPrimaryContainer.withValues(alpha: 0.8),
+                  fontSize: 11),
+            ),
+          ],
         ],
       ),
     );
@@ -441,8 +474,8 @@ class _BudgetBanner extends StatelessWidget {
     final exceeded = status == BudgetStatus.exceeded;
     final color = exceeded ? scheme.error : scheme.tertiary;
     final msg = exceeded
-        ? 'Budget bulan ini sudah terlampaui!'
-        : 'Sudah ≥80% budget bulan ini.';
+        ? 'Pengeluaran sudah melampaui pendapatan siklus ini!'
+        : 'Sudah ≥80% dari pendapatan siklus ini.';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(

@@ -5,7 +5,9 @@ import '../expenses/expense.dart';
 import '../expenses/expense_repository.dart';
 import '../household/household.dart';
 import '../household/household_providers.dart';
-import '../incomes/income_repository.dart';
+
+// Re-exports so existing insights callers keep working.
+export '../incomes/income_providers.dart' show currentCycleIncomeTotalProvider;
 
 /// Expenses for the previous N budget cycles (excluding current).
 final previousCyclesExpensesProvider =
@@ -44,24 +46,6 @@ final previousCyclesExpensesProvider =
     }
     return out;
   });
-});
-
-/// Income aggregated over the current cycle (used by health score).
-final currentCycleIncomeTotalProvider = StreamProvider<int>((ref) async* {
-  final household = ref.watch(currentHouseholdProvider).value;
-  if (household == null) {
-    yield 0;
-    return;
-  }
-  final cycle = currentCycle(DateTime.now(), payday: household.payday);
-  yield* ref
-      .watch(incomeRepositoryProvider)
-      .watchRecent(hid: household.id, limit: 200)
-      .map((items) => items
-          .where((i) =>
-              !i.date.isBefore(cycle.start) &&
-              i.date.isBefore(cycle.endExclusive))
-          .fold<int>(0, (a, b) => a + b.amount));
 });
 
 /// Convenience: pulls the household's savings balance + card debt totals.

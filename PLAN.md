@@ -16,8 +16,11 @@ Household financial tracker for Indonesian families. Flutter + Firebase. iOS + A
 - ✅ Phase 3 done (cicilan POS plans 3/6/12/24 with flat-rate APR, installment subcollection, pay-minimum / pay-full transactions, card detail screen)
 - ✅ Phase 4 done (5-factor weighted health score, per-category 3-cycle analysis, spend donut, insights screen)
 - ✅ Phase 5 done (goals shared+personal, manual investments, client-side recurring materialisation, CSV export via share sheet, in-app budget/due-date banners)
+- ✅ Auth expanded (email/password + Google + email-link passwordless, all three on the same redesigned editorial auth screens)
+- ✅ Visual refresh (warm cream editorial theme matching `claude-design/`: Newsreader serif + Inter sans, clay/sage/moss palette, custom `FtColors`, reusable `Eyebrow`)
+- ✅ CI: GitHub Actions `build` workflow — analyze + unit tests on every PR; release APKs (split-per-ABI) on `main` + tag-triggered GH Release attach
 - ✅ Tests: 104 Dart unit tests + 54 emulator integration tests, all green
-- ⏭ Next: TestFlight / APK distribution + Phase 5 deferred items (push notifications, Cloud Function recurring, web build) only if needed
+- ⏭ Next: TestFlight distribution + Phase 5 deferred items (push notifications, Cloud Function recurring, web build) only if needed
 
 ## Stack
 - Flutter 3.41.9 stable
@@ -68,7 +71,7 @@ Household financial tracker for Indonesian families. Flutter + Firebase. iOS + A
 - ✅ Firebase packages + main.dart init
 - ✅ Deploy Firestore Security Rules (from SCHEMA.md)
 - ✅ go_router scaffold + auth-aware redirect (auth → onboarding → home)
-- ✅ Firebase Auth: email/password — **Google sign-in deferred** (needs OAuth client setup; v7 API changes)
+- ✅ Firebase Auth: email/password + **Google sign-in (google_sign_in 7.x)** + **email-link passwordless** (paste-link-back UX, no Universal/App Links plumbing)
 - ✅ Creator onboarding wizard (4 steps):
   1. Household name + creator role
   2. Total monthly budget + payday
@@ -117,6 +120,16 @@ Household financial tracker for Indonesian families. Flutter + Firebase. iOS + A
 - ✅ Insights screen wired in home menu
 - Allocation recommendation → **deferred** (financial-advice risk)
 
+### Auth & Visual ✅
+- ✅ Three sign-in methods on a single editorial auth shell:
+  - Email + password (Firebase Auth)
+  - Google (google_sign_in 7.x; native sheet → idToken → `signInWithCredential`)
+  - Email link passwordless (`sendSignInLinkToEmail` → user pastes URL back → `signInWithEmailLink`)
+- ✅ `AuthShell` + `LabeledField` + `AuthErrorBanner` + `OrDivider` shared widgets (`lib/src/features/auth/auth_shell.dart`)
+- ✅ Hand-painted Google "G" mark (`_GoogleGPainter`) — no asset bundled
+- ✅ Theme refresh (`lib/src/theme.dart`): `FtColors` palette (clay/sage/moss/plum/ochre/danger/sky + 4 ink levels + 2 line tints), Newsreader serif for display + Inter for body via `google_fonts`, custom Material 3 `ColorScheme` mapped to warm cream surfaces, default Card / InputDecoration / FilledButton / OutlinedButton themes, reusable `Eyebrow` widget
+- ✅ Idempotent `_ensureUserDoc` upsert on every sign-in path so existing `householdId` is never clobbered
+
 ### Phase 5 — Polish ✅
 - ✅ Goals: shared + personal scope, target/current/dueDate/monthlyContrib, contribute tx clamps to target, monthsToGoal + requiredMonthlyContribution pure helpers, full CRUD UI
 - ✅ Investments: manual positions per type (saham/reksadana/deposito/crypto/emas/lainnya), gain + portfolio summary helpers, mark-to-market update, feeds health score's diversifikasi factor
@@ -158,5 +171,13 @@ Household financial tracker for Indonesian families. Flutter + Firebase. iOS + A
   - `investments.test.js` — Phase 5: position add/read/update/delete, non-member denied
 - **Run**: `flutter test` for unit; `cd emulator_tests && npm install && cd .. && firebase emulators:exec --only firestore --project demo-ft "cd emulator_tests && npm test"` for integration
 
+## CI / Distribution
+- `.github/workflows/build.yml`:
+  - Job `test` — `flutter analyze` + `flutter test` on every push / PR to `main`
+  - Job `android` — `flutter build apk --release --split-per-abi` → uploads APKs as workflow artifacts (`financial-tracker-apks-<sha>`, 30 day retention)
+  - On `v*` tags → additionally attaches APKs to a GitHub Release with auto-generated notes
+  - Flutter pinned to 3.41.9 stable; Temurin JDK 17
+  - No signing config: builds use the debug keystore baked into Flutter (fine for internal sideloading). Add an upload keystore + secrets when distributing more widely.
+
 ## Next Step
-MVP scope complete. Remaining work is distribution (TestFlight + APK direct install) and the deferred items called out per phase. No further phases planned.
+MVP scope complete. Remaining work is distribution (TestFlight + APK sideload via GH Release) and the deferred items called out per phase. No further phases planned.
