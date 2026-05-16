@@ -22,10 +22,6 @@ Keep only active issues here. Remove an issue once it is fully addressed.
 - `HouseholdRepository.leave` deletes the household root doc only.
 - Subcollections can remain orphaned when the last member leaves.
 
-### Auth sign-out silently swallows Google errors
-- `AuthRepository.signOut` has an empty `catch`.
-- Align with repo guidance: fail loud or surface expected best-effort behavior explicitly.
-
 ### Code organization: oversized UI files
 - `lib/src/features/home/home_screen.dart` is ~1194 LOC after the design pass.
 - `lib/src/features/goals/goals_screen.dart` is ~557 LOC.

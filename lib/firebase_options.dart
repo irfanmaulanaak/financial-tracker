@@ -69,6 +69,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '361266947064',
     projectId: 'financial-tracker-4791d',
     storageBucket: 'financial-tracker-4791d.firebasestorage.app',
+    iosClientId:
+        '361266947064-8torhm8lco4ok9770rvmm48vpkjfppll.apps.googleusercontent.com',
     iosBundleId: 'com.irfanmaulanaakbar.financialTracker',
   );
 }

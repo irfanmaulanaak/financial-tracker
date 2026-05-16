@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
@@ -39,10 +40,7 @@ class AuthRepository {
     required String email,
     required String password,
   }) async {
-    return _auth.signInWithEmailAndPassword(
-      email: email,
-      password: password,
-    );
+    return _auth.signInWithEmailAndPassword(email: email, password: password);
   }
 
   /// Google sign-in (and sign-up — Firebase auto-creates the auth user on
@@ -53,6 +51,21 @@ class AuthRepository {
   /// `GoogleSignInException(code: canceled)` if the user dismisses the sheet.
   /// Per AGENTS.md (fail LOUD): we do NOT swallow either.
   Future<UserCredential> signInWithGoogle() async {
+    if (kIsWeb) {
+      final provider = GoogleAuthProvider()
+        ..addScope('email')
+        ..addScope('profile');
+      final result = await _auth.signInWithPopup(provider);
+      final user = result.user!;
+      await _ensureUserDoc(
+        uid: user.uid,
+        email: user.email ?? '',
+        displayName: user.displayName ?? '',
+        photoURL: user.photoURL,
+      );
+      return result;
+    }
+
     final googleUser = await GoogleSignIn.instance.authenticate();
     final idToken = googleUser.authentication.idToken;
     if (idToken == null) {
@@ -128,10 +141,9 @@ class AuthRepository {
       emailLink: link,
     );
     final user = result.user!;
-    final fallbackName =
-        (user.displayName?.trim().isNotEmpty ?? false)
-            ? user.displayName!
-            : email.split('@').first;
+    final fallbackName = (user.displayName?.trim().isNotEmpty ?? false)
+        ? user.displayName!
+        : email.split('@').first;
     await _ensureUserDoc(
       uid: user.uid,
       email: user.email ?? email,
@@ -146,11 +158,14 @@ class AuthRepository {
   bool isSignInWithEmailLink(String link) => _auth.isSignInWithEmailLink(link);
 
   Future<void> signOut() async {
-    // Best-effort Google sign-out; safe to ignore failures (user might not be
-    // signed in via Google).
-    try {
-      await GoogleSignIn.instance.signOut();
-    } catch (_) {}
+    if (!kIsWeb) {
+      // Best-effort Google sign-out; Firebase sign-out below is still required.
+      try {
+        await GoogleSignIn.instance.signOut();
+      } catch (e, st) {
+        debugPrint('Google Sign-In signOut failed: $e\n$st');
+      }
+    }
     await _auth.signOut();
   }
 }

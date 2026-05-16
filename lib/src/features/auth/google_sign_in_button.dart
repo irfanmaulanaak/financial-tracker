@@ -21,8 +21,7 @@ class GoogleSignInButton extends ConsumerStatefulWidget {
   final bool enabled;
 
   @override
-  ConsumerState<GoogleSignInButton> createState() =>
-      _GoogleSignInButtonState();
+  ConsumerState<GoogleSignInButton> createState() => _GoogleSignInButtonState();
 }
 
 class _GoogleSignInButtonState extends ConsumerState<GoogleSignInButton> {
@@ -33,7 +32,9 @@ class _GoogleSignInButtonState extends ConsumerState<GoogleSignInButton> {
     try {
       await ref.read(authRepositoryProvider).signInWithGoogle();
     } on GoogleSignInException catch (e) {
-      if (e.code == GoogleSignInExceptionCode.canceled) return;
+      debugPrint(
+        'Google Sign-In failed: ${e.code.name} ${e.description ?? ''}',
+      );
       widget.onError(_friendlyGoogleError(e));
     } on FirebaseAuthException catch (e) {
       widget.onError(_friendlyFirebaseError(e));
@@ -90,9 +91,16 @@ class _GoogleGPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = r - inner;
       final rect = Rect.fromCircle(
-          center: Offset(cx, cy), radius: (r + inner) / 2);
-      canvas.drawArc(rect, startDeg * 3.1415926535 / 180,
-          sweepDeg * 3.1415926535 / 180, false, paint);
+        center: Offset(cx, cy),
+        radius: (r + inner) / 2,
+      );
+      canvas.drawArc(
+        rect,
+        startDeg * 3.1415926535 / 180,
+        sweepDeg * 3.1415926535 / 180,
+        false,
+        paint,
+      );
     }
 
     // Red top, Yellow left, Green bottom, Blue right (clockwise from -90°)
@@ -112,23 +120,28 @@ class _GoogleGPainter extends CustomPainter {
 }
 
 String _friendlyGoogleError(GoogleSignInException e) => switch (e.code) {
-      GoogleSignInExceptionCode.canceled => 'Dibatalkan',
-      GoogleSignInExceptionCode.interrupted => 'Proses terganggu, coba lagi',
-      GoogleSignInExceptionCode.clientConfigurationError =>
-        'Konfigurasi Google Sign-In belum lengkap (cek Firebase Console + flutterfire configure)',
-      GoogleSignInExceptionCode.providerConfigurationError =>
-        'Provider Google belum diaktifkan di Firebase Console',
-      GoogleSignInExceptionCode.uiUnavailable =>
-        'UI Google Sign-In tidak tersedia di platform ini',
-      _ => 'Gagal masuk dengan Google: ${e.description ?? e.code.name}',
-    };
+  GoogleSignInExceptionCode.canceled =>
+    'Google Sign-In dibatalkan atau Credential Manager gagal. Tutup app lalu rebuild kalau baru update Firebase config.',
+  GoogleSignInExceptionCode.interrupted => 'Proses terganggu, coba lagi',
+  GoogleSignInExceptionCode.clientConfigurationError =>
+    'Google Sign-In native belum punya OAuth client. Cek SHA Android lalu unduh ulang google-services.json.',
+  GoogleSignInExceptionCode.providerConfigurationError =>
+    'Provider Google belum diaktifkan di Firebase Console',
+  GoogleSignInExceptionCode.uiUnavailable =>
+    'UI Google Sign-In tidak tersedia di platform ini',
+  _ => 'Gagal masuk dengan Google: ${e.description ?? e.code.name}',
+};
 
 String _friendlyFirebaseError(FirebaseAuthException e) => switch (e.code) {
-      'account-exists-with-different-credential' =>
-        'Akun email ini sudah dibuat dengan metode lain. Masuk pakai email/password dulu.',
-      'invalid-credential' => 'Kredensial Google tidak valid',
-      'user-disabled' => 'Akun dinonaktifkan',
-      'network-request-failed' => 'Tidak ada koneksi internet',
-      'missing-id-token' => 'Google tidak mengembalikan ID token',
-      _ => 'Gagal: ${e.message ?? e.code}',
-    };
+  'account-exists-with-different-credential' =>
+    'Akun email ini sudah dibuat dengan metode lain. Masuk pakai email/password dulu.',
+  'invalid-credential' => 'Kredensial Google tidak valid',
+  'operation-not-allowed' =>
+    'Provider Google belum diaktifkan di Firebase Console',
+  'popup-blocked' => 'Popup Google diblokir browser',
+  'popup-closed-by-user' => 'Dibatalkan',
+  'user-disabled' => 'Akun dinonaktifkan',
+  'network-request-failed' => 'Tidak ada koneksi internet',
+  'missing-id-token' => 'Google tidak mengembalikan ID token',
+  _ => 'Gagal: ${e.message ?? e.code}',
+};
