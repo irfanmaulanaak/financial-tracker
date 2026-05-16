@@ -7,6 +7,7 @@ import '../../core/formatters.dart';
 import '../../theme.dart';
 import '../../ui/ft_ui.dart';
 import '../household/household_providers.dart';
+import '../household/name_format.dart';
 import 'credit_card.dart';
 import 'card_repository.dart';
 import 'edit_card_sheet.dart';
@@ -118,8 +119,8 @@ class CardsScreen extends ConsumerWidget {
                       padding: const EdgeInsets.fromLTRB(22, 0, 22, 12),
                       child: _CardTile(
                         card: c,
-                        ownerName:
-                            household.memberOf(c.ownerId)?.displayName ?? '-',
+                        ownerName: prettyName(
+                            household.memberOf(c.ownerId)?.displayName ?? '-'),
                         onTap: () => context.push('/cards/${c.id}'),
                       ),
                     ),

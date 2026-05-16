@@ -9,6 +9,7 @@ import '../../theme.dart';
 import '../../ui/ft_ui.dart';
 import '../household/household.dart';
 import '../household/household_repository.dart';
+import '../household/name_format.dart';
 
 class JoinHouseholdScreen extends ConsumerStatefulWidget {
   const JoinHouseholdScreen({super.key});
@@ -48,7 +49,7 @@ class _JoinHouseholdScreenState extends ConsumerState<JoinHouseholdScreen> {
           .joinWithInvite(
             code: code,
             userId: user.uid,
-            displayName: user.displayName ?? user.email ?? 'Saya',
+            displayName: prettyName(user.displayName ?? user.email ?? ''),
             role: _role,
           );
       if (mounted) context.go('/home');

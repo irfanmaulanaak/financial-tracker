@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/formatters.dart';
 import '../../../theme.dart';
@@ -48,13 +49,36 @@ class MonthStrip extends StatelessWidget {
                       style: Theme.of(context).textTheme.headlineLarge,
                     ),
                     const SizedBox(height: 2),
-                    Text(
-                      hasIncome
-                          ? 'dari ${compactMoney(income)} pendapatan'
-                          : 'Belum ada pemasukan tercatat',
-                      style: const TextStyle(
-                        color: FtColors.ink3,
-                        fontSize: 12,
+                    Builder(
+                      builder: (ctx) => FtTapScale(
+                        scale: 0.98,
+                        haptic: false,
+                        onTap: () => ctx.push('/incomes'),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                hasIncome
+                                    ? 'dari ${compactMoney(income)} pendapatan'
+                                    : 'Catat pemasukan pertama',
+                                style: const TextStyle(
+                                  color: FtColors.ink3,
+                                  fontSize: 12,
+                                  decoration: TextDecoration.underline,
+                                  decorationColor: FtColors.line,
+                                  decorationStyle: TextDecorationStyle.dotted,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 3),
+                            const Icon(
+                              Icons.chevron_right_rounded,
+                              size: 13,
+                              color: FtColors.ink3,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],

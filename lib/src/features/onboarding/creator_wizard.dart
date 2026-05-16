@@ -10,6 +10,7 @@ import '../../theme.dart';
 import '../../ui/ft_ui.dart';
 import '../household/household.dart';
 import '../household/household_repository.dart';
+import '../household/name_format.dart';
 
 class CreatorWizardScreen extends ConsumerStatefulWidget {
   const CreatorWizardScreen({super.key});
@@ -69,7 +70,7 @@ class _CreatorWizardScreenState extends ConsumerState<CreatorWizardScreen> {
           .read(householdRepositoryProvider)
           .create(
             creatorUid: user.uid,
-            creatorName: user.displayName ?? user.email ?? 'Saya',
+            creatorName: prettyName(user.displayName ?? user.email ?? ''),
             creatorRole: _role,
             name: _nameCtrl.text.trim(),
             payday: _payday,

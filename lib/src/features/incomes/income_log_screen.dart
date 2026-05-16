@@ -6,6 +6,7 @@ import '../../core/formatters.dart';
 import '../../theme.dart';
 import '../../ui/ft_ui.dart';
 import '../household/household_providers.dart';
+import '../household/name_format.dart';
 import 'income.dart';
 import 'income_repository.dart';
 
@@ -126,7 +127,7 @@ class IncomeLogScreen extends ConsumerWidget {
                                         Dates.short(inc.date),
                                         if (dest != null) dest.label,
                                         if (spender != null)
-                                          spender.displayName,
+                                          prettyName(spender.displayName),
                                         if (inc.note != null &&
                                             inc.note!.isNotEmpty)
                                           inc.note!,

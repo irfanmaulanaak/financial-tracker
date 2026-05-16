@@ -7,6 +7,7 @@ import '../../core/providers.dart';
 import '../../theme.dart';
 import '../../ui/ft_ui.dart';
 import '../household/household_providers.dart';
+import '../household/name_format.dart';
 import 'goal.dart';
 import 'goal_repository.dart';
 import 'widgets/goal_card.dart';
@@ -94,7 +95,10 @@ class GoalsScreen extends ConsumerWidget {
                     GoalCard(
                       goal: g,
                       ownerLabel: g.ownerId != null
-                          ? household.memberOf(g.ownerId!)?.displayName ?? '-'
+                          ? prettyName(household
+                                  .memberOf(g.ownerId!)
+                                  ?.displayName ??
+                              '-')
                           : 'Bersama',
                       onContribute: () =>
                           _openContributeSheet(context, ref, household.id, g),

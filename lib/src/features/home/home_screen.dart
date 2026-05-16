@@ -15,6 +15,7 @@ import '../../ui/ft_ui.dart';
 import '../auth/auth_repository.dart';
 import '../cards/credit_card.dart';
 import '../cards/cards_screen.dart';
+import '../household/name_format.dart';
 import '../expenses/expense.dart';
 import '../expenses/expense_providers.dart';
 import '../goals/goal.dart';
@@ -178,9 +179,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 children: [
                 HomeHeader(
                   household: household,
-                  displayName: user?.displayName?.trim().isNotEmpty == true
-                      ? user!.displayName!
-                      : user?.email?.split('@').first ?? 'Keluarga',
+                  displayName: prettyName(
+                      user?.displayName ?? user?.email ?? 'Keluarga'),
                   onMembers: () => context.push('/members'),
                   onSelected: _handleMenu,
                 ),
@@ -230,10 +230,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     switch (v) {
       case 'insights':
         context.push('/insights');
-      case 'investments':
-        context.push('/investments');
-      case 'incomes':
-        context.push('/incomes');
       case 'categories':
         context.push('/categories');
       case 'members':

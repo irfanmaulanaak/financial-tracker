@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/formatters.dart';
 import '../../../theme.dart';
+import '../../household/name_format.dart';
 
 String compactMoney(num value) {
   final sign = value < 0 ? '-' : '';
@@ -24,7 +25,8 @@ String _trim(num n) {
 }
 
 String initialsOf(String name) {
-  final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty);
+  final pretty = prettyName(name);
+  final parts = pretty.split(RegExp(r'\s+')).where((p) => p.isNotEmpty);
   final text = parts.take(2).map((p) => p[0]).join();
   return text.isEmpty ? 'FT' : text.toUpperCase();
 }

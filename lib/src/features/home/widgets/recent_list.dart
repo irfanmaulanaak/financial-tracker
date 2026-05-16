@@ -6,6 +6,7 @@ import '../../../theme.dart';
 import '../../../ui/ft_ui.dart';
 import '../../expenses/expense.dart';
 import '../../household/household.dart';
+import '../../household/name_format.dart';
 import 'home_formatters.dart';
 
 class RecentList extends StatelessWidget {
@@ -138,7 +139,7 @@ class _RecentExpenseRow extends StatelessWidget {
                 Text(
                   [
                     Dates.short(expense.date),
-                    if (spender != null) spender!.displayName,
+                    if (spender != null) prettyName(spender!.displayName),
                   ].join(' · '),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,

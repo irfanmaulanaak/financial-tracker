@@ -9,6 +9,7 @@ import '../../ui/ft_ui.dart';
 import '../household/household.dart';
 import '../household/household_providers.dart';
 import '../household/household_repository.dart';
+import '../household/name_format.dart';
 
 class MemberListScreen extends ConsumerStatefulWidget {
   const MemberListScreen({super.key});
@@ -141,15 +142,14 @@ class _MemberTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final initial = member.displayName.isNotEmpty
-        ? member.displayName[0].toUpperCase()
-        : '?';
+    final pretty = prettyName(member.displayName);
+    final initial = pretty.isNotEmpty ? pretty[0].toUpperCase() : '?';
     return ListTile(
       leading: CircleAvatar(
         backgroundColor: _parseColor(member.color),
         child: Text(initial, style: const TextStyle(color: Colors.white)),
       ),
-      title: Text(member.displayName + (isSelf ? ' (kamu)' : '')),
+      title: Text(pretty + (isSelf ? ' (kamu)' : '')),
       subtitle: Text(roleToString(member.role)),
       trailing: member.isCreator
           ? const Chip(

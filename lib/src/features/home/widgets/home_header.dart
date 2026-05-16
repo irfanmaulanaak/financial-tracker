@@ -222,40 +222,27 @@ class _OverflowMenu extends StatelessWidget {
       itemBuilder: (_) => const [
         PopupMenuItem(
           value: 'insights',
-          child: _MenuRow(icon: Icons.insights_rounded, label: 'Insight'),
+          child: _MenuRow(
+              icon: Icons.insights_rounded, label: 'Kesehatan Finansial'),
         ),
-        PopupMenuItem(
-          value: 'investments',
-          child:
-              _MenuRow(icon: Icons.trending_up_rounded, label: 'Investasi'),
-        ),
-        PopupMenuItem(
-          value: 'incomes',
-          child:
-              _MenuRow(icon: Icons.south_west_rounded, label: 'Riwayat Pemasukan'),
-        ),
-        PopupMenuDivider(),
         PopupMenuItem(
           value: 'categories',
-          child:
-              _MenuRow(icon: Icons.category_rounded, label: 'Kategori'),
+          child: _MenuRow(icon: Icons.category_rounded, label: 'Kategori'),
         ),
         PopupMenuItem(
           value: 'members',
-          child:
-              _MenuRow(icon: Icons.group_rounded, label: 'Anggota'),
+          child: _MenuRow(icon: Icons.group_rounded, label: 'Anggota'),
         ),
         PopupMenuItem(
           value: 'export',
-          child:
-              _MenuRow(icon: Icons.ios_share_rounded, label: 'Ekspor data'),
+          child: _MenuRow(icon: Icons.ios_share_rounded, label: 'Ekspor data'),
         ),
         PopupMenuDivider(),
         PopupMenuItem(
           value: 'signout',
           child: _MenuRow(
             icon: Icons.logout_rounded,
-            label: 'Keluar',
+            label: 'Keluar akun',
             danger: true,
           ),
         ),

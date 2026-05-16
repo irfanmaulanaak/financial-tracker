@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../household/household_providers.dart';
+import '../household/name_format.dart';
 import 'credit_card.dart';
 
 class CardDraft {
@@ -142,7 +143,7 @@ class _EditCardSheetState extends ConsumerState<EditCardSheet> {
               items: members
                   .map((m) => DropdownMenuItem(
                         value: m.userId,
-                        child: Text(m.displayName),
+                        child: Text(prettyName(m.displayName)),
                       ))
                   .toList(),
               onChanged: (v) => setState(() => _ownerId = v),

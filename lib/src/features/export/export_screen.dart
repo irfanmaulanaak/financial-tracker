@@ -13,6 +13,7 @@ import '../expenses/expense.dart';
 import '../expenses/expense_repository.dart';
 import '../household/household.dart';
 import '../household/household_providers.dart';
+import '../household/name_format.dart';
 import '../incomes/income_repository.dart';
 
 class ExportScreen extends ConsumerStatefulWidget {
@@ -48,7 +49,7 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
           amount: e.amount,
           category: cat?.label ?? e.categoryId,
           paymentMethod: pm?.label ?? e.paymentMethodId,
-          spentBy: member?.displayName ?? e.spentBy,
+          spentBy: prettyName(member?.displayName ?? e.spentBy),
           note: e.note,
         );
       });
@@ -75,7 +76,7 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
           amount: i.amount,
           category: i.source.name,
           paymentMethod: dest?.label ?? i.destinationAccountId,
-          spentBy: member?.displayName ?? i.receivedBy,
+          spentBy: prettyName(member?.displayName ?? i.receivedBy),
           note: i.note,
         );
       });

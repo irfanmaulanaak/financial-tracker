@@ -8,6 +8,7 @@ import '../../theme.dart';
 import '../../ui/ft_ui.dart';
 import '../household/household.dart';
 import '../household/household_providers.dart';
+import '../household/name_format.dart';
 import 'expense.dart';
 import 'expense_repository.dart';
 
@@ -45,52 +46,31 @@ class _ExpenseLogScreenState extends ConsumerState<ExpenseLogScreen> {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
                 child: Row(
                   children: [
                     Expanded(
-                      child: DropdownButtonFormField<String?>(
-                        initialValue: _filterMemberId,
-                        isExpanded: true,
-                        decoration: const InputDecoration(
-                          labelText: 'Anggota',
-                          isDense: true,
-                        ),
-                        items: [
-                          const DropdownMenuItem(
-                            value: null,
-                            child: Text('Semua'),
-                          ),
-                          ...household.members.map(
-                            (m) => DropdownMenuItem(
-                              value: m.userId,
-                              child: Text(m.displayName),
-                            ),
-                          ),
+                      child: _FilterDropdown(
+                        label: 'Anggota',
+                        value: _filterMemberId,
+                        options: [
+                          const _FilterOption(value: null, label: 'Semua'),
+                          for (final m in household.members)
+                            _FilterOption(
+                                value: m.userId, label: prettyName(m.displayName)),
                         ],
                         onChanged: (v) => setState(() => _filterMemberId = v),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 10),
                     Expanded(
-                      child: DropdownButtonFormField<String?>(
-                        initialValue: _filterCategoryId,
-                        isExpanded: true,
-                        decoration: const InputDecoration(
-                          labelText: 'Kategori',
-                          isDense: true,
-                        ),
-                        items: [
-                          const DropdownMenuItem(
-                            value: null,
-                            child: Text('Semua'),
-                          ),
-                          ...household.categories.map(
-                            (c) => DropdownMenuItem(
-                              value: c.id,
-                              child: Text(c.label),
-                            ),
-                          ),
+                      child: _FilterDropdown(
+                        label: 'Kategori',
+                        value: _filterCategoryId,
+                        options: [
+                          const _FilterOption(value: null, label: 'Semua'),
+                          for (final c in household.categories)
+                            _FilterOption(value: c.id, label: c.label),
                         ],
                         onChanged: (v) => setState(() => _filterCategoryId = v),
                       ),
@@ -274,7 +254,7 @@ class _ExpenseTile extends ConsumerWidget {
                 const SizedBox(height: 2),
                 Text(
                   [
-                    if (spender != null) spender!.displayName,
+                    if (spender != null) prettyName(spender!.displayName),
                     if (expense.note != null && expense.note!.isNotEmpty)
                       expense.note!,
                   ].join(' • '),
@@ -332,3 +312,80 @@ IconData _iconFor(String name) => switch (name) {
   'sports_esports' => Icons.sports_esports,
   _ => Icons.category,
 };
+
+class _FilterOption {
+  const _FilterOption({required this.value, required this.label});
+  final String? value;
+  final String label;
+}
+
+/// Compact pill-styled dropdown that stays inside its cell — no overflow into
+/// neighbouring widgets even on small phones. Replaces the default
+/// `DropdownButtonFormField` which paints labels on top of the title bar.
+class _FilterDropdown extends StatelessWidget {
+  const _FilterDropdown({
+    required this.label,
+    required this.value,
+    required this.options,
+    required this.onChanged,
+  });
+
+  final String label;
+  final String? value;
+  final List<_FilterOption> options;
+  final ValueChanged<String?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 6, 8, 6),
+      decoration: BoxDecoration(
+        color: FtColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: FtColors.line, width: 0.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              color: FtColors.ink3,
+              fontSize: 10,
+              letterSpacing: 0.3,
+            ),
+          ),
+          DropdownButtonHideUnderline(
+            child: DropdownButton<String?>(
+              value: value,
+              isExpanded: true,
+              isDense: true,
+              icon: const Icon(Icons.expand_more_rounded,
+                  size: 18, color: FtColors.ink3),
+              style: const TextStyle(
+                color: FtColors.ink,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+              dropdownColor: FtColors.surface,
+              borderRadius: BorderRadius.circular(12),
+              items: [
+                for (final o in options)
+                  DropdownMenuItem<String?>(
+                    value: o.value,
+                    child: Text(
+                      o.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+              ],
+              onChanged: onChanged,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
