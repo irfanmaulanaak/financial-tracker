@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../theme.dart';
+import '../../ui/ft_motion.dart';
 
-/// Shared editorial chrome for sign-in / sign-up screens.
-/// - cream background, generous top padding
-/// - small eyebrow line + serif headline + supporting subtitle
-/// - kids = the form & primary action stack
-/// - quietFooter = secondary nav text below
+/// Shared editorial chrome for sign-in / sign-up / email-link screens.
 class AuthShell extends StatelessWidget {
   const AuthShell({
     super.key,
@@ -28,46 +25,63 @@ class AuthShell extends StatelessWidget {
     return Scaffold(
       backgroundColor: FtColors.bg,
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 28),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: 12),
-                  _BrandMark(),
-                  const SizedBox(height: 36),
-                  Eyebrow(eyebrow),
-                  const SizedBox(height: 10),
-                  Text(
-                    headline,
-                    style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                          height: 1.05,
-                          fontSize: 36,
+        child: LayoutBuilder(
+          builder: (ctx, box) {
+            final tight = box.maxHeight < 720;
+            return Center(
+              child: SingleChildScrollView(
+                physics: const ClampingScrollPhysics(),
+                padding: EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: tight ? 20 : 36,
+                ),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 440),
+                  child: FtFadeUp(
+                    duration: const Duration(milliseconds: 360),
+                    distance: 12,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const _BrandMark(),
+                        SizedBox(height: tight ? 36 : 48),
+                        Eyebrow(eyebrow, color: FtColors.clay),
+                        const SizedBox(height: 14),
+                        Text(
+                          headline,
+                          style: Theme.of(context)
+                              .textTheme
+                              .displaySmall
+                              ?.copyWith(
+                                fontSize: tight ? 38 : 44,
+                                height: 1.05,
+                                letterSpacing: -1.4,
+                                color: FtColors.ink,
+                              ),
                         ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      color: FtColors.ink3,
-                      fontSize: 13,
-                      height: 1.5,
+                        const SizedBox(height: 14),
+                        Text(
+                          subtitle,
+                          style: const TextStyle(
+                            color: FtColors.ink3,
+                            fontSize: 14,
+                            height: 1.55,
+                          ),
+                        ),
+                        SizedBox(height: tight ? 28 : 36),
+                        ...children,
+                        if (quietFooter != null) ...[
+                          const SizedBox(height: 28),
+                          Center(child: quietFooter!),
+                        ],
+                        const SizedBox(height: 12),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 28),
-                  ...children,
-                  if (quietFooter != null) ...[
-                    const SizedBox(height: 22),
-                    Center(child: quietFooter),
-                  ],
-                  const SizedBox(height: 12),
-                ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         ),
       ),
     );
@@ -75,16 +89,17 @@ class AuthShell extends StatelessWidget {
 }
 
 class _BrandMark extends StatelessWidget {
+  const _BrandMark();
+
   @override
   Widget build(BuildContext context) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.start,
       children: [
         Container(
-          width: 38,
-          height: 38,
+          width: 42,
+          height: 42,
           decoration: BoxDecoration(
-            color: FtColors.surfaceAlt,
+            color: FtColors.surface,
             shape: BoxShape.circle,
             border: Border.all(color: FtColors.lineStrong, width: 0.5),
           ),
@@ -92,47 +107,39 @@ class _BrandMark extends StatelessWidget {
           child: Text(
             'ft',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontSize: 16,
-                  letterSpacing: 0.5,
-                  color: FtColors.ink,
+                  fontSize: 17,
+                  letterSpacing: 0.3,
+                  color: FtColors.clay,
+                  height: 1,
                 ),
           ),
         ),
-        const SizedBox(width: 10),
-        Text(
-          'Financial Tracker',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: FtColors.ink2,
+        const SizedBox(width: 12),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: const [
+            Text(
+              'Financial Tracker',
+              style: TextStyle(
+                color: FtColors.ink,
+                fontSize: 13.5,
                 fontWeight: FontWeight.w500,
+                letterSpacing: -0.2,
               ),
+            ),
+            SizedBox(height: 2),
+            Text(
+              'untuk keluarga · IDR',
+              style: TextStyle(
+                color: FtColors.ink3,
+                fontSize: 10.5,
+                letterSpacing: 0.6,
+              ),
+            ),
+          ],
         ),
       ],
-    );
-  }
-}
-
-/// Field with an eyebrow-style label above the input (matches design ref).
-class LabeledField extends StatelessWidget {
-  const LabeledField({
-    super.key,
-    required this.label,
-    required this.child,
-  });
-  final String label;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Eyebrow(label),
-          const SizedBox(height: 6),
-          child,
-        ],
-      ),
     );
   }
 }
@@ -174,29 +181,93 @@ class AuthErrorBanner extends StatelessWidget {
   }
 }
 
-/// Quiet "—— atau ——" divider used between primary CTA + Google button.
+/// Inline success/info band (cream/sage), used by passwordless link flow.
+class AuthInfoBanner extends StatelessWidget {
+  const AuthInfoBanner({
+    super.key,
+    required this.message,
+    this.icon = Icons.mark_email_read_outlined,
+  });
+  final String message;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: FtColors.sage.withValues(alpha: 0.08),
+        border: Border.all(
+            color: FtColors.sage.withValues(alpha: 0.3), width: 0.5),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: FtColors.moss, size: 16),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                color: FtColors.moss,
+                fontSize: 12,
+                height: 1.5,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Subtle "—— atau ——" divider used between primary CTA + Google button.
 class OrDivider extends StatelessWidget {
   const OrDivider({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 18),
+      padding: const EdgeInsets.symmetric(vertical: 20),
       child: Row(
-        children: [
-          const Expanded(child: Divider(color: FtColors.line, thickness: 0.5)),
+        children: const [
+          Expanded(child: Divider(color: FtColors.line, thickness: 0.5)),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+            padding: EdgeInsets.symmetric(horizontal: 14),
             child: Text(
               'atau',
               style: TextStyle(
                 color: FtColors.ink3,
                 fontSize: 11,
-                letterSpacing: 0.5,
+                letterSpacing: 1,
               ),
             ),
           ),
-          const Expanded(child: Divider(color: FtColors.line, thickness: 0.5)),
+          Expanded(child: Divider(color: FtColors.line, thickness: 0.5)),
+        ],
+      ),
+    );
+  }
+}
+
+/// Kept for backwards-compat (sign-in/up/email-link migrated to FtInput).
+class LabeledField extends StatelessWidget {
+  const LabeledField({super.key, required this.label, required this.child});
+  final String label;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Eyebrow(label),
+          const SizedBox(height: 6),
+          child,
         ],
       ),
     );

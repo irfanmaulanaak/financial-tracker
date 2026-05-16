@@ -48,7 +48,7 @@ Household financial tracker for Indonesian families. Flutter + Firebase. iOS + A
 - Recurring flag: per-expense + per-income, user-toggled. Metadata only in Phase 1-3; auto-create in Phase 5.
 - Payment methods: seeded defaults (Tunai, BCA Debit, GoPay, OVO, etc.) + household can add custom.
 - Account transfers: skip MVP. Edit each account balance manually.
-- Daily budget: derived as `monthly budget ÷ days in cycle`. Display-only on home.
+- Daily budget: derived as `current-cycle income ÷ days in cycle`. Display-only on home. Income is the spending ceiling; dashboard warns when expenses approach/exceed recorded income.
 - Invite code: 6-digit numeric, unique per invitation, one-time use, regenerated for each new invite. No stable household-wide code.
 - Onboarding (creator): step-by-step wizard.
 - Onboarding (invited member): enter code → auto-join → home.
@@ -88,7 +88,7 @@ Household financial tracker for Indonesian families. Flutter + Firebase. iOS + A
 - ✅ Archive/unarchive category
 - ✅ Record expense: amount, category, method, note, attributed-to-spender, date (backdate-able), recurring flag
 - ✅ Expense log: grouped by day, current cycle only, filter by member + category, swipe/long-press delete
-- ✅ Home: cycle spend vs total budget, daily budget, top categories with progress bars, recent 5 expenses
+- ✅ Home: cycle spend vs current-cycle income, income-based daily budget, top categories with progress bars, recent 5 expenses
 
 ### Phase 2 — Money Model ✅
 - ✅ Cash accounts (embedded on household; set + delta + add + delete)
@@ -135,7 +135,7 @@ Household financial tracker for Indonesian families. Flutter + Firebase. iOS + A
 - ✅ Goals: shared + personal scope, target/current/dueDate/monthlyContrib, contribute tx clamps to target, monthsToGoal + requiredMonthlyContribution pure helpers, full CRUD UI
 - ✅ Investments: manual positions per type (saham/reksadana/deposito/crypto/emas/lainnya), gain + portfolio summary helpers, mark-to-market update, feeds health score's diversifikasi factor
 - ✅ Recurring materialisation: client-side `datesToMaterialise` + `latestPerKey` helpers (full-month gap detection, day-clamp on shorter months, year-boundary safe). Cloud Function path skipped per AGENTS.md ("no over-engineering" for 2-5 users).
-- ✅ In-app indicators: budget banner (≥80% warning, ≥100% exceeded) + CC due-date banner (≤5 days). Push notifications deferred.
+- ✅ In-app indicators: income-spend banner (≥80% warning, ≥100% exceeded) + CC due-date banner (≤5 days). Push notifications deferred.
 - ✅ Export: CSV builder (RFC 4180-ish quoting), share-sheet via `share_plus` for expenses (90d) + income (500 latest).
 - PDF export → **deferred** (CSV opens in Excel/Numbers/Sheets, sufficient for internal use)
 - Bank/e-wallet auto-import → **deferred** (large initiative)
