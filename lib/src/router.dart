@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'features/accounts/accounts_screen.dart';
+import 'features/auth/email_link_screen.dart';
 import 'features/auth/sign_in_screen.dart';
 import 'features/auth/sign_up_screen.dart';
 import 'features/cards/card_detail_screen.dart';
@@ -42,7 +43,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       if (loadingAuth) return null;
 
-      final authRoutes = {'/sign-in', '/sign-up'};
+      final authRoutes = {'/sign-in', '/sign-up', '/sign-in-link'};
       final onboardRoutes = {'/', '/onboard/create', '/onboard/join'};
 
       if (!signedIn) {
@@ -62,6 +63,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/', builder: (_, _) => const LandingScreen()),
       GoRoute(path: '/sign-in', builder: (_, _) => const SignInScreen()),
       GoRoute(path: '/sign-up', builder: (_, _) => const SignUpScreen()),
+      GoRoute(
+          path: '/sign-in-link',
+          builder: (_, _) => const EmailLinkScreen()),
       GoRoute(
         path: '/onboard/create',
         builder: (_, _) => const CreatorWizardScreen(),

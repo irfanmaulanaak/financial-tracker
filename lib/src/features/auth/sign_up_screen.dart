@@ -161,6 +161,12 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
           enabled: !_busy,
           onError: (msg) => setState(() => _error = msg),
         ),
+        const SizedBox(height: 10),
+        OutlinedButton.icon(
+          onPressed: _busy ? null : () => context.push('/sign-in-link'),
+          icon: const Icon(Icons.link, size: 18, color: FtColors.ink2),
+          label: const Text('Daftar lewat link email'),
+        ),
         const SizedBox(height: 14),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4),

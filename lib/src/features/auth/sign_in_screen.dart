@@ -146,6 +146,12 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
           enabled: !_busy,
           onError: (msg) => setState(() => _error = msg),
         ),
+        const SizedBox(height: 10),
+        OutlinedButton.icon(
+          onPressed: _busy ? null : () => context.push('/sign-in-link'),
+          icon: const Icon(Icons.link, size: 18, color: FtColors.ink2),
+          label: const Text('Masuk tanpa password'),
+        ),
       ],
     );
   }

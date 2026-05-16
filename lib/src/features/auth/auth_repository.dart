@@ -5,6 +5,12 @@ import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../core/providers.dart';
 
+/// Firebase Hosting action URL for the project — used as the landing page
+/// when the email link is clicked. Universal/App Links aren't configured
+/// (internal app, 2-5 users), so users paste the link back into the app.
+const String _emailLinkActionUrl =
+    'https://financial-tracker-4791d.firebaseapp.com/__/auth/action';
+
 class AuthRepository {
   AuthRepository(this._auth, this._db);
   final FirebaseAuth _auth;
@@ -86,6 +92,58 @@ class AuthRepository {
       'createdAt': FieldValue.serverTimestamp(),
     });
   }
+
+  /// Step 1 of passwordless sign-in: emails a magic link to the user.
+  /// Caller must remember the email for [signInWithEmailLink].
+  Future<void> sendEmailLink({required String email}) async {
+    final actionCodeSettings = ActionCodeSettings(
+      url: _emailLinkActionUrl,
+      handleCodeInApp: true,
+      iOSBundleId: 'com.irfanmaulanaakbar.financialTracker',
+      androidPackageName: 'com.irfanmaulanaakbar.financial_tracker',
+      androidInstallApp: false,
+    );
+    await _auth.sendSignInLinkToEmail(
+      email: email,
+      actionCodeSettings: actionCodeSettings,
+    );
+  }
+
+  /// Step 2 of passwordless sign-in. `link` is the full URL from the email.
+  /// Firebase auto-creates the auth user if it doesn't exist. We upsert the
+  /// `users/{uid}` profile doc with `displayName` derived from the email
+  /// local-part as a sensible default; user can rename later.
+  Future<UserCredential> signInWithEmailLink({
+    required String email,
+    required String link,
+  }) async {
+    if (!_auth.isSignInWithEmailLink(link)) {
+      throw FirebaseAuthException(
+        code: 'invalid-action-code',
+        message: 'Link tidak valid atau sudah kedaluwarsa.',
+      );
+    }
+    final result = await _auth.signInWithEmailLink(
+      email: email,
+      emailLink: link,
+    );
+    final user = result.user!;
+    final fallbackName =
+        (user.displayName?.trim().isNotEmpty ?? false)
+            ? user.displayName!
+            : email.split('@').first;
+    await _ensureUserDoc(
+      uid: user.uid,
+      email: user.email ?? email,
+      displayName: fallbackName,
+      photoURL: user.photoURL,
+    );
+    return result;
+  }
+
+  /// Pure helper — true if `link` looks like a Firebase sign-in link.
+  /// Exposed so the UI can sanity-check the pasted URL before submitting.
+  bool isSignInWithEmailLink(String link) => _auth.isSignInWithEmailLink(link);
 
   Future<void> signOut() async {
     // Best-effort Google sign-out; safe to ignore failures (user might not be
