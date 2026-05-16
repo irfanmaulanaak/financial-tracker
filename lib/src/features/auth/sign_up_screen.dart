@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../theme.dart';
+import '../../ui/ft_haptics.dart';
+import '../../ui/ft_input.dart';
 import 'auth_repository.dart';
 import 'auth_shell.dart';
 import 'google_sign_in_button.dart';
@@ -33,7 +35,11 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      FtHaptics.warning();
+      return;
+    }
+    FtHaptics.tap();
     setState(() {
       _busy = true;
       _error = null;
@@ -44,7 +50,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
             password: _password.text,
             displayName: _name.text.trim(),
           );
+      if (mounted) FtHaptics.success();
     } on FirebaseAuthException catch (e) {
+      FtHaptics.error();
       setState(() => _error = _friendlyAuthError(e));
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -60,6 +68,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
           'Buat akun untuk mulai mencatat pengeluaran, tabungan, dan tujuan.',
       quietFooter: Wrap(
         crossAxisAlignment: WrapCrossAlignment.center,
+        alignment: WrapAlignment.center,
         children: [
           const Text(
             'Sudah punya akun?',
@@ -72,7 +81,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
-            child: Text(
+            child: const Text(
               'Masuk',
               style: TextStyle(
                 color: FtColors.clay,
@@ -89,59 +98,57 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              LabeledField(
+              FtInput(
                 label: 'Nama panggilan',
-                child: TextFormField(
-                  controller: _name,
-                  textCapitalization: TextCapitalization.words,
-                  textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(hintText: 'Mis. Irfan'),
-                  validator: (v) => (v == null || v.trim().isEmpty)
-                      ? 'Wajib diisi'
-                      : null,
-                ),
+                controller: _name,
+                hintText: 'Mis. Irfan',
+                textCapitalization: TextCapitalization.words,
+                textInputAction: TextInputAction.next,
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? 'Wajib diisi'
+                    : null,
               ),
-              LabeledField(
+              const SizedBox(height: 14),
+              FtInput(
                 label: 'Email',
-                child: TextFormField(
-                  controller: _email,
-                  keyboardType: TextInputType.emailAddress,
-                  autocorrect: false,
-                  textInputAction: TextInputAction.next,
-                  decoration:
-                      const InputDecoration(hintText: 'kamu@email.com'),
-                  validator: (v) => (v == null || !v.contains('@'))
-                      ? 'Email tidak valid'
-                      : null,
-                ),
+                controller: _email,
+                hintText: 'kamu@email.com',
+                keyboardType: TextInputType.emailAddress,
+                autocorrect: false,
+                textInputAction: TextInputAction.next,
+                validator: (v) => (v == null || !v.contains('@'))
+                    ? 'Email tidak valid'
+                    : null,
               ),
-              LabeledField(
+              const SizedBox(height: 14),
+              FtInput(
                 label: 'Password',
-                child: TextFormField(
-                  controller: _password,
-                  obscureText: _obscure,
-                  textInputAction: TextInputAction.done,
-                  onFieldSubmitted: (_) => _submit(),
-                  decoration: InputDecoration(
-                    hintText: 'Minimal 6 karakter',
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                        size: 18,
-                        color: FtColors.ink3,
-                      ),
-                      onPressed: () =>
-                          setState(() => _obscure = !_obscure),
-                    ),
+                controller: _password,
+                hintText: 'Minimal 6 karakter',
+                obscureText: _obscure,
+                textInputAction: TextInputAction.done,
+                onFieldSubmitted: (_) => _submit(),
+                trailing: IconButton(
+                  onPressed: () {
+                    FtHaptics.select();
+                    setState(() => _obscure = !_obscure);
+                  },
+                  splashRadius: 18,
+                  icon: Icon(
+                    _obscure
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
+                    size: 18,
+                    color: FtColors.ink3,
                   ),
-                  validator: (v) => (v == null || v.length < 6)
-                      ? 'Minimal 6 karakter'
-                      : null,
                 ),
+                validator: (v) =>
+                    (v == null || v.length < 6) ? 'Minimal 6 karakter' : null,
               ),
             ],
           ),
         ),
+        const SizedBox(height: 18),
         if (_error != null) AuthErrorBanner(message: _error!),
         FilledButton(
           onPressed: _busy ? null : _submit,
@@ -159,25 +166,30 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
         const OrDivider(),
         GoogleSignInButton(
           enabled: !_busy,
-          onError: (msg) => setState(() => _error = msg),
+          onError: (msg) {
+            FtHaptics.error();
+            setState(() => _error = msg);
+          },
         ),
         const SizedBox(height: 10),
         OutlinedButton.icon(
-          onPressed: _busy ? null : () => context.push('/sign-in-link'),
+          onPressed: _busy
+              ? null
+              : () {
+                  FtHaptics.tap();
+                  context.push('/sign-in-link');
+                },
           icon: const Icon(Icons.link, size: 18, color: FtColors.ink2),
           label: const Text('Daftar lewat link email'),
         ),
-        const SizedBox(height: 14),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: Text(
-            'Dengan mendaftar, kamu menyetujui penggunaan data sesuai kebijakan internal aplikasi.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: FtColors.ink4,
-              fontSize: 11,
-              height: 1.5,
-            ),
+        const SizedBox(height: 18),
+        const Text(
+          'Dengan mendaftar, kamu menyetujui penggunaan data sesuai kebijakan internal aplikasi.',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: FtColors.ink4,
+            fontSize: 11,
+            height: 1.5,
           ),
         ),
       ],

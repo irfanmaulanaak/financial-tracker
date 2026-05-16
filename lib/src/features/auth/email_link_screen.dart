@@ -5,16 +5,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../theme.dart';
+import '../../ui/ft_haptics.dart';
+import '../../ui/ft_input.dart';
 import 'auth_repository.dart';
 import 'auth_shell.dart';
 
 /// Passwordless sign-in via emailed magic link.
-/// Two-step flow on a single screen:
-///   1. Enter email → "Kirim link"
-///   2. Paste the URL from the email → "Masuk"
-///
-/// No deep-link plumbing — user copies the link from their email and pastes
-/// it back into the app. Trade-off chosen per AGENTS.md (2-5 internal users).
+/// User receives the link in their email, copies the URL, and pastes it back.
+/// No deep-link plumbing — chosen per AGENTS.md (2-5 internal users).
 class EmailLinkScreen extends ConsumerStatefulWidget {
   const EmailLinkScreen({super.key});
 
@@ -42,9 +40,11 @@ class _EmailLinkScreenState extends ConsumerState<EmailLinkScreen> {
   Future<void> _sendLink() async {
     final email = _email.text.trim();
     if (!email.contains('@')) {
+      FtHaptics.warning();
       setState(() => _error = 'Email tidak valid');
       return;
     }
+    FtHaptics.tap();
     setState(() {
       _busy = true;
       _error = null;
@@ -52,12 +52,14 @@ class _EmailLinkScreenState extends ConsumerState<EmailLinkScreen> {
     });
     try {
       await ref.read(authRepositoryProvider).sendEmailLink(email: email);
+      if (mounted) FtHaptics.success();
       setState(() {
         _stage = _Stage.awaitingLink;
         _info = 'Link sudah dikirim ke $email. Buka email di device manapun, '
             'lalu copy seluruh URL dan paste di bawah.';
       });
     } on FirebaseAuthException catch (e) {
+      FtHaptics.error();
       setState(() => _error = _friendly(e));
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -68,9 +70,11 @@ class _EmailLinkScreenState extends ConsumerState<EmailLinkScreen> {
     final link = _link.text.trim();
     final email = _email.text.trim();
     if (link.isEmpty) {
+      FtHaptics.warning();
       setState(() => _error = 'Paste link dari email');
       return;
     }
+    FtHaptics.tap();
     setState(() {
       _busy = true;
       _error = null;
@@ -79,8 +83,9 @@ class _EmailLinkScreenState extends ConsumerState<EmailLinkScreen> {
       await ref
           .read(authRepositoryProvider)
           .signInWithEmailLink(email: email, link: link);
-      // Router redirect takes over.
+      if (mounted) FtHaptics.success();
     } on FirebaseAuthException catch (e) {
+      FtHaptics.error();
       setState(() => _error = _friendly(e));
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -88,6 +93,7 @@ class _EmailLinkScreenState extends ConsumerState<EmailLinkScreen> {
   }
 
   Future<void> _pasteFromClipboard() async {
+    FtHaptics.select();
     final data = await Clipboard.getData('text/plain');
     final text = data?.text;
     if (text != null && text.isNotEmpty) {
@@ -105,78 +111,52 @@ class _EmailLinkScreenState extends ConsumerState<EmailLinkScreen> {
           ? 'Klik link di email untuk membukanya, lalu paste URL-nya di sini.'
           : 'Kami kirimkan link sekali pakai. Tidak perlu ingat password.',
       quietFooter: TextButton(
-        onPressed: _busy ? null : () => context.go('/sign-in'),
-        child: Text(
+        onPressed: _busy
+            ? null
+            : () {
+                FtHaptics.tap();
+                context.go('/sign-in');
+              },
+        child: const Text(
           'Kembali ke login biasa',
           style: TextStyle(color: FtColors.ink3, fontSize: 13),
         ),
       ),
       children: [
-        LabeledField(
+        FtInput(
           label: 'Email',
-          child: TextField(
-            controller: _email,
-            enabled: !isStep2,
-            keyboardType: TextInputType.emailAddress,
-            autocorrect: false,
-            decoration: const InputDecoration(hintText: 'kamu@email.com'),
-          ),
+          controller: _email,
+          hintText: 'kamu@email.com',
+          keyboardType: TextInputType.emailAddress,
+          autocorrect: false,
+          enabled: !isStep2,
         ),
-        if (isStep2)
-          LabeledField(
+        if (isStep2) ...[
+          const SizedBox(height: 14),
+          FtInput(
             label: 'Link dari email',
-            child: TextField(
-              controller: _link,
-              keyboardType: TextInputType.url,
-              autocorrect: false,
-              maxLines: 3,
-              minLines: 2,
-              decoration: InputDecoration(
-                hintText: 'https://financial-tracker-4791d...',
-                suffixIcon: IconButton(
-                  tooltip: 'Paste dari clipboard',
-                  icon: const Icon(Icons.content_paste_outlined,
-                      size: 18, color: FtColors.ink3),
-                  onPressed: _busy ? null : _pasteFromClipboard,
-                ),
+            controller: _link,
+            hintText: 'https://financial-tracker-4791d...',
+            keyboardType: TextInputType.url,
+            autocorrect: false,
+            minLines: 2,
+            maxLines: 3,
+            trailing: IconButton(
+              onPressed: _busy ? null : _pasteFromClipboard,
+              splashRadius: 18,
+              icon: const Icon(
+                Icons.content_paste_outlined,
+                size: 18,
+                color: FtColors.ink3,
               ),
             ),
           ),
-        if (_info != null)
-          Container(
-            margin: const EdgeInsets.only(bottom: 14),
-            padding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: FtColors.sage.withValues(alpha: 0.08),
-              border: Border.all(
-                  color: FtColors.sage.withValues(alpha: 0.3), width: 0.5),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Icon(Icons.mark_email_read_outlined,
-                    color: FtColors.moss, size: 16),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    _info!,
-                    style: const TextStyle(
-                      color: FtColors.moss,
-                      fontSize: 12,
-                      height: 1.4,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+        ],
+        const SizedBox(height: 18),
+        if (_info != null) AuthInfoBanner(message: _info!),
         if (_error != null) AuthErrorBanner(message: _error!),
         FilledButton(
-          onPressed: _busy
-              ? null
-              : (isStep2 ? _submitLink : _sendLink),
+          onPressed: _busy ? null : (isStep2 ? _submitLink : _sendLink),
           child: _busy
               ? const SizedBox(
                   width: 18,
@@ -193,11 +173,14 @@ class _EmailLinkScreenState extends ConsumerState<EmailLinkScreen> {
           OutlinedButton(
             onPressed: _busy
                 ? null
-                : () => setState(() {
+                : () {
+                    FtHaptics.tap();
+                    setState(() {
                       _stage = _Stage.compose;
                       _info = null;
                       _link.clear();
-                    }),
+                    });
+                  },
             child: const Text('Pakai email lain'),
           ),
         ],
