@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../theme.dart';
+import 'ft_haptics.dart';
+import 'ft_motion.dart';
 
 class FtCard extends StatelessWidget {
   const FtCard({
@@ -41,14 +43,10 @@ class FtCard extends StatelessWidget {
 
     final wrapped = onTap == null && onLongPress == null
         ? card
-        : Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(18),
-              onTap: onTap,
-              onLongPress: onLongPress,
-              child: card,
-            ),
+        : FtTapScale(
+            onTap: onTap,
+            onLongPress: onLongPress,
+            child: card,
           );
 
     if (margin == null) return wrapped;
@@ -280,11 +278,18 @@ class _FtNavButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(22),
-      onTap: active ? null : () => context.go(item.path),
+    return FtTapScale(
+      scale: 0.94,
+      haptic: false,
+      onTap: active
+          ? null
+          : () {
+              FtHaptics.select();
+              context.go(item.path);
+            },
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOutCubic,
         padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
           color: active ? FtColors.bg : Colors.transparent,

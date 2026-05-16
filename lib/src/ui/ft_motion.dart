@@ -138,7 +138,7 @@ Page<T> ftFadeUpPage<T>(
     child: child,
     transitionDuration: const Duration(milliseconds: 260),
     reverseTransitionDuration: const Duration(milliseconds: 200),
-    transitionsBuilder: (_, animation, __, w) {
+    transitionsBuilder: (_, animation, _, w) {
       final curve = CurvedAnimation(
         parent: animation,
         curve: Curves.easeOutCubic,
