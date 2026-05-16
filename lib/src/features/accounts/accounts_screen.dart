@@ -119,9 +119,10 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen>
                     setState(() {});
                   },
                   dividerColor: Colors.transparent,
+                  indicatorPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   indicator: const BoxDecoration(
                     color: FtColors.ink,
-                    borderRadius: BorderRadius.all(Radius.circular(999)),
+                    borderRadius: BorderRadius.all(Radius.circular(10)),
                   ),
                   labelColor: FtColors.bg,
                   unselectedLabelColor: FtColors.ink2,

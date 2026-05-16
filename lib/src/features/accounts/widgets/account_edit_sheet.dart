@@ -92,9 +92,14 @@ class _AccountEditSheetState extends State<AccountEditSheet> {
         bottom: MediaQuery.of(context).viewInsets.bottom + 16,
       ),
       child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.7,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
             Text(
               isEdit ? 'Edit akun' : 'Akun baru',
               style: Theme.of(context).textTheme.titleLarge,
@@ -169,6 +174,7 @@ class _AccountEditSheetState extends State<AccountEditSheet> {
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 }

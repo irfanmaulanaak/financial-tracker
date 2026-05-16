@@ -1,43 +1,61 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Warm editorial palette from `claude-design/theme.jsx` (light variant).
-/// Newsreader serif for display/numerals, Geist sans for body/buttons.
+/// Warm editorial palette. Supports both light and dark modes via a static
+/// brightness toggle so existing widgets don't need to change.
 class FtColors {
-  static const bg = Color(0xFFF1EDE4); // warm cream paper
-  static const bgAlt = Color(0xFFE9E4D7); // deeper cream chips
-  static const surface = Color(0xFFFBF8F1); // card surface
-  static const surfaceAlt = Color(0xFFF6F2E8);
-  static const ink = Color(0xFF1A1814); // near-black warm
-  static const ink2 = Color(0xFF4B463D); // body
-  static const ink3 = Color(0xFF807868); // secondary
-  static const ink4 = Color(0xFFB8B0A0); // tertiary
-  static const line = Color(0x141A1814); // 8% ink
-  static const lineStrong = Color(0x291A1814); // 16% ink
+  static Brightness _brightness = Brightness.light;
+  static void setBrightness(Brightness b) => _brightness = b;
+  static bool get _dark => _brightness == Brightness.dark;
 
-  static const clay = Color(0xFFC4612A); // primary warm accent
-  static const sage = Color(0xFF5E7A64); // positive
-  static const moss = Color(0xFF2D5040); // deep positive
-  static const plum = Color(0xFF7A3F4E); // accent
-  static const ochre = Color(0xFFB89030); // warning
-  static const danger = Color(0xFF9A2F2F);
-  static const sky = Color(0xFF3A6075);
+  // Backgrounds & surfaces
+  static Color get bg => _dark ? const Color(0xFF14130f) : const Color(0xFFF1EDE4);
+  static Color get bgAlt => _dark ? const Color(0xFF1c1a15) : const Color(0xFFE9E4D7);
+  static Color get surface => _dark ? const Color(0xFF1f1d18) : const Color(0xFFFBF8F1);
+  static Color get surfaceAlt => _dark ? const Color(0xFF26231d) : const Color(0xFFF6F2E8);
+
+  // Text
+  static Color get ink => _dark ? const Color(0xFFf1ede4) : const Color(0xFF1A1814);
+  static Color get ink2 => _dark ? const Color(0xFFc8c0b0) : const Color(0xFF4B463D);
+  static Color get ink3 => _dark ? const Color(0xFF8a8272) : const Color(0xFF807868);
+  static Color get ink4 => _dark ? const Color(0xFF56514a) : const Color(0xFFB8B0A0);
+
+  // Lines
+  static Color get line => _dark ? const Color(0x14f1ede4) : const Color(0x141A1814);
+  static Color get lineStrong => _dark ? const Color(0x29f1ede4) : const Color(0x291A1814);
+
+  // Accents
+  static Color get clay => _dark ? const Color(0xFFe08a4a) : const Color(0xFFC4612A);
+  static Color get sage => _dark ? const Color(0xFF8aab92) : const Color(0xFF5E7A64);
+  static Color get moss => _dark ? const Color(0xFF6ea088) : const Color(0xFF2D5040);
+  static Color get plum => _dark ? const Color(0xFFb56f80) : const Color(0xFF7A3F4E);
+  static Color get ochre => _dark ? const Color(0xFFd4ab55) : const Color(0xFFB89030);
+  static Color get danger => _dark ? const Color(0xFFd56a6a) : const Color(0xFF9A2F2F);
+  static Color get sky => _dark ? const Color(0xFF7aa3bd) : const Color(0xFF3A6075);
+
+  // Health
+  static Color get healthOk => _dark ? const Color(0xFF8aab92) : const Color(0xFF5E7A64);
+  static Color get healthWarn => _dark ? const Color(0xFFd4ab55) : const Color(0xFFB89030);
+  static Color get healthBad => _dark ? const Color(0xFFd56a6a) : const Color(0xFF9A2F2F);
 }
 
-ThemeData buildTheme() {
+ThemeData buildTheme(Brightness brightness) {
+  FtColors.setBrightness(brightness);
+  final isDark = brightness == Brightness.dark;
+
   final scheme = ColorScheme(
-    brightness: Brightness.light,
+    brightness: brightness,
     primary: FtColors.clay,
     onPrimary: Colors.white,
-    primaryContainer: const Color(0xFFE9D9C8),
+    primaryContainer: isDark ? const Color(0xFF3a2818) : const Color(0xFFE9D9C8),
     onPrimaryContainer: FtColors.ink,
     secondary: FtColors.sage,
     onSecondary: Colors.white,
-    secondaryContainer: const Color(0xFFD9E2DC),
+    secondaryContainer: isDark ? const Color(0xFF2a3a2e) : const Color(0xFFD9E2DC),
     onSecondaryContainer: FtColors.ink,
     tertiary: FtColors.sky,
     onTertiary: Colors.white,
-    tertiaryContainer: const Color(0xFFD6E2EA),
+    tertiaryContainer: isDark ? const Color(0xFF253540) : const Color(0xFFD6E2EA),
     onTertiaryContainer: FtColors.ink,
     error: FtColors.danger,
     onError: Colors.white,
@@ -51,7 +69,7 @@ ThemeData buildTheme() {
     outlineVariant: FtColors.line,
   );
 
-  final sans = GoogleFonts.interTextTheme(); // close to Geist; bundled-friendly fallback below
+  final sans = GoogleFonts.interTextTheme();
   final serif = GoogleFonts.newsreaderTextTheme();
 
   final textTheme = sans.copyWith(
@@ -83,6 +101,7 @@ ThemeData buildTheme() {
 
   return ThemeData(
     useMaterial3: true,
+    brightness: brightness,
     colorScheme: scheme,
     scaffoldBackgroundColor: FtColors.bg,
     textTheme: textTheme,
@@ -105,10 +124,10 @@ ThemeData buildTheme() {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
-        side: const BorderSide(color: FtColors.line, width: 0.5),
+        side: BorderSide(color: FtColors.line, width: 0.5),
       ),
     ),
-    dividerTheme: const DividerThemeData(
+    dividerTheme: DividerThemeData(
       color: FtColors.line,
       space: 1,
       thickness: 0.5,
@@ -119,23 +138,23 @@ ThemeData buildTheme() {
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: FtColors.line, width: 0.5),
+        borderSide: BorderSide(color: FtColors.line, width: 0.5),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: FtColors.line, width: 0.5),
+        borderSide: BorderSide(color: FtColors.line, width: 0.5),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: FtColors.ink, width: 1),
+        borderSide: BorderSide(color: FtColors.ink, width: 1),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: FtColors.danger, width: 0.5),
+        borderSide: BorderSide(color: FtColors.danger, width: 0.5),
       ),
       focusedErrorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: FtColors.danger, width: 1),
+        borderSide: BorderSide(color: FtColors.danger, width: 1),
       ),
       labelStyle: sans.bodyMedium?.copyWith(color: FtColors.ink3),
       hintStyle: sans.bodyMedium?.copyWith(color: FtColors.ink4),
@@ -155,7 +174,7 @@ ThemeData buildTheme() {
         foregroundColor: FtColors.ink,
         backgroundColor: FtColors.surface,
         minimumSize: const Size.fromHeight(52),
-        side: const BorderSide(color: FtColors.lineStrong, width: 0.5),
+        side: BorderSide(color: FtColors.lineStrong, width: 0.5),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         textStyle: sans.labelLarge
             ?.copyWith(fontWeight: FontWeight.w500, fontSize: 14),
@@ -167,7 +186,7 @@ ThemeData buildTheme() {
         textStyle: sans.labelLarge?.copyWith(fontWeight: FontWeight.w500),
       ),
     ),
-    floatingActionButtonTheme: const FloatingActionButtonThemeData(
+    floatingActionButtonTheme: FloatingActionButtonThemeData(
       backgroundColor: FtColors.ink,
       foregroundColor: FtColors.bg,
     ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/theme_provider.dart';
 import 'router.dart';
 import 'theme.dart';
 
@@ -11,10 +12,14 @@ class FinancialTrackerApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
+    final themeMode = ref.watch(themeModeProvider);
+
     return MaterialApp.router(
       title: 'Financial Tracker',
       debugShowCheckedModeBanner: false,
-      theme: buildTheme(),
+      theme: buildTheme(Brightness.light),
+      darkTheme: buildTheme(Brightness.dark),
+      themeMode: themeMode,
       routerConfig: router,
       locale: const Locale('id', 'ID'),
       supportedLocales: const [Locale('id', 'ID'), Locale('en', 'US')],
