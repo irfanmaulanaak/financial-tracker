@@ -9,8 +9,10 @@ import '../household/household_providers.dart';
 import 'income.dart';
 import 'income_repository.dart';
 
-final _incomesProvider =
-    StreamProvider.family<List<Income>, String>((ref, hid) {
+final _incomesProvider = StreamProvider.family<List<Income>, String>((
+  ref,
+  hid,
+) {
   return ref.watch(incomeRepositoryProvider).watchRecent(hid: hid, limit: 100);
 });
 
@@ -49,8 +51,10 @@ class IncomeLogScreen extends ConsumerWidget {
                       return const Center(
                         child: Padding(
                           padding: EdgeInsets.all(32),
-                          child: Text('Belum ada pemasukan.',
-                              style: TextStyle(color: FtColors.ink3)),
+                          child: Text(
+                            'Belum ada pemasukan.',
+                            style: TextStyle(color: FtColors.ink3),
+                          ),
                         ),
                       );
                     }
@@ -59,8 +63,9 @@ class IncomeLogScreen extends ConsumerWidget {
                       itemCount: items.length,
                       itemBuilder: (_, i) {
                         final inc = items[i];
-                        final dest =
-                            household.accountOf(inc.destinationAccountId);
+                        final dest = household.accountOf(
+                          inc.destinationAccountId,
+                        );
                         final spender = household.memberOf(inc.receivedBy);
                         return FtCard(
                           margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
@@ -71,21 +76,26 @@ class IncomeLogScreen extends ConsumerWidget {
                               builder: (_) => AlertDialog(
                                 title: const Text('Hapus pemasukan?'),
                                 content: const Text(
-                                    'Saldo akun tidak akan otomatis dikurangi. Sesuaikan manual lewat menu Akun.'),
+                                  'Saldo akun tidak akan otomatis dikurangi. Sesuaikan manual lewat menu Akun.',
+                                ),
                                 actions: [
                                   TextButton(
-                                      onPressed: () =>
-                                          Navigator.pop(context, false),
-                                      child: const Text('Batal')),
+                                    onPressed: () =>
+                                        Navigator.pop(context, false),
+                                    child: const Text('Batal'),
+                                  ),
                                   FilledButton(
-                                      onPressed: () =>
-                                          Navigator.pop(context, true),
-                                      child: const Text('Hapus')),
+                                    onPressed: () =>
+                                        Navigator.pop(context, true),
+                                    child: const Text('Hapus'),
+                                  ),
                                 ],
                               ),
                             );
                             if (ok == true) {
-                              await ref.read(incomeRepositoryProvider).delete(
+                              await ref
+                                  .read(incomeRepositoryProvider)
+                                  .delete(
                                     householdId: household.id,
                                     incomeId: inc.id,
                                   );
@@ -95,8 +105,10 @@ class IncomeLogScreen extends ConsumerWidget {
                             children: [
                               const CircleAvatar(
                                 backgroundColor: Color(0x1A5E7A64),
-                                child: Icon(Icons.arrow_downward,
-                                    color: FtColors.sage),
+                                child: Icon(
+                                  Icons.arrow_downward,
+                                  color: FtColors.sage,
+                                ),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
@@ -106,8 +118,9 @@ class IncomeLogScreen extends ConsumerWidget {
                                     Text(
                                       incomeSourceLabel(inc.source),
                                       style: const TextStyle(
-                                          color: FtColors.ink,
-                                          fontWeight: FontWeight.w600),
+                                        color: FtColors.ink,
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
@@ -123,7 +136,9 @@ class IncomeLogScreen extends ConsumerWidget {
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(
-                                          color: FtColors.ink3, fontSize: 12),
+                                        color: FtColors.ink3,
+                                        fontSize: 12,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -145,7 +160,7 @@ class IncomeLogScreen extends ConsumerWidget {
                 ),
               ),
             ],
-          );
+          ),
         ),
       ),
     );

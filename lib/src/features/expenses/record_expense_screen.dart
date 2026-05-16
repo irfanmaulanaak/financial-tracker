@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import '../../core/cicilan.dart';
 import '../../core/formatters.dart';
 import '../../core/providers.dart';
+import '../../theme.dart';
+import '../../ui/ft_ui.dart';
 import '../cards/credit_card.dart';
 import '../cards/cards_screen.dart';
 import '../household/household_providers.dart';
@@ -136,7 +138,9 @@ class _RecordExpenseScreenState extends ConsumerState<RecordExpenseScreen> {
     final categories = household.categories.where((c) => !c.archived).toList()
       ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
     final cards = ref.watch(cardsProvider(household.id)).value ?? const [];
-    final method = _methodId != null ? household.paymentMethodOf(_methodId!) : null;
+    final method = _methodId != null
+        ? household.paymentMethodOf(_methodId!)
+        : null;
     final isCredit = method?.type == 'credit';
 
     // Preview cicilan calc
@@ -155,188 +159,244 @@ class _RecordExpenseScreenState extends ConsumerState<RecordExpenseScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Catat pengeluaran')),
+      backgroundColor: FtColors.bg,
       body: SafeArea(
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              TextFormField(
-                controller: _amount,
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                decoration: const InputDecoration(
-                  labelText: 'Nominal',
-                  prefixText: 'Rp ',
-                ),
-                style: const TextStyle(fontSize: 24),
-                onChanged: (_) => setState(() {}),
-                validator: (v) {
-                  final a = Money.parse(v ?? '');
-                  return (a == null || a <= 0) ? 'Wajib diisi' : null;
-                },
+        child: Column(
+          children: [
+            FtSubHeader(
+              title: 'Catat pengeluaran',
+              trailing: IconButton.filled(
+                tooltip: 'Simpan',
+                onPressed: _busy ? null : () => _submit(cards),
+                icon: _busy
+                    ? const SizedBox(
+                        height: 16,
+                        width: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.check, size: 18),
               ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                initialValue: _categoryId,
-                decoration: const InputDecoration(labelText: 'Kategori'),
-                items: categories
-                    .map((c) => DropdownMenuItem(
-                          value: c.id,
-                          child: Text(c.label),
-                        ))
-                    .toList(),
-                onChanged: (v) => setState(() => _categoryId = v),
-                validator: (v) => v == null ? 'Pilih kategori' : null,
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                initialValue: _methodId,
-                decoration: const InputDecoration(labelText: 'Metode bayar'),
-                items: household.paymentMethods
-                    .map((p) => DropdownMenuItem(
-                          value: p.id,
-                          child: Text(p.label),
-                        ))
-                    .toList(),
-                onChanged: (v) => setState(() {
-                  _methodId = v;
-                  // Reset card-only fields when switching methods.
-                  if (household.paymentMethodOf(v ?? '')?.type != 'credit') {
-                    _cardId = null;
-                    _cicilan = false;
-                  }
-                }),
-                validator: (v) => v == null ? 'Pilih metode' : null,
-              ),
-              if (isCredit) ...[
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  initialValue: _cardId,
-                  decoration: const InputDecoration(labelText: 'Kartu kredit'),
-                  items: cards
-                      .map((c) => DropdownMenuItem(
-                            value: c.id,
-                            child:
-                                Text('${c.label} (${Money.format(c.limit - c.used)} tersedia)'),
-                          ))
-                      .toList(),
-                  onChanged: (v) => setState(() {
-                    _cardId = v;
-                    final c = cards.where((x) => x.id == v).toList();
-                    if (c.isNotEmpty) _cicilanApr = c.first.apr;
-                  }),
-                  validator: (v) =>
-                      isCredit && v == null ? 'Pilih kartu' : null,
-                ),
-                const SizedBox(height: 4),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Cicilan (POS)'),
-                  subtitle: const Text('Bagi pembelian jadi cicilan bulanan'),
-                  value: _cicilan,
-                  onChanged: cards.isEmpty
-                      ? null
-                      : (v) => setState(() => _cicilan = v),
-                ),
-                if (_cicilan) ...[
-                  Row(
-                    children: [
-                      const Text('Tenor:'),
-                      const SizedBox(width: 8),
-                      ...[3, 6, 12, 24].map((n) => Padding(
-                            padding: const EdgeInsets.only(right: 6),
-                            child: ChoiceChip(
-                              label: Text('${n}x'),
-                              selected: _cicilanMonths == n,
-                              onSelected: (_) =>
-                                  setState(() => _cicilanMonths = n),
-                            ),
-                          )),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text('Bunga: ${(_cicilanApr * 100).toStringAsFixed(1)}% / tahun (flat)'),
-                  Slider(
-                    value: _cicilanApr,
-                    min: 0,
-                    max: 0.50,
-                    divisions: 50,
-                    label: '${(_cicilanApr * 100).toStringAsFixed(0)}%',
-                    onChanged: (v) => setState(() => _cicilanApr = v),
-                  ),
-                  if (preview != null)
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
+            ),
+            Expanded(
+              child: Form(
+                key: _formKey,
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                  children: [
+                    FtCard(
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                              'Cicilan: ${Money.format(preview.monthly)} / bln × $_cicilanMonths bln'),
-                          Text(
-                              'Total: ${Money.format(preview.total)} (bunga ${Money.format(preview.totalInterest)})'),
+                          const Eyebrow('Jumlah'),
+                          const SizedBox(height: 10),
+                          TextFormField(
+                            controller: _amount,
+                            textAlign: TextAlign.center,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
+                            decoration: const InputDecoration(
+                              labelText: 'Nominal',
+                              prefixText: 'Rp ',
+                            ),
+                            style: Theme.of(context).textTheme.headlineMedium,
+                            onChanged: (_) => setState(() {}),
+                            validator: (v) {
+                              final a = Money.parse(v ?? '');
+                              return (a == null || a <= 0)
+                                  ? 'Wajib diisi'
+                                  : null;
+                            },
+                          ),
                         ],
                       ),
                     ),
-                ],
-              ],
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                initialValue: _spentBy,
-                decoration: const InputDecoration(labelText: 'Dibayar oleh'),
-                items: household.members
-                    .map((m) => DropdownMenuItem(
-                          value: m.userId,
-                          child: Text(m.displayName),
-                        ))
-                    .toList(),
-                onChanged: (v) => setState(() => _spentBy = v),
-              ),
-              const SizedBox(height: 12),
-              InkWell(
-                onTap: _pickDate,
-                child: InputDecorator(
-                  decoration: const InputDecoration(labelText: 'Tanggal'),
-                  child: Text(Dates.short(_date)),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      initialValue: _categoryId,
+                      decoration: const InputDecoration(labelText: 'Kategori'),
+                      items: categories
+                          .map(
+                            (c) => DropdownMenuItem(
+                              value: c.id,
+                              child: Text(c.label),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (v) => setState(() => _categoryId = v),
+                      validator: (v) => v == null ? 'Pilih kategori' : null,
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      initialValue: _methodId,
+                      decoration: const InputDecoration(
+                        labelText: 'Metode bayar',
+                      ),
+                      items: household.paymentMethods
+                          .map(
+                            (p) => DropdownMenuItem(
+                              value: p.id,
+                              child: Text(p.label),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (v) => setState(() {
+                        _methodId = v;
+                        // Reset card-only fields when switching methods.
+                        if (household.paymentMethodOf(v ?? '')?.type !=
+                            'credit') {
+                          _cardId = null;
+                          _cicilan = false;
+                        }
+                      }),
+                      validator: (v) => v == null ? 'Pilih metode' : null,
+                    ),
+                    if (isCredit) ...[
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        initialValue: _cardId,
+                        decoration: const InputDecoration(
+                          labelText: 'Kartu kredit',
+                        ),
+                        items: cards
+                            .map(
+                              (c) => DropdownMenuItem(
+                                value: c.id,
+                                child: Text(
+                                  '${c.label} (${Money.format(c.limit - c.used)} tersedia)',
+                                ),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (v) => setState(() {
+                          _cardId = v;
+                          final c = cards.where((x) => x.id == v).toList();
+                          if (c.isNotEmpty) _cicilanApr = c.first.apr;
+                        }),
+                        validator: (v) =>
+                            isCredit && v == null ? 'Pilih kartu' : null,
+                      ),
+                      const SizedBox(height: 4),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Cicilan (POS)'),
+                        subtitle: const Text(
+                          'Bagi pembelian jadi cicilan bulanan',
+                        ),
+                        value: _cicilan,
+                        onChanged: cards.isEmpty
+                            ? null
+                            : (v) => setState(() => _cicilan = v),
+                      ),
+                      if (_cicilan) ...[
+                        Row(
+                          children: [
+                            const Text('Tenor:'),
+                            const SizedBox(width: 8),
+                            ...[3, 6, 12, 24].map(
+                              (n) => Padding(
+                                padding: const EdgeInsets.only(right: 6),
+                                child: ChoiceChip(
+                                  label: Text('${n}x'),
+                                  selected: _cicilanMonths == n,
+                                  onSelected: (_) =>
+                                      setState(() => _cicilanMonths = n),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Bunga: ${(_cicilanApr * 100).toStringAsFixed(1)}% / tahun (flat)',
+                        ),
+                        Slider(
+                          value: _cicilanApr,
+                          min: 0,
+                          max: 0.50,
+                          divisions: 50,
+                          label: '${(_cicilanApr * 100).toStringAsFixed(0)}%',
+                          onChanged: (v) => setState(() => _cicilanApr = v),
+                        ),
+                        if (preview != null)
+                          FtCard(
+                            padding: const EdgeInsets.all(12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Cicilan: ${Money.format(preview.monthly)} / bln × $_cicilanMonths bln',
+                                ),
+                                Text(
+                                  'Total: ${Money.format(preview.total)} (bunga ${Money.format(preview.totalInterest)})',
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ],
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      initialValue: _spentBy,
+                      decoration: const InputDecoration(
+                        labelText: 'Dibayar oleh',
+                      ),
+                      items: household.members
+                          .map(
+                            (m) => DropdownMenuItem(
+                              value: m.userId,
+                              child: Text(m.displayName),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (v) => setState(() => _spentBy = v),
+                    ),
+                    const SizedBox(height: 12),
+                    InkWell(
+                      onTap: _pickDate,
+                      child: InputDecorator(
+                        decoration: const InputDecoration(labelText: 'Tanggal'),
+                        child: Text(Dates.short(_date)),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _note,
+                      decoration: const InputDecoration(
+                        labelText: 'Catatan (opsional)',
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    if (!_cicilan)
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Pengeluaran berulang'),
+                        value: _recurring,
+                        onChanged: (v) => setState(() => _recurring = v),
+                      ),
+                    if (_error != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        _error!,
+                        style: const TextStyle(color: FtColors.danger),
+                      ),
+                    ],
+                    const SizedBox(height: 16),
+                    FilledButton(
+                      onPressed: _busy ? null : () => _submit(cards),
+                      child: _busy
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text('Simpan'),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _note,
-                decoration:
-                    const InputDecoration(labelText: 'Catatan (opsional)'),
-              ),
-              const SizedBox(height: 8),
-              if (!_cicilan)
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Pengeluaran berulang'),
-                  value: _recurring,
-                  onChanged: (v) => setState(() => _recurring = v),
-                ),
-              if (_error != null) ...[
-                const SizedBox(height: 8),
-                Text(_error!,
-                    style: TextStyle(
-                        color: Theme.of(context).colorScheme.error)),
-              ],
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: _busy ? null : () => _submit(cards),
-                child: _busy
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Text('Simpan'),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

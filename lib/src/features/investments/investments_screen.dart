@@ -9,8 +9,10 @@ import '../household/household_providers.dart';
 import 'investment.dart';
 import 'investments_repository.dart';
 
-final investmentsProvider =
-    StreamProvider.family<List<Investment>, String>((ref, hid) {
+final investmentsProvider = StreamProvider.family<List<Investment>, String>((
+  ref,
+  hid,
+) {
   return ref.watch(investmentsRepositoryProvider).watchAll(hid);
 });
 
@@ -64,13 +66,19 @@ class InvestmentsScreen extends ConsumerWidget {
                             ),
                           )
                         else
-                          ...items.map((i) => _InvestmentTile(
-                                inv: i,
-                                onUpdate: () => _openUpdateValue(
-                                    context, ref, household.id, i),
-                                onDelete: () => _confirmDelete(
-                                    context, ref, household.id, i),
-                              )),
+                          ...items.map(
+                            (i) => _InvestmentTile(
+                              inv: i,
+                              onUpdate: () => _openUpdateValue(
+                                context,
+                                ref,
+                                household.id,
+                                i,
+                              ),
+                              onDelete: () =>
+                                  _confirmDelete(context, ref, household.id, i),
+                            ),
+                          ),
                       ],
                     );
                   },
@@ -90,7 +98,9 @@ class InvestmentsScreen extends ConsumerWidget {
       builder: (_) => const _InvestmentEditSheet(),
     );
     if (draft == null) return;
-    await ref.read(investmentsRepositoryProvider).add(
+    await ref
+        .read(investmentsRepositoryProvider)
+        .add(
           hid: hid,
           label: draft.label,
           type: draft.type,
@@ -100,29 +110,38 @@ class InvestmentsScreen extends ConsumerWidget {
   }
 
   Future<void> _openUpdateValue(
-      BuildContext context, WidgetRef ref, String hid, Investment i) async {
+    BuildContext context,
+    WidgetRef ref,
+    String hid,
+    Investment i,
+  ) async {
     final ctrl = TextEditingController(text: i.currentValue.toString());
     final v = await showModalBottomSheet<int>(
       context: context,
       isScrollControlled: true,
       builder: (_) => Padding(
         padding: EdgeInsets.only(
-            left: 16,
-            right: 16,
-            top: 16,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 16),
+          left: 16,
+          right: 16,
+          top: 16,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Update ${i.label}',
-                style: Theme.of(context).textTheme.titleLarge),
+            Text(
+              'Update ${i.label}',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
             const SizedBox(height: 12),
             TextField(
               controller: ctrl,
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               decoration: const InputDecoration(
-                  labelText: 'Nilai sekarang', prefixText: 'Rp '),
+                labelText: 'Nilai sekarang',
+                prefixText: 'Rp ',
+              ),
             ),
             const SizedBox(height: 16),
             FilledButton(
@@ -145,18 +164,24 @@ class InvestmentsScreen extends ConsumerWidget {
   }
 
   Future<void> _confirmDelete(
-      BuildContext context, WidgetRef ref, String hid, Investment i) async {
+    BuildContext context,
+    WidgetRef ref,
+    String hid,
+    Investment i,
+  ) async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
         title: Text('Hapus "${i.label}"?'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Batal')),
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
           FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Hapus')),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Hapus'),
+          ),
         ],
       ),
     );
@@ -175,8 +200,9 @@ class _Summary extends StatelessWidget {
     final positive = summary.totalGain >= 0;
     final color = positive ? FtColors.sage : FtColors.danger;
     return FtCard(
-      backgroundColor:
-          positive ? const Color(0xFFEAF0EC) : const Color(0xFFF2E7E3),
+      backgroundColor: positive
+          ? const Color(0xFFEAF0EC)
+          : const Color(0xFFF2E7E3),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -192,8 +218,10 @@ class _Summary extends StatelessWidget {
             style: TextStyle(color: color, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
-          Text('Diversifikasi: ${summary.distinctTypes} jenis aset',
-              style: const TextStyle(color: FtColors.ink3, fontSize: 12)),
+          Text(
+            'Diversifikasi: ${summary.distinctTypes} jenis aset',
+            style: const TextStyle(color: FtColors.ink3, fontSize: 12),
+          ),
         ],
       ),
     );
@@ -201,8 +229,11 @@ class _Summary extends StatelessWidget {
 }
 
 class _InvestmentTile extends StatelessWidget {
-  const _InvestmentTile(
-      {required this.inv, required this.onUpdate, required this.onDelete});
+  const _InvestmentTile({
+    required this.inv,
+    required this.onUpdate,
+    required this.onDelete,
+  });
   final Investment inv;
   final VoidCallback onUpdate;
   final VoidCallback onDelete;
@@ -233,9 +264,13 @@ class _InvestmentTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(inv.label,
-                    style: const TextStyle(
-                        color: FtColors.ink, fontWeight: FontWeight.w600)),
+                Text(
+                  inv.label,
+                  style: const TextStyle(
+                    color: FtColors.ink,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 const SizedBox(height: 2),
                 Text(
                   '${investmentTypeLabel(inv.type)} • cost ${Money.format(inv.costBasis)}',
@@ -250,8 +285,10 @@ class _InvestmentTile extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(Money.format(inv.currentValue),
-                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text(
+                Money.format(inv.currentValue),
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
               Text(
                 '${positive ? '+' : ''}${(inv.gainPct * 100).toStringAsFixed(1)}%',
                 style: TextStyle(color: color, fontSize: 12),
@@ -305,14 +342,18 @@ class _InvestmentEditSheetState extends State<_InvestmentEditSheet> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Investasi baru',
-                style: Theme.of(context).textTheme.titleLarge),
+            Text(
+              'Investasi baru',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
             const SizedBox(height: 16),
             TextField(
               controller: _label,
               textCapitalization: TextCapitalization.words,
               decoration: const InputDecoration(
-                  labelText: 'Nama', hintText: 'mis. BBCA / Sucorinvest Sharia'),
+                labelText: 'Nama',
+                hintText: 'mis. BBCA / Sucorinvest Sharia',
+              ),
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<InvestmentType>(
@@ -320,9 +361,12 @@ class _InvestmentEditSheetState extends State<_InvestmentEditSheet> {
               items: [
                 for (final t in InvestmentType.values)
                   DropdownMenuItem(
-                      value: t, child: Text(investmentTypeLabel(t))),
+                    value: t,
+                    child: Text(investmentTypeLabel(t)),
+                  ),
               ],
-              onChanged: (v) => setState(() => _type = v ?? InvestmentType.reksadana),
+              onChanged: (v) =>
+                  setState(() => _type = v ?? InvestmentType.reksadana),
               decoration: const InputDecoration(labelText: 'Jenis'),
             ),
             const SizedBox(height: 12),
@@ -331,7 +375,9 @@ class _InvestmentEditSheetState extends State<_InvestmentEditSheet> {
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               decoration: const InputDecoration(
-                  labelText: 'Modal (cost basis)', prefixText: 'Rp '),
+                labelText: 'Modal (cost basis)',
+                prefixText: 'Rp ',
+              ),
             ),
             const SizedBox(height: 12),
             TextField(
@@ -339,7 +385,9 @@ class _InvestmentEditSheetState extends State<_InvestmentEditSheet> {
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               decoration: const InputDecoration(
-                  labelText: 'Nilai saat ini', prefixText: 'Rp '),
+                labelText: 'Nilai saat ini',
+                prefixText: 'Rp ',
+              ),
             ),
             const SizedBox(height: 24),
             FilledButton(

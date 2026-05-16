@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/formatters.dart';
 import '../../core/providers.dart';
+import '../../theme.dart';
+import '../../ui/ft_ui.dart';
 import '../household/household_providers.dart';
 import 'income.dart';
 import 'income_repository.dart';
@@ -66,7 +68,9 @@ class _RecordIncomeScreenState extends ConsumerState<RecordIncomeScreen> {
       _error = null;
     });
     try {
-      await ref.read(incomeRepositoryProvider).add(
+      await ref
+          .read(incomeRepositoryProvider)
+          .add(
             householdId: household.id,
             amount: amount,
             source: _source,
@@ -100,102 +104,147 @@ class _RecordIncomeScreenState extends ConsumerState<RecordIncomeScreen> {
     ];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Catat pemasukan')),
+      backgroundColor: FtColors.bg,
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(16),
+        child: Column(
           children: [
-            TextField(
-              controller: _amount,
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration: const InputDecoration(
-                labelText: 'Nominal',
-                prefixText: 'Rp ',
-              ),
-              style: const TextStyle(fontSize: 24),
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<IncomeSource>(
-              initialValue: _source,
-              decoration: const InputDecoration(labelText: 'Sumber'),
-              items: IncomeSource.values
-                  .map((s) => DropdownMenuItem(
-                        value: s,
-                        child: Text(incomeSourceLabel(s)),
-                      ))
-                  .toList(),
-              onChanged: (v) => setState(() => _source = v ?? _source),
-            ),
-            const SizedBox(height: 12),
-            if (accounts.isEmpty)
-              Padding(
-                padding: const EdgeInsets.all(8),
-                child: Text(
-                  'Belum ada akun. Buat akun lewat menu Akun dulu.',
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                ),
-              )
-            else
-              DropdownButtonFormField<String>(
-                initialValue: _destinationAccountId,
-                decoration:
-                    const InputDecoration(labelText: 'Masuk ke akun'),
-                items: accounts
-                    .map((a) => DropdownMenuItem(
-                          value: a.$1,
-                          child: Text(a.$2),
-                        ))
-                    .toList(),
-                onChanged: (v) => setState(() => _destinationAccountId = v),
-              ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              initialValue: _receivedBy,
-              decoration: const InputDecoration(labelText: 'Diterima oleh'),
-              items: household.members
-                  .map((m) => DropdownMenuItem(
-                        value: m.userId,
-                        child: Text(m.displayName),
-                      ))
-                  .toList(),
-              onChanged: (v) => setState(() => _receivedBy = v),
-            ),
-            const SizedBox(height: 12),
-            InkWell(
-              onTap: _pickDate,
-              child: InputDecorator(
-                decoration: const InputDecoration(labelText: 'Tanggal'),
-                child: Text(Dates.short(_date)),
+            FtSubHeader(
+              title: 'Catat pemasukan',
+              trailing: IconButton.filled(
+                tooltip: 'Simpan',
+                onPressed: _busy ? null : _submit,
+                icon: _busy
+                    ? const SizedBox(
+                        height: 16,
+                        width: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.check, size: 18),
               ),
             ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _note,
-              decoration: const InputDecoration(labelText: 'Catatan (opsional)'),
-            ),
-            const SizedBox(height: 8),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Pemasukan berulang'),
-              value: _recurring,
-              onChanged: (v) => setState(() => _recurring = v),
-            ),
-            if (_error != null) ...[
-              const SizedBox(height: 8),
-              Text(_error!,
-                  style:
-                      TextStyle(color: Theme.of(context).colorScheme.error)),
-            ],
-            const SizedBox(height: 16),
-            FilledButton(
-              onPressed: _busy ? null : _submit,
-              child: _busy
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Text('Simpan'),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                children: [
+                  FtCard(
+                    child: Column(
+                      children: [
+                        const Eyebrow('Jumlah pendapatan'),
+                        const SizedBox(height: 10),
+                        TextField(
+                          controller: _amount,
+                          textAlign: TextAlign.center,
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                          ],
+                          decoration: const InputDecoration(
+                            labelText: 'Nominal',
+                            prefixText: 'Rp ',
+                          ),
+                          style: Theme.of(context).textTheme.headlineMedium,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<IncomeSource>(
+                    initialValue: _source,
+                    decoration: const InputDecoration(labelText: 'Sumber'),
+                    items: IncomeSource.values
+                        .map(
+                          (s) => DropdownMenuItem(
+                            value: s,
+                            child: Text(incomeSourceLabel(s)),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (v) => setState(() => _source = v ?? _source),
+                  ),
+                  const SizedBox(height: 12),
+                  if (accounts.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.all(8),
+                      child: Text(
+                        'Belum ada akun. Buat akun lewat menu Akun dulu.',
+                        style: TextStyle(color: FtColors.danger),
+                      ),
+                    )
+                  else
+                    DropdownButtonFormField<String>(
+                      initialValue: _destinationAccountId,
+                      decoration: const InputDecoration(
+                        labelText: 'Masuk ke akun',
+                      ),
+                      items: accounts
+                          .map(
+                            (a) => DropdownMenuItem(
+                              value: a.$1,
+                              child: Text(a.$2),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (v) =>
+                          setState(() => _destinationAccountId = v),
+                    ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    initialValue: _receivedBy,
+                    decoration: const InputDecoration(
+                      labelText: 'Diterima oleh',
+                    ),
+                    items: household.members
+                        .map(
+                          (m) => DropdownMenuItem(
+                            value: m.userId,
+                            child: Text(m.displayName),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (v) => setState(() => _receivedBy = v),
+                  ),
+                  const SizedBox(height: 12),
+                  InkWell(
+                    onTap: _pickDate,
+                    child: InputDecorator(
+                      decoration: const InputDecoration(labelText: 'Tanggal'),
+                      child: Text(Dates.short(_date)),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _note,
+                    decoration: const InputDecoration(
+                      labelText: 'Catatan (opsional)',
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Pemasukan berulang'),
+                    value: _recurring,
+                    onChanged: (v) => setState(() => _recurring = v),
+                  ),
+                  if (_error != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      _error!,
+                      style: const TextStyle(color: FtColors.danger),
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+                  FilledButton(
+                    onPressed: _busy ? null : _submit,
+                    child: _busy
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text('Simpan'),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

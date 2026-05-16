@@ -125,8 +125,7 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
                   const SizedBox(height: 10),
                   Text(
                     'Pengeluaran: 90 hari terakhir (sejak ${_short(start)}).\nPemasukan: 500 catatan terbaru.\nSiklus aktif: ${_short(cycle.start)} – ${_short(cycle.endExclusive.subtract(const Duration(days: 1)))}.',
-                    style:
-                        const TextStyle(color: FtColors.ink3, fontSize: 12),
+                    style: const TextStyle(color: FtColors.ink3, fontSize: 12),
                   ),
                 ],
               ),
@@ -153,6 +152,5 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
     );
   }
 
-  String _short(DateTime d) =>
-      '${d.day}/${d.month}/${d.year}';
+  String _short(DateTime d) => '${d.day}/${d.month}/${d.year}';
 }

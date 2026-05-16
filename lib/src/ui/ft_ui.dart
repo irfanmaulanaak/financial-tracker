@@ -326,10 +326,16 @@ class _FtNavItem {
 }
 
 class FtSubHeader extends StatelessWidget {
-  const FtSubHeader({super.key, required this.title, this.trailing});
+  const FtSubHeader({
+    super.key,
+    required this.title,
+    this.trailing,
+    this.onBack,
+  });
 
   final String title;
   final Widget? trailing;
+  final VoidCallback? onBack;
 
   @override
   Widget build(BuildContext context) {
@@ -338,13 +344,14 @@ class FtSubHeader extends StatelessWidget {
       child: Row(
         children: [
           IconButton.filledTonal(
-            onPressed: () {
-              if (Navigator.of(context).canPop()) {
-                context.pop();
-              } else {
-                context.go('/home');
-              }
-            },
+            onPressed: onBack ??
+                () {
+                  if (Navigator.of(context).canPop()) {
+                    context.pop();
+                  } else {
+                    context.go('/home');
+                  }
+                },
             icon: const Icon(Icons.arrow_back, size: 18),
           ),
           const SizedBox(width: 10),

@@ -60,11 +60,15 @@ class _ExpenseLogScreenState extends ConsumerState<ExpenseLogScreen> {
                         ),
                         items: [
                           const DropdownMenuItem(
-                              value: null, child: Text('Semua')),
-                          ...household.members.map((m) => DropdownMenuItem(
-                                value: m.userId,
-                                child: Text(m.displayName),
-                              )),
+                            value: null,
+                            child: Text('Semua'),
+                          ),
+                          ...household.members.map(
+                            (m) => DropdownMenuItem(
+                              value: m.userId,
+                              child: Text(m.displayName),
+                            ),
+                          ),
                         ],
                         onChanged: (v) => setState(() => _filterMemberId = v),
                       ),
@@ -80,14 +84,17 @@ class _ExpenseLogScreenState extends ConsumerState<ExpenseLogScreen> {
                         ),
                         items: [
                           const DropdownMenuItem(
-                              value: null, child: Text('Semua')),
-                          ...household.categories.map((c) => DropdownMenuItem(
-                                value: c.id,
-                                child: Text(c.label),
-                              )),
+                            value: null,
+                            child: Text('Semua'),
+                          ),
+                          ...household.categories.map(
+                            (c) => DropdownMenuItem(
+                              value: c.id,
+                              child: Text(c.label),
+                            ),
+                          ),
                         ],
-                        onChanged: (v) =>
-                            setState(() => _filterCategoryId = v),
+                        onChanged: (v) => setState(() => _filterCategoryId = v),
                       ),
                     ),
                   ],
@@ -99,82 +106,96 @@ class _ExpenseLogScreenState extends ConsumerState<ExpenseLogScreen> {
                       const Center(child: CircularProgressIndicator()),
                   error: (e, _) => Center(child: Text('Gagal: $e')),
                   data: (all) {
-          final filtered = all.where((e) {
-            if (_filterMemberId != null && e.spentBy != _filterMemberId) {
-              return false;
-            }
-            if (_filterCategoryId != null && e.categoryId != _filterCategoryId) {
-              return false;
-            }
-            return true;
-          }).toList();
+                    final filtered = all.where((e) {
+                      if (_filterMemberId != null &&
+                          e.spentBy != _filterMemberId) {
+                        return false;
+                      }
+                      if (_filterCategoryId != null &&
+                          e.categoryId != _filterCategoryId) {
+                        return false;
+                      }
+                      return true;
+                    }).toList();
 
-          if (filtered.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.receipt_long_outlined,
-                        size: 48, color: FtColors.ink4),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Belum ada pengeluaran di siklus ini\n(${Dates.short(cycle.start)} – ${Dates.short(cycle.endExclusive.subtract(const Duration(days: 1)))})',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: FtColors.ink3),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }
-
-          final grouped = <DateTime, List<Expense>>{};
-          for (final e in filtered) {
-            final key = Dates.dayKey(e.date);
-            grouped.putIfAbsent(key, () => []).add(e);
-          }
-          final days = grouped.keys.toList()
-            ..sort((a, b) => b.compareTo(a));
-
-          return ListView.builder(
-            padding: const EdgeInsets.only(top: 2, bottom: 112),
-            itemCount: days.length,
-            itemBuilder: (_, dayIdx) {
-              final day = days[dayIdx];
-              final items = grouped[day]!;
-              final dayTotal =
-                  items.fold<int>(0, (a, e) => a + e.amount.toInt());
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(22, 16, 22, 8),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            Dates.grouped(day),
-                            style: const TextStyle(
-                                fontWeight: FontWeight.bold),
+                    if (filtered.isEmpty) {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(32),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.receipt_long_outlined,
+                                size: 48,
+                                color: FtColors.ink4,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Belum ada pengeluaran di siklus ini\n(${Dates.short(cycle.start)} – ${Dates.short(cycle.endExclusive.subtract(const Duration(days: 1)))})',
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(color: FtColors.ink3),
+                              ),
+                            ],
                           ),
                         ),
-                        Text(Money.format(dayTotal),
-                            style: const TextStyle(color: FtColors.ink3)),
-                      ],
-                    ),
-                  ),
-                  ...items.map((e) => _ExpenseTile(
-                        expense: e,
-                        category: household.categoryOf(e.categoryId),
-                        spender: household.memberOf(e.spentBy),
-                        onDelete: () => _confirmDelete(household, e),
-                      )),
-                ],
-              );
-            },
-          );
+                      );
+                    }
+
+                    final grouped = <DateTime, List<Expense>>{};
+                    for (final e in filtered) {
+                      final key = Dates.dayKey(e.date);
+                      grouped.putIfAbsent(key, () => []).add(e);
+                    }
+                    final days = grouped.keys.toList()
+                      ..sort((a, b) => b.compareTo(a));
+
+                    return ListView.builder(
+                      padding: const EdgeInsets.only(top: 2, bottom: 112),
+                      itemCount: days.length,
+                      itemBuilder: (_, dayIdx) {
+                        final day = days[dayIdx];
+                        final items = grouped[day]!;
+                        final dayTotal = items.fold<int>(
+                          0,
+                          (a, e) => a + e.amount.toInt(),
+                        );
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(22, 16, 22, 8),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      Dates.grouped(day),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  Text(
+                                    Money.format(dayTotal),
+                                    style: const TextStyle(
+                                      color: FtColors.ink3,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            ...items.map(
+                              (e) => _ExpenseTile(
+                                expense: e,
+                                category: household.categoryOf(e.categoryId),
+                                spender: household.memberOf(e.spentBy),
+                                onDelete: () => _confirmDelete(household, e),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    );
                   },
                 ),
               ),
@@ -193,19 +214,20 @@ class _ExpenseLogScreenState extends ConsumerState<ExpenseLogScreen> {
         content: Text('${Money.format(e.amount)} • ${Dates.short(e.date)}'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Batal')),
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
           FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Hapus')),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Hapus'),
+          ),
         ],
       ),
     );
     if (ok == true) {
-      await ref.read(expenseRepositoryProvider).delete(
-            householdId: household.id,
-            expenseId: e.id,
-          );
+      await ref
+          .read(expenseRepositoryProvider)
+          .delete(householdId: household.id, expenseId: e.id);
     }
   }
 }
@@ -235,17 +257,23 @@ class _ExpenseTile extends ConsumerWidget {
             backgroundColor: cat != null
                 ? _parseColor(cat.color).withValues(alpha: 0.15)
                 : FtColors.surfaceAlt,
-            child: Icon(_iconFor(cat?.icon ?? 'category'),
-                color: cat != null ? _parseColor(cat.color) : FtColors.ink3),
+            child: Icon(
+              _iconFor(cat?.icon ?? 'category'),
+              color: cat != null ? _parseColor(cat.color) : FtColors.ink3,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(cat?.label ?? '-',
-                    style: const TextStyle(
-                        color: FtColors.ink, fontWeight: FontWeight.w600)),
+                Text(
+                  cat?.label ?? '-',
+                  style: const TextStyle(
+                    color: FtColors.ink,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 const SizedBox(height: 2),
                 Text(
                   [
@@ -261,21 +289,29 @@ class _ExpenseTile extends ConsumerWidget {
             ),
           ),
           const SizedBox(width: 12),
-          Text(Money.format(expense.amount),
-              style: const TextStyle(
-                  color: FtColors.ink, fontWeight: FontWeight.bold)),
+          Text(
+            Money.format(expense.amount),
+            style: const TextStyle(
+              color: FtColors.ink,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-final _expensesProvider =
-    StreamProvider.family<List<Expense>, String>((ref, householdId) {
+final _expensesProvider = StreamProvider.family<List<Expense>, String>((
+  ref,
+  householdId,
+) {
   final household = ref.watch(currentHouseholdProvider).value;
   if (household == null) return Stream.value(const []);
   final cycle = currentCycle(DateTime.now(), payday: household.payday);
-  return ref.watch(expenseRepositoryProvider).watchInRange(
+  return ref
+      .watch(expenseRepositoryProvider)
+      .watchInRange(
         householdId: householdId,
         startInclusive: cycle.start,
         endExclusive: cycle.endExclusive,
@@ -288,14 +324,14 @@ Color _parseColor(String hex) {
 }
 
 IconData _iconFor(String name) => switch (name) {
-      'restaurant' => Icons.restaurant,
-      'receipt_long' => Icons.receipt_long,
-      'shopping_bag' => Icons.shopping_bag,
-      'directions_car' => Icons.directions_car,
-      'movie' => Icons.movie,
-      'favorite' => Icons.favorite,
-      'school' => Icons.school,
-      'pets' => Icons.pets,
-      'sports_esports' => Icons.sports_esports,
-      _ => Icons.category,
-    };
+  'restaurant' => Icons.restaurant,
+  'receipt_long' => Icons.receipt_long,
+  'shopping_bag' => Icons.shopping_bag,
+  'directions_car' => Icons.directions_car,
+  'movie' => Icons.movie,
+  'favorite' => Icons.favorite,
+  'school' => Icons.school,
+  'pets' => Icons.pets,
+  'sports_esports' => Icons.sports_esports,
+  _ => Icons.category,
+};

@@ -59,14 +59,18 @@ class CategoryManageScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _archive(WidgetRef ref, Household h, Category c, bool archived) async {
+  Future<void> _archive(
+    WidgetRef ref,
+    Household h,
+    Category c,
+    bool archived,
+  ) async {
     final updated = h.categories
         .map((x) => x.id == c.id ? x.copyWith(archived: archived) : x)
         .toList();
-    await ref.read(householdRepositoryProvider).updateCategories(
-          householdId: h.id,
-          categories: updated,
-        );
+    await ref
+        .read(householdRepositoryProvider)
+        .updateCategories(householdId: h.id, categories: updated);
   }
 
   Future<void> _openAddSheet(
@@ -80,7 +84,9 @@ class CategoryManageScreen extends ConsumerWidget {
       builder: (_) => const _CategoryEditSheet(),
     );
     if (saved == null) return;
-    await ref.read(householdRepositoryProvider).addCategory(
+    await ref
+        .read(householdRepositoryProvider)
+        .addCategory(
           householdId: h.id,
           label: saved.label,
           icon: saved.icon,
@@ -102,19 +108,20 @@ class CategoryManageScreen extends ConsumerWidget {
     );
     if (saved == null) return;
     final updated = h.categories
-        .map((x) => x.id == c.id
-            ? x.copyWith(
-                label: saved.label,
-                icon: saved.icon,
-                color: saved.color,
-                monthlyBudget: saved.budget,
-              )
-            : x)
+        .map(
+          (x) => x.id == c.id
+              ? x.copyWith(
+                  label: saved.label,
+                  icon: saved.icon,
+                  color: saved.color,
+                  monthlyBudget: saved.budget,
+                )
+              : x,
+        )
         .toList();
-    await ref.read(householdRepositoryProvider).updateCategories(
-          householdId: h.id,
-          categories: updated,
-        );
+    await ref
+        .read(householdRepositoryProvider)
+        .updateCategories(householdId: h.id, categories: updated);
   }
 }
 
@@ -138,22 +145,32 @@ class _CategoryTile extends StatelessWidget {
       child: Row(
         children: [
           CircleAvatar(
-            backgroundColor: _parseColor(category.color).withValues(alpha: 0.15),
-            child: Icon(_iconFor(category.icon),
-                color: _parseColor(category.color), size: 22),
+            backgroundColor: _parseColor(
+              category.color,
+            ).withValues(alpha: 0.15),
+            child: Icon(
+              _iconFor(category.icon),
+              color: _parseColor(category.color),
+              size: 22,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(category.label,
-                    style: const TextStyle(
-                        color: FtColors.ink, fontWeight: FontWeight.w600)),
+                Text(
+                  category.label,
+                  style: const TextStyle(
+                    color: FtColors.ink,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 const SizedBox(height: 2),
-                Text(Money.format(category.monthlyBudget),
-                    style: const TextStyle(
-                        color: FtColors.ink3, fontSize: 12)),
+                Text(
+                  Money.format(category.monthlyBudget),
+                  style: const TextStyle(color: FtColors.ink3, fontSize: 12),
+                ),
               ],
             ),
           ),
@@ -193,12 +210,14 @@ class _CategoryEditSheet extends StatefulWidget {
 }
 
 class _CategoryEditSheetState extends State<_CategoryEditSheet> {
-  late final TextEditingController _label =
-      TextEditingController(text: widget.initial?.label ?? '');
+  late final TextEditingController _label = TextEditingController(
+    text: widget.initial?.label ?? '',
+  );
   late final TextEditingController _budget = TextEditingController(
-      text: widget.initial != null && widget.initial!.monthlyBudget > 0
-          ? widget.initial!.monthlyBudget.toString()
-          : '');
+    text: widget.initial != null && widget.initial!.monthlyBudget > 0
+        ? widget.initial!.monthlyBudget.toString()
+        : '',
+  );
   String _color = '#3B82F6';
   String _icon = 'category';
 
@@ -343,14 +362,14 @@ Color _parseColor(String hex) {
 }
 
 IconData _iconFor(String name) => switch (name) {
-      'restaurant' => Icons.restaurant,
-      'receipt_long' => Icons.receipt_long,
-      'shopping_bag' => Icons.shopping_bag,
-      'directions_car' => Icons.directions_car,
-      'movie' => Icons.movie,
-      'favorite' => Icons.favorite,
-      'school' => Icons.school,
-      'pets' => Icons.pets,
-      'sports_esports' => Icons.sports_esports,
-      _ => Icons.category,
-    };
+  'restaurant' => Icons.restaurant,
+  'receipt_long' => Icons.receipt_long,
+  'shopping_bag' => Icons.shopping_bag,
+  'directions_car' => Icons.directions_car,
+  'movie' => Icons.movie,
+  'favorite' => Icons.favorite,
+  'school' => Icons.school,
+  'pets' => Icons.pets,
+  'sports_esports' => Icons.sports_esports,
+  _ => Icons.category,
+};

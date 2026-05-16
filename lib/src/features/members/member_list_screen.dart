@@ -24,10 +24,9 @@ class _MemberListScreenState extends ConsumerState<MemberListScreen> {
   Future<void> _createInvite(String householdId, String uid) async {
     setState(() => _busy = true);
     try {
-      final code = await ref.read(householdRepositoryProvider).createInvite(
-            householdId: householdId,
-            generatedBy: uid,
-          );
+      final code = await ref
+          .read(householdRepositoryProvider)
+          .createInvite(householdId: householdId, generatedBy: uid);
       setState(() => _newInviteCode = code);
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -40,22 +39,24 @@ class _MemberListScreenState extends ConsumerState<MemberListScreen> {
       builder: (_) => AlertDialog(
         title: const Text('Keluar dari rumah tangga?'),
         content: const Text(
-            'Kamu akan dikeluarkan dari rumah tangga ini. Data tetap ada untuk anggota lain.'),
+          'Kamu akan dikeluarkan dari rumah tangga ini. Data tetap ada untuk anggota lain.',
+        ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Batal')),
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
           FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Keluar')),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Keluar'),
+          ),
         ],
       ),
     );
     if (confirmed != true) return;
-    await ref.read(householdRepositoryProvider).leave(
-          householdId: householdId,
-          userId: uid,
-        );
+    await ref
+        .read(householdRepositoryProvider)
+        .leave(householdId: householdId, userId: uid);
   }
 
   @override
@@ -78,8 +79,10 @@ class _MemberListScreenState extends ConsumerState<MemberListScreen> {
                 children: [
                   const Eyebrow('Rumah tangga'),
                   const SizedBox(height: 6),
-                  Text(household.name,
-                      style: Theme.of(context).textTheme.headlineSmall),
+                  Text(
+                    household.name,
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
                   const SizedBox(height: 4),
                   Text(
                     'Payday tanggal ${household.payday} • ${Money.format(household.monthlyBudgetTotal)} / siklus',
@@ -121,8 +124,10 @@ class _MemberListScreenState extends ConsumerState<MemberListScreen> {
             TextButton.icon(
               onPressed: () => _leave(household.id, user.uid),
               icon: const Icon(Icons.logout, color: FtColors.danger),
-              label: const Text('Keluar dari rumah tangga',
-                  style: TextStyle(color: FtColors.danger)),
+              label: const Text(
+                'Keluar dari rumah tangga',
+                style: TextStyle(color: FtColors.danger),
+              ),
             ),
           ],
         ),
@@ -150,7 +155,9 @@ class _MemberTile extends StatelessWidget {
       subtitle: Text(roleToString(member.role)),
       trailing: member.isCreator
           ? const Chip(
-              label: Text('Creator'), visualDensity: VisualDensity.compact)
+              label: Text('Creator'),
+              visualDensity: VisualDensity.compact,
+            )
           : null,
     );
   }
@@ -170,18 +177,15 @@ class _InviteCodeCard extends StatelessWidget {
           Row(
             children: [
               const Expanded(child: Text('Kode undangan (sekali pakai)')),
-              IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: onClose,
-              ),
+              IconButton(icon: const Icon(Icons.close), onPressed: onClose),
             ],
           ),
           SelectableText(
             code,
             style: TextStyle(
-            fontSize: 36,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 8,
+              fontSize: 36,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 8,
               color: FtColors.ink,
             ),
           ),
@@ -189,9 +193,9 @@ class _InviteCodeCard extends StatelessWidget {
           TextButton.icon(
             onPressed: () {
               Clipboard.setData(ClipboardData(text: code));
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Kode disalin')),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('Kode disalin')));
             },
             icon: const Icon(Icons.copy),
             label: const Text('Salin'),

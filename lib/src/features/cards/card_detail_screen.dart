@@ -12,17 +12,20 @@ import 'edit_card_sheet.dart';
 
 final _cardProvider =
     StreamProvider.family<CreditCard?, ({String hid, String cardId})>((ref, p) {
-  return ref
-      .watch(cardRepositoryProvider)
-      .watchOne(hid: p.hid, cardId: p.cardId);
-});
+      return ref
+          .watch(cardRepositoryProvider)
+          .watchOne(hid: p.hid, cardId: p.cardId);
+    });
 
-final _installmentsProvider = StreamProvider.family<List<Installment>,
-    ({String hid, String cardId})>((ref, p) {
-  return ref
-      .watch(cardRepositoryProvider)
-      .watchInstallments(hid: p.hid, cardId: p.cardId);
-});
+final _installmentsProvider =
+    StreamProvider.family<List<Installment>, ({String hid, String cardId})>((
+      ref,
+      p,
+    ) {
+      return ref
+          .watch(cardRepositoryProvider)
+          .watchInstallments(hid: p.hid, cardId: p.cardId);
+    });
 
 class CardDetailScreen extends ConsumerWidget {
   const CardDetailScreen({super.key, required this.cardId});
@@ -34,9 +37,12 @@ class CardDetailScreen extends ConsumerWidget {
     if (household == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-    final cardAsync = ref.watch(_cardProvider((hid: household.id, cardId: cardId)));
-    final installmentsAsync =
-        ref.watch(_installmentsProvider((hid: household.id, cardId: cardId)));
+    final cardAsync = ref.watch(
+      _cardProvider((hid: household.id, cardId: cardId)),
+    );
+    final installmentsAsync = ref.watch(
+      _installmentsProvider((hid: household.id, cardId: cardId)),
+    );
 
     Future<void> editCard(CreditCard c) async {
       final result = await showModalBottomSheet<CardDraft>(
@@ -45,7 +51,9 @@ class CardDetailScreen extends ConsumerWidget {
         builder: (_) => EditCardSheet(initial: c),
       );
       if (result == null) return;
-      await ref.read(cardRepositoryProvider).updateCard(
+      await ref
+          .read(cardRepositoryProvider)
+          .updateCard(
             hid: household.id,
             cardId: cardId,
             label: result.label,
@@ -69,13 +77,17 @@ class CardDetailScreen extends ConsumerWidget {
               child: Column(
                 children: [
                   FtSubHeader(title: 'Kartu'),
-                  Expanded(child: Center(child: Text('Kartu tidak ditemukan.'))),
+                  Expanded(
+                    child: Center(child: Text('Kartu tidak ditemukan.')),
+                  ),
                 ],
               ),
             );
           }
           final minPay = minimumPayment(
-              balance: card.used, minPaymentPct: card.minPaymentPct);
+            balance: card.used,
+            minPaymentPct: card.minPaymentPct,
+          );
           final available = (card.limit - card.used).clamp(0, card.limit);
           return SafeArea(
             child: FtAppChrome(
@@ -100,19 +112,20 @@ class CardDetailScreen extends ConsumerWidget {
                           onPressed: card.used == 0
                               ? null
                               : () => _confirm(
-                                    context,
-                                    'Bayar minimum (${Money.format(minPay)})?',
-                                    () async {
-                                      await ref
-                                          .read(cardRepositoryProvider)
-                                          .payMinimum(
-                                            hid: household.id,
-                                            cardId: cardId,
-                                          );
-                                    },
-                                  ),
-                          icon:
-                              const Icon(Icons.account_balance_wallet_outlined),
+                                  context,
+                                  'Bayar minimum (${Money.format(minPay)})?',
+                                  () async {
+                                    await ref
+                                        .read(cardRepositoryProvider)
+                                        .payMinimum(
+                                          hid: household.id,
+                                          cardId: cardId,
+                                        );
+                                  },
+                                ),
+                          icon: const Icon(
+                            Icons.account_balance_wallet_outlined,
+                          ),
                           label: Text('Min ${Money.format(minPay)}'),
                         ),
                       ),
@@ -122,17 +135,17 @@ class CardDetailScreen extends ConsumerWidget {
                           onPressed: card.used == 0
                               ? null
                               : () => _confirm(
-                                    context,
-                                    'Bayar lunas (${Money.format(card.used)})?',
-                                    () async {
-                                      await ref
-                                          .read(cardRepositoryProvider)
-                                          .payFull(
-                                            hid: household.id,
-                                            cardId: cardId,
-                                          );
-                                    },
-                                  ),
+                                  context,
+                                  'Bayar lunas (${Money.format(card.used)})?',
+                                  () async {
+                                    await ref
+                                        .read(cardRepositoryProvider)
+                                        .payFull(
+                                          hid: household.id,
+                                          cardId: cardId,
+                                        );
+                                  },
+                                ),
                           icon: const Icon(Icons.check),
                           label: Text('Lunasi ${Money.format(card.used)}'),
                         ),
@@ -146,13 +159,16 @@ class CardDetailScreen extends ConsumerWidget {
                         ? [
                             const FtCard(
                               child: Center(
-                                child: Text('Belum ada cicilan.',
-                                    style: TextStyle(color: FtColors.ink3)),
+                                child: Text(
+                                  'Belum ada cicilan.',
+                                  style: TextStyle(color: FtColors.ink3),
+                                ),
                               ),
                             ),
                           ]
                         : items
-                            .map((i) => _InstallmentTile(
+                              .map(
+                                (i) => _InstallmentTile(
                                   inst: i,
                                   onPaidOne: () => ref
                                       .read(cardRepositoryProvider)
@@ -161,8 +177,9 @@ class CardDetailScreen extends ConsumerWidget {
                                         cardId: cardId,
                                         installmentId: i.id,
                                       ),
-                                ))
-                            .toList(),
+                                ),
+                              )
+                              .toList(),
                     orElse: () => const [
                       Padding(
                         padding: EdgeInsets.all(16),
@@ -180,18 +197,23 @@ class CardDetailScreen extends ConsumerWidget {
   }
 
   Future<void> _confirm(
-      BuildContext context, String title, Future<void> Function() action) async {
+    BuildContext context,
+    String title,
+    Future<void> Function() action,
+  ) async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
         title: Text(title),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Batal')),
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
           FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Lanjut')),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Lanjut'),
+          ),
         ],
       ),
     );
@@ -209,7 +231,9 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = _parseColor(card.accent);
-    final pct = card.limit == 0 ? 0.0 : (card.used / card.limit).clamp(0.0, 1.0);
+    final pct = card.limit == 0
+        ? 0.0
+        : (card.used / card.limit).clamp(0.0, 1.0);
     return FtCard(
       backgroundColor: color,
       padding: const EdgeInsets.all(20),
@@ -219,28 +243,40 @@ class _Header extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text(card.label,
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 20)),
+                child: Text(
+                  card.label,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                  ),
+                ),
               ),
               if (card.last4.isNotEmpty)
-                Text('•••• ${card.last4}',
-                    style: const TextStyle(color: Colors.white70)),
+                Text(
+                  '•••• ${card.last4}',
+                  style: const TextStyle(color: Colors.white70),
+                ),
             ],
           ),
           const SizedBox(height: 16),
-          Text('Terpakai',
-              style: const TextStyle(color: Colors.white70, fontSize: 12)),
-          Text(Money.format(card.used),
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 28)),
+          Text(
+            'Terpakai',
+            style: const TextStyle(color: Colors.white70, fontSize: 12),
+          ),
+          Text(
+            Money.format(card.used),
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 28,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text('Tersedia: ${Money.format(available)} dari ${Money.format(card.limit)}',
-              style: const TextStyle(color: Colors.white70, fontSize: 12)),
+          Text(
+            'Tersedia: ${Money.format(available)} dari ${Money.format(card.limit)}',
+            style: const TextStyle(color: Colors.white70, fontSize: 12),
+          ),
           const SizedBox(height: 12),
           ClipRRect(
             borderRadius: BorderRadius.circular(6),
@@ -253,8 +289,9 @@ class _Header extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-              'Jatuh tempo: tgl ${card.dueDay}  •  APR: ${(card.apr * 100).toStringAsFixed(1)}%',
-              style: const TextStyle(color: Colors.white70, fontSize: 12)),
+            'Jatuh tempo: tgl ${card.dueDay}  •  APR: ${(card.apr * 100).toStringAsFixed(1)}%',
+            style: const TextStyle(color: Colors.white70, fontSize: 12),
+          ),
         ],
       ),
     );
@@ -279,11 +316,15 @@ class _InstallmentTile extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: Text(inst.label,
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                  child: Text(
+                    inst.label,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
-                Text('${inst.monthsPaid}/${inst.monthsTotal} bln',
-                    style: const TextStyle(fontSize: 12)),
+                Text(
+                  '${inst.monthsPaid}/${inst.monthsTotal} bln',
+                  style: const TextStyle(fontSize: 12),
+                ),
               ],
             ),
             const SizedBox(height: 4),
@@ -296,8 +337,9 @@ class _InstallmentTile extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                      'Cicilan: ${Money.format(inst.monthly)} / bln  •  Sisa: ${Money.format(inst.remainingAmount)}',
-                      style: const TextStyle(fontSize: 12)),
+                    'Cicilan: ${Money.format(inst.monthly)} / bln  •  Sisa: ${Money.format(inst.remainingAmount)}',
+                    style: const TextStyle(fontSize: 12),
+                  ),
                 ),
                 if (!inst.isComplete)
                   TextButton(
@@ -305,7 +347,10 @@ class _InstallmentTile extends StatelessWidget {
                     child: const Text('Tandai dibayar'),
                   )
                 else
-                  const Chip(label: Text('Lunas'), visualDensity: VisualDensity.compact),
+                  const Chip(
+                    label: Text('Lunas'),
+                    visualDensity: VisualDensity.compact,
+                  ),
               ],
             ),
           ],
