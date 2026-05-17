@@ -49,6 +49,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final householdAsync = ref.watch(currentHouseholdProvider);
+    // Self-heal stale `users/{uid}.householdId` after a creator removed us
+    // from the household.
+    ref.watch(orphanedMembershipCleanupProvider);
     final loadedHid = householdAsync.value?.id;
     if (loadedHid != null && loadedHid != _lastRecurringHid) {
       _lastRecurringHid = loadedHid;
@@ -318,7 +321,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   void _handleMenu(String v) {
     switch (v) {
       case 'insights':
-        context.push('/insights');
+        context.push('/health');
       case 'categories':
         context.push('/categories');
       case 'members':

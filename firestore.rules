@@ -1,34 +1,59 @@
 rules_version = '2';
 
 // Financial Tracker — Firestore rules
-// Model: 1 user ↔ 1 household. Household members[].userId is mirrored to
-// memberIds[] for rule evaluation. Both arrays kept in sync on join/leave.
 //
-// Trust model: internal app, 2-5 known users, distributed via TestFlight/APK.
-// Household root doc is readable by any authed user (so a joiner can validate
-// an invite); per-household subcollections (expenses, etc.) remain
-// member-gated. Self-join requires the joiner to reference a valid invite
-// via the `claimedInvite` field — the rule resolves that to the actual
-// invite doc and checks it targets THIS household, is unconsumed, and is
-// not expired.
+// Model: 1 user ↔ 1 household. Household members[].userId is mirrored to
+// memberIds[] for `request.auth.uid in array` checks. Per-member access
+// tier is mirrored to `memberAccess: {<uid>: 'full'|'limited'|'view'}` for
+// O(1) rule lookups. Both arrays + map kept in sync on join/leave.
+//
+// Trust model: internal app, 2-5 known users.
+//
+// Reads:
+//   - households: `get` allowed for any authed user (so a joiner can validate
+//     a code). `list` blocked — no enumeration of every household.
+//   - invites: `get` allowed for any authed user. `list` blocked.
+//   - per-household subcollections: members only.
+//
+// Writes (per access tier):
+//   - full    → all writes (settings, members, expenses, incomes, cards,
+//               goals, investments).
+//   - limited → expenses + incomes only. No settings/cards/goals/investments.
+//   - view    → no writes.
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Per-user profile. Only the owner can read/write.
+    // Per-user profile. Only the owner reads/writes their own doc.
+    // Exception: `removeMember` (creator-only, app code) and `leave` set
+    // `users/{uid}.householdId`. We still tighten this to owner-only;
+    // the removed user's doc is cleaned up by the app on next sign-in
+    // (see `currentUserDocProvider`).
     match /users/{uid} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }
 
     match /households/{hid} {
-      allow read: if request.auth != null;
+      // Single-doc reads stay open so a joiner can validate household
+      // existence after redeeming an invite. `list` is blocked: no global
+      // household enumeration.
+      allow get: if request.auth != null;
+      allow list: if request.auth != null
+                  && request.auth.uid in resource.data.memberIds;
 
       allow create: if request.auth != null
                     && request.auth.uid == request.resource.data.creatorId
                     && request.auth.uid in request.resource.data.memberIds;
 
-      // Existing-member update: free-form (subject to subcollection rules).
+      // Existing-member update.
+      // - `view`     → blocked.
+      // - `limited`  → blocked at root (settings/members/categories/etc).
+      //                Subcollection writes are gated separately below.
+      // - `full`     → allowed.
+      // Self-edit profile (members[<self>]) currently requires `full`.
+      // Internal-team scope (2–5 users) makes this acceptable.
       allow update: if request.auth != null
-                    && request.auth.uid in resource.data.memberIds;
+                    && request.auth.uid in resource.data.memberIds
+                    && resource.data.memberAccess[request.auth.uid] == 'full';
 
       // Non-member self-join: must add only themselves AND reference a valid,
       // unconsumed invite for THIS household. The `claimedInvite` field on
@@ -55,25 +80,63 @@ service cloud.firestore {
                     && getAfter(/databases/$(database)/documents/invites/$(request.resource.data.claimedInvite))
                          .data.consumedBy == request.auth.uid;
 
+      // Last-leaver delete: only the sole remaining member may delete the
+      // household root (also requires full access).
       allow delete: if request.auth != null
-                    && request.auth.uid in resource.data.memberIds;
+                    && request.auth.uid in resource.data.memberIds
+                    && resource.data.memberAccess[request.auth.uid] == 'full';
 
-      // All household subcollections (expenses, incomes, cards, goals, etc.)
-      // are member-only.
-      match /{document=**} {
-        allow read, write: if request.auth != null
-          && request.auth.uid in
-            get(/databases/$(database)/documents/households/$(hid)).data.memberIds;
+      // Helpers for subcollection rules.
+      function household() {
+        return get(/databases/$(database)/documents/households/$(hid)).data;
+      }
+      function isMember() {
+        return request.auth != null
+               && request.auth.uid in household().memberIds;
+      }
+      function level() {
+        return household().memberAccess[request.auth.uid];
+      }
+      function canTxn() {
+        return level() == 'full' || level() == 'limited';
+      }
+      function canFull() {
+        return level() == 'full';
+      }
+
+      // expenses + incomes: full + limited can write.
+      match /expenses/{document=**} {
+        allow read: if isMember();
+        allow write: if isMember() && canTxn();
+      }
+      match /incomes/{document=**} {
+        allow read: if isMember();
+        allow write: if isMember() && canTxn();
+      }
+
+      // cards + goals + investments: full only.
+      match /cards/{document=**} {
+        allow read: if isMember();
+        allow write: if isMember() && canFull();
+      }
+      match /goals/{document=**} {
+        allow read: if isMember();
+        allow write: if isMember() && canFull();
+      }
+      match /investments/{document=**} {
+        allow read: if isMember();
+        allow write: if isMember() && canFull();
       }
     }
 
-    // Invite codes: 6-digit, single-use. Any authed user can read (to validate
-    // a code). Only the generator can create; they must mark it unconsumed.
-    // Consume = a single false→true transition that binds `consumedBy` to the
-    // caller; immutable fields (householdId, generatedBy, expiresAt) must
-    // stay unchanged. After consumption no further updates allowed.
+    // Invite codes: 6-digit, single-use. `get` allowed (so a joiner can
+    // validate). `list` blocked — no enumeration. Only the generator can
+    // create; they must mark it unconsumed. Consume = a single false→true
+    // transition that binds `consumedBy` to the caller; immutable fields
+    // (householdId, generatedBy, expiresAt) must stay unchanged.
     match /invites/{code} {
-      allow read: if request.auth != null;
+      allow get: if request.auth != null;
+      allow list: if false;
 
       allow create: if request.auth != null
                     && request.auth.uid == request.resource.data.generatedBy

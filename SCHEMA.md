@@ -28,14 +28,24 @@ monthlyBudgetTotal: number // IDR
 // Security rules — must mirror members[].userId so rules can use `in`
 memberIds: uid[]
 
+// Fast-lookup mirror of members[].accessLevel keyed by uid. Kept in sync on
+// every write that touches `members`; used by Firestore rules to resolve
+// the caller's tier without iterating the array.
+memberAccess: { <uid>: 'full' | 'limited' | 'view' }
+
 // Embedded (bounded sets)
 members: [{
   userId: uid
   displayName: string
-  role: 'Istri'|'Suami'|'Anak'|'Other'  // label only
+  role: 'Suami'|'Istri'|'Anak'|'Orang Tua'|'Lainnya'  // label only
   color: string
   joinedAt: timestamp
   isCreator: boolean
+  // Permission tier (the source of truth):
+  // - 'full'    → all writes (settings, members, txn, cards, goals, invest)
+  // - 'limited' → expenses + incomes only
+  // - 'view'    → no writes; reads only
+  accessLevel: 'full' | 'limited' | 'view'
 }]
 
 categories: [{
@@ -130,7 +140,9 @@ label, hint, value, delta, color
 ```
 
 ### `invites/{code}` — top-level, code as doc ID
-6-digit numeric. Single-use. Regenerated per invite.
+6-digit numeric. Single-use. Regenerated per invite. The role and access
+tier are baked at create time and applied at join time — joiners cannot
+escalate.
 ```
 householdId: string
 generatedBy: uid
@@ -139,6 +151,8 @@ expiresAt: timestamp      // 24h default
 consumed: boolean
 consumedBy: uid?
 consumedAt: timestamp?
+role: 'Suami'|'Istri'|'Anak'|'Orang Tua'|'Lainnya'
+accessLevel: 'full'|'limited'|'view'
 ```
 
 ## Composite Indexes
@@ -149,41 +163,25 @@ consumedAt: timestamp?
 - `incomes`: (date desc)
 - `incomes`: (destinationAccountId, date desc)
 
-## Security Rules (sketch)
-```
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{db}/documents {
-
-    match /users/{uid} {
-      allow read, write: if request.auth.uid == uid;
-    }
-
-    match /households/{hid} {
-      allow read: if request.auth.uid in resource.data.memberIds;
-      allow create: if request.auth.uid == request.resource.data.creatorId
-                    && request.auth.uid in request.resource.data.memberIds;
-      allow update, delete: if request.auth.uid in resource.data.memberIds;
-
-      match /{document=**} {
-        allow read, write: if request.auth.uid in
-          get(/databases/$(db)/documents/households/$(hid)).data.memberIds;
-      }
-    }
-
-    match /invites/{code} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update: if request.auth != null && !resource.data.consumed;
-      allow delete: if request.auth.uid == resource.data.generatedBy;
-    }
-  }
-}
-```
+## Security Rules
+See `firestore.rules` for the canonical version. Summary:
+- `users/{uid}` — owner-only.
+- `households/{hid}`:
+  - `get` open to any authed user (so a joiner can validate via invite).
+  - `list` blocked for non-members.
+  - `update` requires `memberAccess[<uid>] == 'full'`. Self-join branch
+    requires a valid `claimedInvite`.
+  - Subcollections: `expenses`/`incomes` writable by full + limited;
+    `cards`/`goals`/`investments` writable by full only.
+- `invites/{code}` — `get` open to authed users, `list` blocked.
 
 ## Notes
-- `memberIds` is the source of truth for security rule evaluation; `members[]` carries display data. Both must be kept in sync (transactional write on join/leave).
+- `memberIds` is the source of truth for membership checks in rules.
+  `memberAccess` is the source of truth for access-tier checks in rules.
+  `members[]` carries display data. All three must be kept in sync
+  (transactional write on join/leave/access-change).
 - Embed for bounded sets (≤ ~50 items): members, categories, payment methods, cash/savings accounts.
 - Subcollection for unbounded or per-record entities: expenses, incomes, cards, goals, investments.
-- Phase 0 needs: `users`, `households` (creation + member join), `invites`. Everything else lands in later phases.
-- Schema versioning: add `schemaVersion: 1` on household doc; bump on breaking changes; client-side migration on read.
+- Schema versioning: `schemaVersion` on household doc; bump on breaking
+  changes; client-side migration on read. Current = `2` (added
+  `memberAccess` map and `members[].accessLevel`).

@@ -2,21 +2,56 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../accounts/account.dart';
 
-/// Roles are labels only — no permission gating. "Other" is a generic fallback.
-enum MemberRole { istri, suami, anak, other }
+/// Family-role label. Display only; permission gating is `AccessLevel`.
+/// "Other" is a generic fallback.
+enum MemberRole { suami, istri, anak, orangTua, other }
 
 String roleToString(MemberRole r) => switch (r) {
       MemberRole.istri => 'Istri',
       MemberRole.suami => 'Suami',
       MemberRole.anak => 'Anak',
-      MemberRole.other => 'Other',
+      MemberRole.orangTua => 'Orang Tua',
+      MemberRole.other => 'Lainnya',
     };
 
 MemberRole roleFromString(String? s) => switch (s) {
       'Istri' => MemberRole.istri,
       'Suami' => MemberRole.suami,
       'Anak' => MemberRole.anak,
+      'Orang Tua' => MemberRole.orangTua,
       _ => MemberRole.other,
+    };
+
+/// 3-tier permission gating per member, persisted on `members[].accessLevel`.
+/// - `full`    → all writes (expenses, incomes, cards, goals, settings).
+/// - `limited` → expenses + incomes only.
+/// - `view`    → no writes.
+enum AccessLevel { full, limited, view }
+
+String accessLevelToString(AccessLevel a) => switch (a) {
+      AccessLevel.full => 'full',
+      AccessLevel.limited => 'limited',
+      AccessLevel.view => 'view',
+    };
+
+AccessLevel accessLevelFromString(String? s) => switch (s) {
+      'limited' => AccessLevel.limited,
+      'view' => AccessLevel.view,
+      _ => AccessLevel.full,
+    };
+
+String accessLevelLabel(AccessLevel a) => switch (a) {
+      AccessLevel.full => 'Akses Penuh',
+      AccessLevel.limited => 'Akses Terbatas',
+      AccessLevel.view => 'Lihat Saja',
+    };
+
+String accessLevelDetail(AccessLevel a) => switch (a) {
+      AccessLevel.full =>
+        'Lihat & catat semua transaksi, saldo, tujuan, dan utang.',
+      AccessLevel.limited =>
+        'Hanya bisa mencatat pengeluaran sendiri. Tidak lihat saldo.',
+      AccessLevel.view => 'Hanya melihat ringkasan bulanan. Tidak dapat mencatat.',
     };
 
 class Member {
@@ -26,6 +61,7 @@ class Member {
   final String color;
   final DateTime joinedAt;
   final bool isCreator;
+  final AccessLevel accessLevel;
 
   const Member({
     required this.userId,
@@ -34,6 +70,7 @@ class Member {
     required this.color,
     required this.joinedAt,
     required this.isCreator,
+    this.accessLevel = AccessLevel.full,
   });
 
   Map<String, dynamic> toMap() => {
@@ -43,6 +80,7 @@ class Member {
         'color': color,
         'joinedAt': Timestamp.fromDate(joinedAt),
         'isCreator': isCreator,
+        'accessLevel': accessLevelToString(accessLevel),
       };
 
   static Member fromMap(Map<String, dynamic> m) => Member(
@@ -52,6 +90,7 @@ class Member {
         color: m['color'] as String? ?? '#64748B',
         joinedAt: (m['joinedAt'] as Timestamp).toDate(),
         isCreator: m['isCreator'] as bool? ?? false,
+        accessLevel: accessLevelFromString(m['accessLevel'] as String?),
       );
 }
 
@@ -202,6 +241,13 @@ class Household {
     return null;
   }
 
+  /// `memberAccess` is the uid→accessLevel map mirrored from `members[]`.
+  /// Stored alongside members so Firestore rules can look up the caller's
+  /// access level in O(1) without scanning the array.
+  static Map<String, String> memberAccessMap(List<Member> members) => {
+        for (final m in members) m.userId: accessLevelToString(m.accessLevel),
+      };
+
   Map<String, dynamic> toMap() => {
         'name': name,
         'creatorId': creatorId,
@@ -212,11 +258,12 @@ class Household {
         'monthlyBudgetTotal': monthlyBudgetTotal,
         'memberIds': memberIds,
         'members': members.map((m) => m.toMap()).toList(),
+        'memberAccess': memberAccessMap(members),
         'categories': categories.map((c) => c.toMap()).toList(),
         'paymentMethods': paymentMethods.map((p) => p.toMap()).toList(),
         'cashAccounts': cashAccounts.map((a) => a.toMap()).toList(),
         'savingsAccounts': savingsAccounts.map((a) => a.toMap()).toList(),
-        'schemaVersion': 1,
+        'schemaVersion': 2,
       };
 
   static Household fromSnapshot(DocumentSnapshot snap) {

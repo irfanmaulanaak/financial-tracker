@@ -116,8 +116,10 @@ class _RecordIncomeScreenState extends ConsumerState<RecordIncomeScreen> {
       for (final a in household.savingsAccounts)
         (id: a.id, label: a.label, hint: 'Tabungan · ${Money.format(a.value)}'),
     ];
-    final canSubmit =
-        _amount > 0 && _destinationAccountId != null && !_busy;
+    final canSubmit = _amount > 0 &&
+        _destinationAccountId != null &&
+        !_busy &&
+        ref.watch(canRecordTxnProvider);
 
     return Scaffold(
       backgroundColor: FtColors.bg,

@@ -7,6 +7,8 @@ import '../../core/providers.dart';
 import '../../core/seeded_data.dart';
 import 'household.dart';
 
+part 'member_management.dart';
+
 class HouseholdRepository {
   HouseholdRepository(this._db);
   final FirebaseFirestore _db;
@@ -95,9 +97,14 @@ class HouseholdRepository {
 
   /// Generates a fresh 6-digit invite code. Retries on collision (extremely
   /// unlikely; one in a million per attempt).
+  ///
+  /// `role` and `accessLevel` are baked into the invite and applied at join
+  /// time — the inviter chooses how the new member gets onboarded.
   Future<String> createInvite({
     required String householdId,
     required String generatedBy,
+    MemberRole role = MemberRole.other,
+    AccessLevel accessLevel = AccessLevel.full,
     Duration ttl = const Duration(hours: 24),
     DateTime? now,
   }) async {
@@ -111,6 +118,8 @@ class HouseholdRepository {
           'generatedAt': Timestamp.fromDate(ts),
           'expiresAt': Timestamp.fromDate(ts.add(ttl)),
           'consumed': false,
+          'role': roleToString(role),
+          'accessLevel': accessLevelToString(accessLevel),
         });
         return code;
       } on FirebaseException catch (e) {
@@ -123,11 +132,15 @@ class HouseholdRepository {
 
   /// Validates + consumes an invite, adds user as a member, and links user doc.
   /// All-or-nothing transaction. Throws on invalid/expired/consumed code.
+  ///
+  /// Role + access level come from the invite doc (set by the inviter). The
+  /// joiner can override `role` to fix the label for themselves; access level
+  /// is always taken from the invite (joiner cannot escalate).
   Future<String> joinWithInvite({
     required String code,
     required String userId,
     required String displayName,
-    required MemberRole role,
+    MemberRole? role,
     DateTime? now,
   }) async {
     final ts = now ?? DateTime.now();
@@ -159,20 +172,27 @@ class HouseholdRepository {
         throw StateError('already_member');
       }
 
+      final inviteRole = roleFromString(inv['role'] as String?);
+      final inviteAccess =
+          accessLevelFromString(inv['accessLevel'] as String?);
+
       final newMember = Member(
         userId: userId,
         displayName: displayName,
-        role: role,
+        role: role ?? inviteRole,
         color: _pickMemberColor(household.members.length),
         joinedAt: ts,
         isCreator: false,
+        accessLevel: inviteAccess,
       );
-      final updatedMembers = [...household.members.map((m) => m.toMap()), newMember.toMap()];
+      final updatedMembersList = [...household.members, newMember];
+      final updatedMembers = updatedMembersList.map((m) => m.toMap()).toList();
       final updatedIds = [...household.memberIds, userId];
 
       tx.update(householdRef, {
         'memberIds': updatedIds,
         'members': updatedMembers,
+        'memberAccess': Household.memberAccessMap(updatedMembersList),
         // Required by Firestore rules to prove a valid invite was claimed
         // (see `firestore.rules` → households self-join rule).
         'claimedInvite': code,
@@ -236,6 +256,8 @@ class HouseholdRepository {
                   color: members.first.color,
                   joinedAt: members.first.joinedAt,
                   isCreator: true,
+                  // Promoted creator must have full access.
+                  accessLevel: AccessLevel.full,
                 ),
                 ...members.skip(1),
               ]
@@ -243,6 +265,7 @@ class HouseholdRepository {
         tx.update(ref, {
           'memberIds': ids,
           'members': newMembers.map((m) => m.toMap()).toList(),
+          'memberAccess': Household.memberAccessMap(newMembers),
           if (wasCreator) 'creatorId': newMembers.first.userId,
         });
       }

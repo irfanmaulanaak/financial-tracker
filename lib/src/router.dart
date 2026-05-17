@@ -21,12 +21,14 @@ import 'features/home/home_screen.dart';
 import 'features/household/household_providers.dart';
 import 'features/incomes/income_log_screen.dart';
 import 'features/incomes/record_income_screen.dart';
-import 'features/insights/insights_screen.dart';
 import 'features/investments/investments_screen.dart';
+import 'features/members/member_detail_screen.dart';
 import 'features/members/member_list_screen.dart';
+import 'features/notifications/notifications_screen.dart';
 import 'features/onboarding/creator_wizard.dart';
 import 'features/onboarding/join_household_screen.dart';
 import 'features/onboarding/landing_screen.dart';
+import 'features/profile/edit_profile_screen.dart';
 import 'features/settings/settings_screen.dart';
 import 'features/spend/spend_screen.dart';
 import 'ui/ft_motion.dart';
@@ -89,13 +91,16 @@ final routerProvider = Provider<GoRouter>((ref) {
       _fadeRoute('/categories/:categoryId', (state) =>
           CategoryDetailScreen(categoryId: state.pathParameters['categoryId']!)),
       _fadeRoute('/members', (_) => const MemberListScreen()),
+      _fadeRoute('/members/:memberId', (state) =>
+          MemberDetailScreen(memberId: state.pathParameters['memberId']!)),
+      _fadeRoute('/notifications', (_) => const NotificationsScreen()),
+      _fadeRoute('/profile/edit', (_) => const EditProfileScreen()),
       _fadeRoute('/accounts', (_) => const AccountsScreen()),
       _fadeRoute('/incomes', (_) => const IncomeLogScreen()),
       _fadeRoute('/incomes/new', (_) => const RecordIncomeScreen()),
       _fadeRoute('/cards', (_) => const CardsScreen()),
       _fadeRoute('/cards/:cardId', (state) =>
           CardDetailScreen(cardId: state.pathParameters['cardId']!)),
-      _fadeRoute('/insights', (_) => const InsightsScreen()),
       _fadeRoute('/health', (_) => const HealthScreen()),
       _fadeRoute('/goals', (_) => const GoalsScreen()),
       _fadeRoute('/goals/new', (_) => const AddGoalScreen()),

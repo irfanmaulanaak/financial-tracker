@@ -6,12 +6,14 @@ import '../../theme.dart';
 import '../../ui/ft_haptics.dart';
 import '../../ui/ft_motion.dart';
 import '../../ui/ft_ui.dart';
+import '../household/household.dart';
 import '../household/household_repository.dart';
+import 'widgets/invite_sheet_parts.dart';
 
-/// Invite bottom sheet — shell from `claude-design/screens-household.jsx`
-/// `InviteMemberSheet`, but generates a single-use invite code instead of
-/// the design's email/WA-by-contact flow. Keeps the existing security model
-/// while matching the inline-from-Settings UX.
+/// Invite bottom sheet — `claude-design/screens-household.jsx > InviteMemberSheet`.
+/// Generates a single-use 6-digit invite code that's pre-baked with the
+/// invited member's role + access level. The joiner cannot escalate access
+/// beyond what the invite carries.
 class InviteMemberSheet extends ConsumerStatefulWidget {
   const InviteMemberSheet({
     super.key,
@@ -47,6 +49,8 @@ class InviteMemberSheet extends ConsumerStatefulWidget {
 }
 
 class _InviteMemberSheetState extends ConsumerState<InviteMemberSheet> {
+  MemberRole _role = MemberRole.suami;
+  AccessLevel _access = AccessLevel.full;
   String? _code;
   bool _busy = false;
   String? _error;
@@ -60,6 +64,8 @@ class _InviteMemberSheetState extends ConsumerState<InviteMemberSheet> {
       final code = await ref.read(householdRepositoryProvider).createInvite(
             householdId: widget.householdId,
             generatedBy: widget.creatorUid,
+            role: _role,
+            accessLevel: _access,
           );
       FtHaptics.success();
       setState(() => _code = code);
@@ -88,235 +94,188 @@ class _InviteMemberSheetState extends ConsumerState<InviteMemberSheet> {
         child: FtFadeUp(
           duration: const Duration(milliseconds: 260),
           distance: 14,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const _Grabber(),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(22, 6, 22, 4),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Eyebrow('Undang Anggota'),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Tambah ke ${widget.householdName}',
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleLarge
-                          ?.copyWith(fontSize: 19, letterSpacing: -0.3),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Bagikan kode satu kali ini ke anggota baru. Setelah masuk, transaksi mereka tergabung otomatis.',
-                      style: TextStyle(
-                        color: FtColors.ink3,
-                        fontSize: 11.5,
-                        height: 1.45,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 14),
-              if (_code == null)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(22, 0, 22, 0),
-                  child: FtTapScale(
-                    scale: 0.97,
-                    onTap: _busy ? null : _generate,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      decoration: BoxDecoration(
-                        color: FtColors.ink,
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      alignment: Alignment.center,
-                      child: _busy
-                          ? SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: FtColors.bg,
-                              ),
-                            )
-                          : Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.auto_awesome_rounded,
-                                    size: 14, color: FtColors.bg),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Buat Kode Undangan',
-                                  style: TextStyle(
-                                    color: FtColors.bg,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SheetGrabber(),
+                InviteHeading(householdName: widget.householdName),
+                const SizedBox(height: 14),
+                if (_code == null) ..._configBody() else ..._codeBody(),
+                if (_error != null) ...[
+                  const SizedBox(height: 10),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 22),
+                    child: Text(
+                      _error!,
+                      style: TextStyle(color: FtColors.danger, fontSize: 11),
                     ),
                   ),
-                )
-              else
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(22, 0, 22, 0),
-                  child: Container(
-                    padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
-                    decoration: BoxDecoration(
-                      color: FtColors.surfaceAlt,
-                      borderRadius: BorderRadius.circular(14),
-                      border:
-                          Border.all(color: FtColors.lineStrong, width: 0.5),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Kode undangan (sekali pakai)',
-                          style: TextStyle(
-                            color: FtColors.ink3,
-                            fontSize: 11,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        SelectableText(
-                          _code!,
-                          style: TextStyle(
-                            fontFamily: 'Newsreader',
-                            fontSize: 30,
-                            fontWeight: FontWeight.w500,
-                            letterSpacing: 6,
-                            color: FtColors.ink,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: FtTapScale(
-                                scale: 0.97,
-                                onTap: () {
-                                  Clipboard.setData(
-                                      ClipboardData(text: _code!));
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Kode disalin'),
-                                    ),
-                                  );
-                                },
-                                child: Container(
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 10),
-                                  decoration: BoxDecoration(
-                                    color: FtColors.surface,
-                                    border: Border.all(
-                                        color: FtColors.line, width: 0.5),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(Icons.copy_rounded,
-                                          size: 14, color: FtColors.ink2),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        'Salin kode',
-                                        style: TextStyle(
-                                          color: FtColors.ink,
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: FtTapScale(
-                                scale: 0.97,
-                                onTap: () => setState(() => _code = null),
-                                child: Container(
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 10),
-                                  decoration: BoxDecoration(
-                                    color: FtColors.surface,
-                                    border: Border.all(
-                                        color: FtColors.line, width: 0.5),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: Text(
-                                    'Buat ulang',
-                                    style: TextStyle(
-                                      color: FtColors.ink2,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              if (_error != null) ...[
+                ],
                 const SizedBox(height: 10),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 22),
                   child: Text(
-                    _error!,
-                    style: TextStyle(color: FtColors.danger, fontSize: 11),
+                    'Kode kedaluwarsa otomatis dalam 24 jam dan hanya bisa dipakai sekali.',
+                    style: TextStyle(
+                      color: FtColors.ink3,
+                      fontSize: 10.5,
+                      height: 1.5,
+                    ),
                   ),
                 ),
               ],
-              const SizedBox(height: 10),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 22),
-                child: Text(
-                  'Anggota dengan kode bisa mencatat pengeluaran, melihat saldo, dan menerima notifikasi anggaran bersama.',
-                  style: TextStyle(
-                    color: FtColors.ink3,
-                    fontSize: 10.5,
-                    height: 1.5,
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
     );
   }
-}
 
-class _Grabber extends StatelessWidget {
-  const _Grabber();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(0, 4, 0, 12),
-      child: Center(
-        child: Container(
-          width: 42,
-          height: 5,
-          decoration: BoxDecoration(
-            color: FtColors.lineStrong,
-            borderRadius: BorderRadius.circular(4),
+  List<Widget> _configBody() {
+    return [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(22, 0, 22, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Eyebrow('Peran'),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final r in MemberRole.values)
+                  RoleChip(
+                    label: roleToString(r),
+                    active: _role == r,
+                    onTap: () => setState(() => _role = r),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(22, 0, 22, 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Eyebrow('Tingkat akses'),
+            const SizedBox(height: 6),
+            for (final lvl in AccessLevel.values)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: AccessOption(
+                  level: lvl,
+                  active: _access == lvl,
+                  onTap: () => setState(() => _access = lvl),
+                ),
+              ),
+          ],
+        ),
+      ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(22, 0, 22, 0),
+        child: FtTapScale(
+          scale: 0.97,
+          onTap: _busy ? null : _generate,
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            decoration: BoxDecoration(
+              color: FtColors.ink,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            alignment: Alignment.center,
+            child: _busy
+                ? SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: FtColors.bg,
+                    ),
+                  )
+                : Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.auto_awesome_rounded,
+                          size: 14, color: FtColors.bg),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Buat Kode Undangan',
+                        style: TextStyle(
+                          color: FtColors.bg,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
           ),
         ),
       ),
-    );
+    ];
+  }
+
+  List<Widget> _codeBody() {
+    return [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(22, 0, 22, 0),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
+          decoration: BoxDecoration(
+            color: FtColors.surfaceAlt,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: FtColors.lineStrong, width: 0.5),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '${roleToString(_role)} · ${accessLevelLabel(_access)}',
+                style: TextStyle(color: FtColors.ink3, fontSize: 11),
+              ),
+              const SizedBox(height: 8),
+              SelectableText(
+                _code!,
+                style: TextStyle(
+                  fontFamily: 'Newsreader',
+                  fontSize: 30,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 6,
+                  color: FtColors.ink,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Expanded(
+                    child: GhostButton(
+                      icon: Icons.copy_rounded,
+                      label: 'Salin kode',
+                      onTap: () {
+                        Clipboard.setData(ClipboardData(text: _code!));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Kode disalin')),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: GhostButton(
+                      label: 'Buat ulang',
+                      onTap: () => setState(() => _code = null),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    ];
   }
 }

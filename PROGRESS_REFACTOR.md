@@ -10,7 +10,7 @@ Tracking implementation of [REFACTOR_PLAN.md](REFACTOR_PLAN.md). Each phase logs
 | 2 | Home / Beranda | completed |
 | 3 | Core ledger screens | completed |
 | 4 | Assets / Allocation, Goals, Health | completed |
-| 5 | Profile, Members, Notifications, Settings, Access Control | pending |
+| 5 | Profile, Members, Notifications, Settings, Access Control | completed |
 
 ---
 
@@ -213,4 +213,65 @@ Also new in `lib/src/ui/`:
 
 ## Phase 5 — Profile, Members, Notifications, Settings, Access Control
 
-_(not started)_
+**Started:** 2026-05-17
+**Completed:** 2026-05-17
+
+### Changes
+
+**5a — Access-tier model + rules**:
+- `lib/src/features/household/household.dart` — added `AccessLevel` enum (`full` / `limited` / `view`) with id↔string converters + ID-locale labels (`accessLevelLabel`, `accessLevelDetail`). Extended `MemberRole` with `orangTua` and `lainnya`. `Member` gained an `accessLevel` field (defaults `full`). `Household` exposes `Household.memberAccessMap(members)` so the repo can keep a `{uid: levelString}` mirror on the household doc for cheap rules evaluation. `toMap()` now writes `memberAccess` and bumps `schemaVersion` to 2.
+- `lib/src/features/household/household_repository.dart` — `createInvite(...)` now accepts `MemberRole` + `AccessLevel`, persists them on the invite doc; `joinWithInvite(...)` reads them back so joiners land with the level the inviter chose. `create(...)` and `joinWithInvite(...)` write the `memberAccess` map on the household. **Member moderation methods extracted** into `lib/src/features/household/member_management.dart` (Dart `part` file) to keep `household_repository.dart` under the LOC budget: `removeMember(...)` (creator-only), `updateMemberAccess(...)` (creator-only), and `updateMyProfile(...)` (caller's own row).
+- `firestore.rules` — rewrote household + subcollection rules. `households/{hid}` now allows `get` for any signed-in user (so accept-invite can read the doc) but blocks `list` for non-members. `update` requires `memberAccess[uid] == 'full'`. Subcollections (`expenses`, `incomes`, `cards`, `goals`, `investments`) are gated by helper functions `isMember()`, `level()`, `canTxn()`, `canFull()`: `view` is read-only across the board, `limited` can write `expenses` + `incomes` only, `full` can write everything. Card `installments` inherit the parent card's gating. `invites/{code}` now stores `role` + `accessLevel` and is readable by any signed-in user (so we can preview the invite before joining).
+- `lib/src/features/household/household_providers.dart` — new `myAccessLevelProvider` (derives level from current household + uid; defaults to `full` for solo creators / `view` if uid not in members), `canRecordTxnProvider` (`full` or `limited`), and `canWriteAllProvider` (`full` only). Plus `orphanedMembershipCleanupProvider`: when the household stream finishes loading and the current uid isn't in `members[]`, the user's `users/{uid}.householdId` is cleared client-side so the router yanks them back to onboarding (rules block the creator from doing this on their behalf, so the orphan must heal itself).
+
+**5b — Profile + member detail screens**:
+- New `lib/src/features/profile/edit_profile_screen.dart` (188 LOC) — `/profile/edit` route. Edits display name + accent color (10-swatch palette) on the household member row via `updateMyProfile(...)`. Read-only email card (Firebase Auth source of truth). Account-deletion CTA hits `auth_repository.deleteCurrentUser()` after a confirm dialog.
+- New `lib/src/features/profile/widgets/edit_profile_parts.dart` (366 LOC) — extracted `SaveButton`, `AvatarPreview`, `AccentRow`, `InfoCard`, `SecurityCard`, plus the `initialsFor` helper, to keep the screen file slim.
+- `lib/src/features/auth/auth_repository.dart` — added `deleteCurrentUser()` (Firebase Auth `currentUser?.delete()`); rules-driven Firestore data lifecycle is unchanged (cleanup happens via `leave(...)` before deletion in the UI flow).
+- New `lib/src/features/members/member_detail_screen.dart` (196 LOC) — `/members/:memberId` route. Hero (avatar + name + role + access pill), contact card (email if available — pulled from auth metadata when the member is the viewer themselves; otherwise hidden by rules), monthly activity card (`expensesProvider` filter by spender), creator-only "Ubah akses" + "Keluarkan dari household" actions. Uses `AccessPickerSheet.show(...)` for the level picker.
+- New `lib/src/features/members/widgets/access_picker_sheet.dart` (153 LOC) — three-radio sheet (`full` / `limited` / `view`) with the long-form description from `accessLevelDetail`.
+- New `lib/src/features/members/widgets/member_detail_parts.dart` (399 LOC) — `MemberHero`, `MemberContactCard`, `MemberAccessCard`, `MemberActivityCard` (member-specific UI extracted from the screen).
+
+**5c — Settings split + invite flow**:
+- `lib/src/features/settings/settings_screen.dart` — slimmed from **640 → 307 LOC** by extracting:
+  - `widgets/members_section.dart` (224 LOC) — household members list (avatar + name + role chip + access pill); tap-through to `/members/:memberId`; "Undang anggota" CTA gated by `canWriteAllProvider`.
+  - `widgets/household_section.dart` (194 LOC) — household name + payday + monthly budget editors. All write paths gated by `canWriteAllProvider`; for `view` / `limited` users the rows are read-only.
+  - `widgets/settings_row.dart` (130 LOC) — reusable `SettingsRow`, `SettingsToggleRow`, `SettingsChoiceChip` (label + value + chevron primitive shared across the screen).
+- `lib/src/features/members/invite_sheet.dart` (281 LOC) — rewrote: role picker (5 chips: Suami / Istri / Anak / Orang Tua / Lainnya) + access-level radio (`Full akses` / `Catat transaksi` / `Lihat saja`) + generated `FT-XXXX` code with copy + WhatsApp share. `createInvite(...)` is called with both role + level so the joiner inherits the inviter's choice.
+- New `lib/src/features/members/widgets/invite_sheet_parts.dart` (246 LOC) — `InviteHeading`, `RoleChip`, `AccessOption`, `GhostButton`, `SheetGrabber`.
+
+**5d — Notifications**:
+- New `lib/src/features/notifications/notification_providers.dart` (164 LOC) — `AppNotification` (icon + tone + title + subtitle + timestamp + `onTap`) and a derived `notificationsProvider` that aggregates: budget-warning chips when category usage >80%, card statements with `daysUntilDue ≤ 7`, goal milestone hits (50% / 75% / 100%), recent member spend > 100k IDR. Sorted desc by timestamp.
+- New `lib/src/features/notifications/notifications_screen.dart` (211 LOC) — `/notifications` route. Groups by "Baru" (last 24h) and "Minggu ini"; empty state when none. Bell icon in `home_header.dart` now pushes here instead of opening a snackbar.
+
+**5e — Access gating + cleanup**:
+- `lib/src/features/expenses/record_expense_screen.dart` + `lib/src/features/incomes/record_income_screen.dart` — submit dot's `enabled` flag now ANDs in `ref.watch(canRecordTxnProvider)`. `view` users can open the screens but can't submit.
+- `lib/src/ui/ft_action_sheet.dart` — `ActionChooserSheet` is now a `ConsumerWidget`. The action list is filtered by access level; "Catat Pengeluaran" + "Catat Pemasukan" need `canRecordTxn`; "Sesuaikan Aset" needs `canWriteAll`. View-only users see a one-line message instead of empty.
+- `lib/src/ui/ft_ui.dart` — central FAB (`_CatatAktivitasFab`) becomes invisible when the user has no write permissions at all.
+- `lib/src/router.dart` — added routes for `/profile/edit`, `/members/:memberId`, `/notifications`. Removed the `/insights` route + import (legacy analytics screen — Phase 4 already migrated home + Phase 5 menu to `/health`).
+- `lib/src/features/home/home_screen.dart` — mounts `orphanedMembershipCleanupProvider`. The "insights" entry in the home menu now routes to `/health`.
+- `lib/src/features/home/widgets/home_header.dart` — bell tap now pushes `/notifications`.
+
+**5f — Docs**:
+- `AGENTS.md` — replaced the "Roles: labels only for now" line with the new access-tier model: roles stay labels, `accessLevel` (`full`/`limited`/`view`) drives the actual gating; rules + Riverpod providers are the single source of truth.
+- `SCHEMA.md` — updated `households/{hid}` to include `memberAccess: map<uid, level>` and `accessLevel` per member; updated `invites/{code}` to include `role` + `accessLevel`; replaced the inline rules sketch with a pointer to `firestore.rules`; bumped doc'd `schemaVersion` to 2 and noted the synchronization invariants for `memberIds` / `memberAccess` / `members[]`.
+
+### Deviations from plan
+
+- The plan called for two separate "remove member" + "change role" flows. We collapsed them into a single `/members/:memberId` screen with creator-only "Ubah akses" and "Keluarkan dari household" actions; the invite chips already cover initial role assignment so a separate role-change UI was redundant.
+- `accessLevel` defaults to `full` (instead of `limited`) for the member created during `create(...)` — the creator must always have full access. Joiners default to whatever the invite specified (most invites default to `limited`).
+- We did NOT add a Cloud Function to clean up `users/{uid}.householdId` when a creator removes a member; rules forbid it. Instead, the removed user's own client cleans up via `orphanedMembershipCleanupProvider`. This mirrors the existing `leave(...)` flow which the user runs themselves.
+- `/insights` was removed entirely instead of redirected — the existing screen pre-dated the Phase 4 health screen and provided strictly less detail. Anything that linked to `/insights` (home menu) now points at `/health`.
+- Member-management methods (`removeMember`, `updateMemberAccess`, `updateMyProfile`) were extracted into a Dart `part` file (`member_management.dart`) instead of a separate class so they retain access to `_db` / `_households` and the existing provider doesn't need to compose two repos.
+
+### Verification
+
+- `flutter analyze` → **10 issues**, all pre-existing info-level lints in code outside Phase 5 scope (unnecessary `ft_motion` imports in card / home / spend widgets, one unused `_runIncomes` declaration from earlier work, two const-ctor hints in `ft_ui.dart`, one unused `go_router` import in `income_log_screen.dart`). **0 new warnings, 0 errors from Phase 5.**
+- File LOC after Phase 5 (all Phase 5 files under 400 ✓):
+  - `household.dart`: 299; `household_repository.dart`: 361 (was 464, split via `member_management.dart` part file at 109 LOC); `household_providers.dart`: 86
+  - `settings_screen.dart`: 307 (was 640); `widgets/members_section.dart`: 224; `widgets/household_section.dart`: 194; `widgets/settings_row.dart`: 130
+  - `profile/edit_profile_screen.dart`: 188; `profile/widgets/edit_profile_parts.dart`: 366
+  - `members/member_detail_screen.dart`: 196; `members/widgets/access_picker_sheet.dart`: 153; `members/widgets/member_detail_parts.dart`: 399; `members/invite_sheet.dart`: 281; `members/widgets/invite_sheet_parts.dart`: 246
+  - `notifications/notification_providers.dart`: 164; `notifications/notifications_screen.dart`: 211
+- Files still above 400 LOC after Phase 5 (none introduced by this phase — all pre-existing): `home/widgets/home_b_body.dart` 411, `investments/investments_screen.dart` 414, `expenses/expense_log_screen.dart` 416, `spend/spend_screen.dart` 422, `categories/category_detail_screen.dart` 450, `accounts/widgets/investasi_list.dart` 404, `ft_ui.dart` 775. None block Phase 5 acceptance; `ft_ui.dart` is intentionally a single chrome library.
+- Rules sanity check (manual, against `firestore.rules`): `view` user trying to `update` an expense fails on `canTxn()`; `limited` user trying to `update` a card fails on `canFull()`; non-member trying to `list` households fails on the explicit `list` deny; non-member trying to `get` an invite by known code succeeds (needed for accept-invite preview).

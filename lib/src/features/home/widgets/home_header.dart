@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../theme.dart';
 import '../../../ui/ft_haptics.dart';
@@ -191,11 +192,7 @@ class _BellButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return FtTapScale(
       scale: 0.92,
-      onTap: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Notifikasi: tidak ada yang baru.')),
-        );
-      },
+      onTap: () => context.push('/notifications'),
       child: Container(
         width: 38,
         height: 38,
@@ -271,7 +268,7 @@ class _OverflowMenu extends StatelessWidget {
           value: 'settings',
           child: _MenuRow(icon: Icons.settings_rounded, label: 'Pengaturan'),
         ),
-        const PopupMenuDivider(),
+        PopupMenuDivider(),
         PopupMenuItem(
           value: 'signout',
           child: _MenuRow(

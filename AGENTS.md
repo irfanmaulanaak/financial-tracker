@@ -55,7 +55,13 @@ Update this section as the project evolves.
 - Goals: shared OR personal (both)
 - Assets: pooled (no per-member breakdown)
 - Health score: household level
-- Roles (Istri/Suami/Anak): labels only for now, will add permissions gating later if possible
+- Roles (Suami/Istri/Anak/Orang Tua/Lainnya): display label only, no gating
+- Access tiers (full / limited / view): real permission gating, persisted on
+  `households/{hid}.members[].accessLevel` and mirrored to a fast-lookup map
+  `members.memberAccess: {<uid>: 'full'|'limited'|'view'}`. Enforced in
+  Firestore rules: `full` writes everywhere, `limited` writes
+  expenses+incomes only, `view` writes nothing. Access is set at invite time
+  and editable by the household creator.
 
 ### References
 - `claude-design/` → visual/UX reference only (JSX prototype; not portable code)

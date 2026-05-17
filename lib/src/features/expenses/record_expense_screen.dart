@@ -191,7 +191,9 @@ class _RecordExpenseScreenState extends ConsumerState<RecordExpenseScreen> {
               title: 'Catat pengeluaran',
               trailing: FtSubmitDot(
                 busy: _busy,
-                enabled: _amount > 0 && _categoryId != null,
+                enabled: _amount > 0 &&
+                    _categoryId != null &&
+                    ref.watch(canRecordTxnProvider),
                 onTap: () => _submit(household, cards),
               ),
             ),
