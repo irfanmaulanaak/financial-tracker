@@ -5,53 +5,59 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('InviteCode.generate', () {
-    test('always returns 6 digits', () {
+    test('always returns 22 url-safe base64 characters', () {
       for (var i = 0; i < 200; i++) {
         final code = InviteCode.generate();
-        expect(code.length, 6);
-        expect(RegExp(r'^\d{6}$').hasMatch(code), isTrue,
+        expect(code.length, 22);
+        expect(RegExp(r'^[A-Za-z0-9_-]{22}$').hasMatch(code), isTrue,
             reason: 'got "$code"');
       }
     });
 
-    test('preserves leading zeros for small numbers', () {
-      // Seeded RNG that returns 0 on first nextInt call → "000000".
-      final code = InviteCode.generate(random: _FixedRandom(0));
-      expect(code, '000000');
+    test('returns distinct tokens across many draws (sanity check)', () {
+      final seen = <String>{};
+      for (var i = 0; i < 1000; i++) {
+        seen.add(InviteCode.generate());
+      }
+      expect(seen.length, 1000);
     });
 
-    test('preserves leading zeros for small non-zero numbers', () {
-      final code = InviteCode.generate(random: _FixedRandom(42));
-      expect(code, '000042');
+    test('encodes all-zero bytes deterministically', () {
+      final code = InviteCode.generate(random: _AllZerosRandom());
+      expect(code, 'AAAAAAAAAAAAAAAAAAAAAA');
+      expect(InviteCode.isValid(code), isTrue);
     });
   });
 
   group('InviteCode.isValid', () {
-    test('accepts exactly 6 digits', () {
-      expect(InviteCode.isValid('123456'), isTrue);
-      expect(InviteCode.isValid('000000'), isTrue);
+    test('accepts a freshly generated token', () {
+      expect(InviteCode.isValid(InviteCode.generate()), isTrue);
     });
 
-    test('rejects wrong length / non-digit', () {
-      expect(InviteCode.isValid('12345'), isFalse);
-      expect(InviteCode.isValid('1234567'), isFalse);
-      expect(InviteCode.isValid('12345a'), isFalse);
+    test('rejects wrong length / unsupported chars', () {
+      expect(InviteCode.isValid('short'), isFalse);
+      expect(InviteCode.isValid('a' * 21), isFalse);
+      expect(InviteCode.isValid('a' * 23), isFalse);
+      expect(InviteCode.isValid('!' * 22), isFalse);
       expect(InviteCode.isValid(''), isFalse);
+      // Legacy 6-digit codes must no longer be accepted.
+      expect(InviteCode.isValid('123456'), isFalse);
     });
   });
 
   group('InviteCode.normalise', () {
-    test('strips spaces, hyphens, letters', () {
-      expect(InviteCode.normalise(' 123-456 '), '123456');
-      expect(InviteCode.normalise('abc123def'), '123');
+    test('trims whitespace and strips internal spaces', () {
+      expect(InviteCode.normalise(' abc 123 _de-f '), 'abc123_de-f');
+      expect(InviteCode.normalise('abc\n123'), 'abc123');
+    });
+
+    test('preserves case (token alphabet is case-sensitive)', () {
+      expect(InviteCode.normalise('AbCdEf'), 'AbCdEf');
     });
   });
 }
 
-class _FixedRandom implements Random {
-  _FixedRandom(this._value);
-  final int _value;
-
+class _AllZerosRandom implements Random {
   @override
   bool nextBool() => false;
 
@@ -59,5 +65,5 @@ class _FixedRandom implements Random {
   double nextDouble() => 0;
 
   @override
-  int nextInt(int max) => _value;
+  int nextInt(int max) => 0;
 }

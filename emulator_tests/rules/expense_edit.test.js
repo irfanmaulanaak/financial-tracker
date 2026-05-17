@@ -30,6 +30,13 @@ import {
 } from './_setup.js';
 
 function buildHousehold(creator, opts = {}) {
+  // Pop balance-only fields — they live at private/balances now (SEC-004).
+  // Tests pre-seed those via [seedBalances] below.
+  const { cashAccounts: _ca, savingsAccounts: _sa, ...rest } = opts;
+  return _buildRoot(creator, rest);
+}
+
+function _buildRoot(creator, opts = {}) {
   return {
     name: 'Keluarga A',
     creatorId: creator,
@@ -47,32 +54,43 @@ function buildHousehold(creator, opts = {}) {
         color: '#B8825A',
         joinedAt: new Date(),
         isCreator: true,
+        accessLevel: 'full',
       },
     ],
+    memberAccess: { [creator]: 'full' },
     categories: [
       { id: 'food', label: 'Food', icon: 'restaurant', color: '#F59E0B',
         monthlyBudget: 0, archived: false, sortOrder: 0 },
       { id: 'fun', label: 'Hiburan', icon: 'movie', color: '#EC4899',
         monthlyBudget: 0, archived: false, sortOrder: 1 },
     ],
-    paymentMethods: [
-      { id: 'cash', label: 'Tunai', type: 'cash', builtIn: true },
-    ],
-    cashAccounts: [],
-    savingsAccounts: [],
-    schemaVersion: 1,
+    schemaVersion: 3,
     ...opts,
   };
+}
+
+function balancesDoc(db, hid) {
+  return doc(db, 'households', hid, 'private', 'balances');
+}
+
+async function seedBalances(hid, { cashAccounts = [], savingsAccounts = [] } = {}) {
+  await seedWithoutRules(async (db) => {
+    await setDoc(balancesDoc(db, hid), {
+      cashAccounts,
+      savingsAccounts,
+      updatedAt: new Date(),
+    });
+  });
 }
 
 /** Mirrors ExpenseRepository.add (cash lane). */
 async function addCashExpense(db, hid, { amount, categoryId, spentBy, sourceAccountId }) {
   const expRef = doc(collection(db, 'households', hid, 'expenses'));
-  const hRef = doc(db, 'households', hid);
+  const balRef = balancesDoc(db, hid);
   await runTransaction(db, async (tx) => {
-    const hSnap = await tx.get(hRef);
-    const cash = hSnap.data().cashAccounts || [];
-    const savings = hSnap.data().savingsAccounts || [];
+    const bSnap = await tx.get(balRef);
+    const cash = bSnap.data()?.cashAccounts || [];
+    const savings = bSnap.data()?.savingsAccounts || [];
     const isCash = cash.some((a) => a.id === sourceAccountId);
     const isSavings = savings.some((a) => a.id === sourceAccountId);
     if (!isCash && !isSavings) throw new Error('account_missing');
@@ -85,7 +103,7 @@ async function addCashExpense(db, hid, { amount, categoryId, spentBy, sourceAcco
       date: new Date(), recurring: false,
       createdAt: new Date(), createdBy: spentBy,
     });
-    tx.update(hRef, {
+    tx.update(balRef, {
       [isCash ? 'cashAccounts' : 'savingsAccounts']: updated,
     });
   });
@@ -117,7 +135,7 @@ async function addCardExpense(db, hid, { amount, categoryId, spentBy, cardId }) 
  */
 async function updateExpense(db, hid, expenseId, patch) {
   const expRef = doc(db, 'households', hid, 'expenses', expenseId);
-  const hRef = doc(db, 'households', hid);
+  const balRef = balancesDoc(db, hid);
 
   await runTransaction(db, async (tx) => {
     const eSnap = await tx.get(expRef);
@@ -126,9 +144,10 @@ async function updateExpense(db, hid, expenseId, patch) {
     const isCicilan = !!old.installmentPlanId;
     if (isCicilan) {
       const laneChanged =
-        (patch.newCardId ?? null) !== (old.cardId ?? null) ||
-        (patch.newSourceAccountId ?? null) !== (old.sourceAccountId ?? null) ||
-        (patch.newAmount ?? old.amount) !== old.amount;
+        (patch.newCardId !== undefined && patch.newCardId !== old.cardId) ||
+        (patch.newSourceAccountId !== undefined &&
+          patch.newSourceAccountId !== old.sourceAccountId) ||
+        (patch.newAmount !== undefined && patch.newAmount !== old.amount);
       if (laneChanged) throw new Error('cicilan_edit_locked');
     }
 
@@ -139,9 +158,15 @@ async function updateExpense(db, hid, expenseId, patch) {
       ? doc(db, 'households', hid, 'cards', patch.newCardId)
       : null;
 
-    const hSnap = await tx.get(hRef);
-    let cash = hSnap.data().cashAccounts || [];
-    let savings = hSnap.data().savingsAccounts || [];
+    const touchesAccounts = old.sourceAccountId !== undefined ||
+      (!isCicilan && patch.newSourceAccountId !== undefined);
+    let cash = [];
+    let savings = [];
+    if (touchesAccounts) {
+      const bSnap = await tx.get(balRef);
+      cash = bSnap.data()?.cashAccounts || [];
+      savings = bSnap.data()?.savingsAccounts || [];
+    }
 
     const cardUsed = {};
     let oldCard;
@@ -205,15 +230,17 @@ async function updateExpense(db, hid, expenseId, patch) {
       cardId: isCicilan ? old.cardId : (patch.newCardId ?? null),
       sourceAccountId: isCicilan ? old.sourceAccountId : (patch.newSourceAccountId ?? null),
     };
-    // Strip nulls that Firestore would persist explicitly (mirror Expense.toMap).
-    if (updated.cardId === null) delete updated.cardId;
-    if (updated.sourceAccountId === null) delete updated.sourceAccountId;
+    // Strip nulls/undefined that Firestore would persist explicitly (mirror Expense.toMap).
+    if (updated.cardId == null) delete updated.cardId;
+    if (updated.sourceAccountId == null) delete updated.sourceAccountId;
 
     tx.set(expRef, updated);
-    tx.update(hRef, {
-      cashAccounts: cash,
-      savingsAccounts: savings,
-    });
+    if (touchesAccounts) {
+      tx.update(balRef, {
+        cashAccounts: cash,
+        savingsAccounts: savings,
+      });
+    }
     for (const [cid, used] of Object.entries(cardUsed)) {
       tx.update(doc(db, 'households', hid, 'cards', cid), { used });
     }
@@ -243,35 +270,37 @@ describe('expense edit / lane swap', () => {
   it('cash A -> cash B refunds A and debits B exactly', async () => {
     const alice = await dbAs('alice');
     await seedWithoutRules(async (db) => {
-      await setDoc(doc(db, 'households/h1'), buildHousehold('alice', {
-        cashAccounts: [
-          { id: 'a', label: 'A', value: 1_000_000, sortOrder: 0 },
-          { id: 'b', label: 'B', value: 1_000_000, sortOrder: 1 },
-        ],
-      }));
+      await setDoc(doc(db, 'households/h1'), buildHousehold('alice'));
+    });
+    await seedBalances('h1', {
+      cashAccounts: [
+        { id: 'a', label: 'A', value: 1_000_000, sortOrder: 0 },
+        { id: 'b', label: 'B', value: 1_000_000, sortOrder: 1 },
+      ],
     });
     const id = await addCashExpense(alice, 'h1', {
       amount: 100_000, categoryId: 'food', spentBy: 'alice', sourceAccountId: 'a',
     });
-    let hSnap = await getDoc(doc(alice, 'households/h1'));
-    expect(hSnap.data().cashAccounts.find((a) => a.id === 'a').value).to.equal(900_000);
+    let bSnap = await getDoc(balancesDoc(alice, 'h1'));
+    expect(bSnap.data().cashAccounts.find((a) => a.id === 'a').value).to.equal(900_000);
 
     await assertSucceeds(updateExpense(alice, 'h1', id, {
       newAmount: 100_000,
       newCategoryId: 'food',
       newSourceAccountId: 'b',
     }));
-    hSnap = await getDoc(doc(alice, 'households/h1'));
-    expect(hSnap.data().cashAccounts.find((a) => a.id === 'a').value).to.equal(1_000_000);
-    expect(hSnap.data().cashAccounts.find((a) => a.id === 'b').value).to.equal(900_000);
+    bSnap = await getDoc(balancesDoc(alice, 'h1'));
+    expect(bSnap.data().cashAccounts.find((a) => a.id === 'a').value).to.equal(1_000_000);
+    expect(bSnap.data().cashAccounts.find((a) => a.id === 'b').value).to.equal(900_000);
   });
 
   it('cash -> credit refunds the account and bumps card.used', async () => {
     const alice = await dbAs('alice');
     await seedWithoutRules(async (db) => {
-      await setDoc(doc(db, 'households/h1'), buildHousehold('alice', {
-        cashAccounts: [{ id: 'a', label: 'A', value: 1_000_000, sortOrder: 0 }],
-      }));
+      await setDoc(doc(db, 'households/h1'), buildHousehold('alice'));
+    });
+    await seedBalances('h1', {
+      cashAccounts: [{ id: 'a', label: 'A', value: 1_000_000, sortOrder: 0 }],
     });
     await seedCard('h1', 'cc1', 0);
     const id = await addCashExpense(alice, 'h1', {
@@ -284,8 +313,8 @@ describe('expense edit / lane swap', () => {
       newCardId: 'cc1',
     }));
 
-    const hSnap = await getDoc(doc(alice, 'households/h1'));
-    expect(hSnap.data().cashAccounts[0].value).to.equal(1_000_000);
+    const bSnap = await getDoc(balancesDoc(alice, 'h1'));
+    expect(bSnap.data().cashAccounts[0].value).to.equal(1_000_000);
     const cardSnap = await getDoc(doc(alice, 'households/h1/cards/cc1'));
     expect(cardSnap.data().used).to.equal(200_000);
   });
@@ -293,9 +322,10 @@ describe('expense edit / lane swap', () => {
   it('credit -> cash reverses card.used and debits the account', async () => {
     const alice = await dbAs('alice');
     await seedWithoutRules(async (db) => {
-      await setDoc(doc(db, 'households/h1'), buildHousehold('alice', {
-        cashAccounts: [{ id: 'a', label: 'A', value: 500_000, sortOrder: 0 }],
-      }));
+      await setDoc(doc(db, 'households/h1'), buildHousehold('alice'));
+    });
+    await seedBalances('h1', {
+      cashAccounts: [{ id: 'a', label: 'A', value: 500_000, sortOrder: 0 }],
     });
     await seedCard('h1', 'cc1', 0);
     const id = await addCardExpense(alice, 'h1', {
@@ -308,8 +338,8 @@ describe('expense edit / lane swap', () => {
       newSourceAccountId: 'a',
     }));
 
-    const hSnap = await getDoc(doc(alice, 'households/h1'));
-    expect(hSnap.data().cashAccounts[0].value).to.equal(200_000);
+    const bSnap = await getDoc(balancesDoc(alice, 'h1'));
+    expect(bSnap.data().cashAccounts[0].value).to.equal(200_000);
     const cardSnap = await getDoc(doc(alice, 'households/h1/cards/cc1'));
     expect(cardSnap.data().used).to.equal(0);
   });
@@ -319,6 +349,7 @@ describe('expense edit / lane swap', () => {
     await seedWithoutRules(async (db) => {
       await setDoc(doc(db, 'households/h1'), buildHousehold('alice'));
     });
+    await seedBalances('h1');
     await seedCard('h1', 'cc1', 0);
     const id = await addCardExpense(alice, 'h1', {
       amount: 100_000, categoryId: 'food', spentBy: 'alice', cardId: 'cc1',
@@ -338,9 +369,10 @@ describe('expense edit / lane swap', () => {
   it('cicilan: lane swap rejected; category-only change succeeds', async () => {
     const alice = await dbAs('alice');
     await seedWithoutRules(async (db) => {
-      await setDoc(doc(db, 'households/h1'), buildHousehold('alice', {
-        cashAccounts: [{ id: 'a', label: 'A', value: 1_000_000, sortOrder: 0 }],
-      }));
+      await setDoc(doc(db, 'households/h1'), buildHousehold('alice'));
+    });
+    await seedBalances('h1', {
+      cashAccounts: [{ id: 'a', label: 'A', value: 1_000_000, sortOrder: 0 }],
     });
     await seedCard('h1', 'cc1', 600_000);
     // Hand-seed a cicilan expense (no transactional helper needed for setup).

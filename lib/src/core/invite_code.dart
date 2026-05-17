@@ -1,23 +1,33 @@
+import 'dart:convert';
 import 'dart:math';
+import 'dart:typed_data';
 
-/// 6-digit numeric invite codes. Single-use, regenerated per invitation.
-/// Generated client-side; collision handled by Firestore (doc create fails on
-/// existing ID, caller retries).
+/// 128-bit URL-safe random invite tokens. Single-use, regenerated per
+/// invitation. The token doc id IS the credential — guessing it requires
+/// 2^128 attempts, so we keep the `invites/{token}` read open.
+///
+/// Format: 22-character base64url (no padding) of 16 random bytes from
+/// [Random.secure].
 class InviteCode {
-  static const int length = 6;
-  static final _digits = RegExp(r'^\d{6}$');
+  static const int length = 22;
+  static final _format = RegExp(r'^[A-Za-z0-9_-]{22}$');
 
-  /// Generates a random 6-digit code with leading zeros preserved.
+  /// Generates a fresh 128-bit token.
   static String generate({Random? random}) {
     final rng = random ?? Random.secure();
-    final value = rng.nextInt(1000000);
-    return value.toString().padLeft(length, '0');
+    final bytes = Uint8List(16);
+    for (var i = 0; i < bytes.length; i++) {
+      bytes[i] = rng.nextInt(256);
+    }
+    return base64Url.encode(bytes).replaceAll('=', '');
   }
 
-  /// Validates the user-entered string looks like a code (6 digits).
-  static bool isValid(String code) => _digits.hasMatch(code);
+  /// Validates the user-entered string looks like a token.
+  static bool isValid(String code) => _format.hasMatch(code);
 
-  /// Normalises raw input: strips whitespace + non-digits.
+  /// Normalises raw input: trims surrounding whitespace + strips internal
+  /// spaces/newlines. Does not touch character case — the token alphabet
+  /// is case-sensitive.
   static String normalise(String input) =>
-      input.replaceAll(RegExp(r'\D'), '').trim();
+      input.trim().replaceAll(RegExp(r'\s+'), '');
 }

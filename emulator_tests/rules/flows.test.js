@@ -6,6 +6,7 @@
 import { assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
 import { expect } from 'chai';
 import {
+  arrayUnion,
   doc,
   collection,
   getDoc,
@@ -45,8 +46,10 @@ function buildHouseholdPayload({ creatorUid, name, payday, monthlyBudget }) {
         color: '#B8825A',
         joinedAt: new Date(),
         isCreator: true,
+        accessLevel: 'full',
       },
     ],
+    memberAccess: { [creatorUid]: 'full' },
     categories: seededCategories,
     paymentMethods: [
       { id: 'cash', label: 'Tunai', type: 'cash', builtIn: true },
@@ -73,20 +76,25 @@ async function createHousehold(db, creatorUid, opts) {
   return hid;
 }
 
-/** Mirrors HouseholdRepository.createInvite. */
-async function createInvite(db, householdId, generatedBy) {
-  const code = String(Math.floor(Math.random() * 1_000_000)).padStart(6, '0');
+/** Mirrors HouseholdRepository.createInvite. 128-bit-ish dummy token id. */
+async function createInvite(db, householdId, generatedBy, opts = {}) {
+  const code = `tok_${Math.random().toString(36).slice(2)}${Date.now()}`;
   await setDoc(doc(db, 'invites', code), {
     householdId,
     generatedBy,
     generatedAt: new Date(),
     expiresAt: new Date(Date.now() + 24 * 3600 * 1000),
     consumed: false,
+    accessLevel: opts.accessLevel || 'full',
   });
   return code;
 }
 
-/** Mirrors HouseholdRepository.joinWithInvite. */
+/**
+ * Mirrors HouseholdRepository.joinWithInvite. Does NOT read the household
+ * root (members-only). Uses arrayUnion + dot-notation memberAccess; the
+ * joiner's accessLevel is pinned to the invite's `accessLevel`.
+ */
 async function joinWithInvite(db, { code, userId, displayName }) {
   return runTransaction(db, async (tx) => {
     const inviteRef = doc(db, 'invites', code);
@@ -97,8 +105,6 @@ async function joinWithInvite(db, { code, userId, displayName }) {
     if (new Date() > inv.expiresAt.toDate()) throw new Error('invite_expired');
 
     const householdRef = doc(db, 'households', inv.householdId);
-    const hSnap = await tx.get(householdRef);
-    if (!hSnap.exists()) throw new Error('household_missing');
 
     const userRef = doc(db, 'users', userId);
     const userSnap = await tx.get(userRef);
@@ -106,9 +112,7 @@ async function joinWithInvite(db, { code, userId, displayName }) {
       throw new Error('user_already_in_household');
     }
 
-    const data = hSnap.data();
-    if (data.memberIds.includes(userId)) throw new Error('already_member');
-
+    const access = inv.accessLevel || 'full';
     const newMember = {
       userId,
       displayName,
@@ -116,10 +120,12 @@ async function joinWithInvite(db, { code, userId, displayName }) {
       color: '#10B981',
       joinedAt: new Date(),
       isCreator: false,
+      accessLevel: access,
     };
     tx.update(householdRef, {
-      memberIds: [...data.memberIds, userId],
-      members: [...data.members, newMember],
+      memberIds: arrayUnion(userId),
+      members: arrayUnion(newMember),
+      [`memberAccess.${userId}`]: access,
       claimedInvite: code,
     });
     tx.update(inviteRef, {

@@ -22,36 +22,41 @@ MemberRole roleFromString(String? s) => switch (s) {
       _ => MemberRole.other,
     };
 
-/// 3-tier permission gating per member, persisted on `members[].accessLevel`.
-/// - `full`    → all writes (expenses, incomes, cards, goals, settings).
-/// - `limited` → expenses + incomes only.
-/// - `view`    → no writes.
-enum AccessLevel { full, limited, view }
+/// 2-tier permission gating per member, persisted on `members[].accessLevel`
+/// and mirrored to the root `memberAccess: {<uid>: 'full'|'limited'}` map for
+/// O(1) rule lookups.
+///
+/// - `full`    → reads everything (incl. balances); writes everything.
+/// - `limited` → cannot read balances; writes expenses + incomes only.
+///
+/// The legacy `view` tier was dropped in SEC-004 (couldn't be enforced as
+/// promised without server-built summary docs). Existing `view` rows are
+/// migrated to `limited` on next household load — see
+/// `viewToLimitedMigrationProvider`.
+enum AccessLevel { full, limited }
 
 String accessLevelToString(AccessLevel a) => switch (a) {
       AccessLevel.full => 'full',
       AccessLevel.limited => 'limited',
-      AccessLevel.view => 'view',
     };
 
 AccessLevel accessLevelFromString(String? s) => switch (s) {
       'limited' => AccessLevel.limited,
-      'view' => AccessLevel.view,
+      // Legacy: 'view' tier was removed in SEC-004; treat as 'limited'.
+      'view' => AccessLevel.limited,
       _ => AccessLevel.full,
     };
 
 String accessLevelLabel(AccessLevel a) => switch (a) {
       AccessLevel.full => 'Akses Penuh',
       AccessLevel.limited => 'Akses Terbatas',
-      AccessLevel.view => 'Lihat Saja',
     };
 
 String accessLevelDetail(AccessLevel a) => switch (a) {
       AccessLevel.full =>
         'Lihat & catat semua transaksi, saldo, tujuan, dan utang.',
       AccessLevel.limited =>
-        'Hanya bisa mencatat pengeluaran sendiri. Tidak lihat saldo.',
-      AccessLevel.view => 'Hanya melihat ringkasan bulanan. Tidak dapat mencatat.',
+        'Bisa mencatat pengeluaran dan pemasukan. Tidak melihat saldo akun.',
     };
 
 class Member {
@@ -162,6 +167,11 @@ class Household {
   final List<String> memberIds;
   final List<Member> members;
   final List<Category> categories;
+
+  /// Cash + savings balances. Persisted in `households/{hid}/private/balances`
+  /// (SEC-004) — NOT on this doc. `currentHouseholdProvider` populates them
+  /// from the balances stream for `full`-tier members; for `limited` they
+  /// stay empty (Firestore denies the read).
   final List<Account> cashAccounts;
   final List<Account> savingsAccounts;
 
@@ -178,6 +188,25 @@ class Household {
     this.cashAccounts = const [],
     this.savingsAccounts = const [],
   });
+
+  /// Returns a copy of this household with the supplied balances merged in.
+  Household withBalances({
+    required List<Account> cashAccounts,
+    required List<Account> savingsAccounts,
+  }) =>
+      Household(
+        id: id,
+        name: name,
+        creatorId: creatorId,
+        createdAt: createdAt,
+        payday: payday,
+        monthlyBudgetTotal: monthlyBudgetTotal,
+        memberIds: memberIds,
+        members: members,
+        categories: categories,
+        cashAccounts: cashAccounts,
+        savingsAccounts: savingsAccounts,
+      );
 
   /// Returns the account (cash OR savings) with the given id, or null.
   Account? accountOf(String id) {
@@ -223,9 +252,8 @@ class Household {
         'members': members.map((m) => m.toMap()).toList(),
         'memberAccess': memberAccessMap(members),
         'categories': categories.map((c) => c.toMap()).toList(),
-        'cashAccounts': cashAccounts.map((a) => a.toMap()).toList(),
-        'savingsAccounts': savingsAccounts.map((a) => a.toMap()).toList(),
-        'schemaVersion': 2,
+        // Balances live at `households/{hid}/private/balances` since SEC-004.
+        'schemaVersion': 3,
       };
 
   static Household fromSnapshot(DocumentSnapshot snap) {
@@ -243,14 +271,6 @@ class Household {
           .toList(),
       categories: ((m['categories'] as List?) ?? const [])
           .map((e) => Category.fromMap(Map<String, dynamic>.from(e as Map)))
-          .toList(),
-      cashAccounts: ((m['cashAccounts'] as List?) ?? const [])
-          .map((e) => Account.fromMap(
-              Map<String, dynamic>.from(e as Map), AccountKind.cash))
-          .toList(),
-      savingsAccounts: ((m['savingsAccounts'] as List?) ?? const [])
-          .map((e) => Account.fromMap(
-              Map<String, dynamic>.from(e as Map), AccountKind.savings))
           .toList(),
     );
   }

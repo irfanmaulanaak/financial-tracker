@@ -49,4 +49,11 @@ app.*.map.json
 /emulator_tests/package-lock.json
 /firestore-debug.log
 /firebase-debug.log
-SECURITY_ISSUES.md
+
+# Android signing — SEC-007. CI writes these at build time from secrets.
+/android/key.properties
+/android/app/upload-keystore.jks
+# SECURITY_ISSUES.md
+finsist-upload-keystore.jks
+android/key.properties
+.env

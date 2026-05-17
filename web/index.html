@@ -19,43 +19,10 @@
   <title>FinSist</title>
   <link rel="manifest" href="manifest.json">
 
-  <!-- PWA install bridge: capture beforeinstallprompt before Flutter boots,
-       expose a tiny API for Dart to read state + trigger the install dialog. -->
-  <script>
-    (function () {
-      var deferred = null;
-      var installed = false;
-      function isStandalone() {
-        return (window.matchMedia &&
-                window.matchMedia('(display-mode: standalone)').matches) ||
-               window.navigator.standalone === true;
-      }
-      function isIOS() {
-        var ua = window.navigator.userAgent || '';
-        return /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
-      }
-      window.addEventListener('beforeinstallprompt', function (e) {
-        e.preventDefault();
-        deferred = e;
-      });
-      window.addEventListener('appinstalled', function () {
-        installed = true;
-        deferred = null;
-      });
-      window.ftPwa = {
-        canPrompt: function () { return !!deferred && !isStandalone() && !installed; },
-        needsIosInstructions: function () { return isIOS() && !isStandalone() && !installed; },
-        isStandalone: isStandalone,
-        prompt: function () {
-          if (!deferred) return Promise.resolve(false);
-          var d = deferred;
-          deferred = null;
-          d.prompt();
-          return d.userChoice.then(function (c) { return c.outcome === 'accepted'; });
-        }
-      };
-    })();
-  </script>
+  <!-- Inline scripts are extracted to web/pwa-init.js + web/splash.js so the
+       CSP delivered via web/_headers can stay strict (`script-src 'self'`).
+       See SEC-006 in the security plan. -->
+  <script src="pwa-init.js"></script>
 
   <script src="flutter_bootstrap.js" async=""></script>
   
@@ -119,13 +86,7 @@
       right: 0;
     }
   </style>
-  <script id="splash-screen-script">
-    function removeSplashFromWeb() {
-      document.getElementById("splash")?.remove();
-      document.getElementById("splash-branding")?.remove();
-      document.body.style.background = "transparent";
-    }
-  </script>
+  <script id="splash-screen-script" src="splash.js"></script>
 </head><body>
   <picture id="splash">
       <source srcset="splash/img/light-1x.png 1x, splash/img/light-2x.png 2x, splash/img/light-3x.png 3x, splash/img/light-4x.png 4x" media="(prefers-color-scheme: light)">

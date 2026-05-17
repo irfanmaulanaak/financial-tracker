@@ -1,0 +1,12 @@
+# Copy to `android/key.properties` and fill in. NEVER commit the populated
+# file — it's listed in `.gitignore`. Used by `android/app/build.gradle.kts`
+# to produce a release-signed APK. In CI, the file is written from the
+# ANDROID_KEY_PROPS secret (see .github/workflows/build.yml SEC-007 step).
+
+# Path to the upload keystore (relative to android/app/ or absolute).
+storeFile=upload-keystore.jks
+
+# Keystore + key passwords. Keep these in a password manager / GH secret.
+storePassword=
+keyAlias=upload
+keyPassword=

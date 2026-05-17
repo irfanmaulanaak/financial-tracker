@@ -34,9 +34,36 @@ jobs:
       - name: flutter test
         run: flutter test
 
+  emulator:
+    name: Firestore rules emulator
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: emulator_tests/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install firebase-tools
+        run: npm i -g firebase-tools
+
+      - name: npm install (emulator_tests)
+        run: cd emulator_tests && npm ci
+
+      - name: Run rules tests against Firestore emulator
+        run: firebase emulators:exec --only firestore --project demo-ft "cd emulator_tests && npm test"
+
   android:
     name: Android APK (release, unsigned)
-    needs: test
+    needs: [test, emulator]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -54,6 +81,19 @@ jobs:
 
       - name: flutter pub get
         run: flutter pub get
+
+      # SEC-007: decode the upload keystore + drop key.properties so the
+      # release APK is signed with the production key. Skip silently on PRs
+      # from forks where the secrets aren't exposed (build then falls back
+      # to debug signing + warns loudly via build.gradle.kts).
+      - name: Set up release signing
+        if: env.ANDROID_KEYSTORE_BASE64 != ''
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_PROPS: ${{ secrets.ANDROID_KEY_PROPS }}
+        run: |
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/upload-keystore.jks
+          printf '%s\n' "$ANDROID_KEY_PROPS" > android/key.properties
 
       # Build per-ABI split APKs (smaller download per device). Output ends up
       # in build/app/outputs/flutter-apk/.
@@ -78,7 +118,7 @@ jobs:
 
   web:
     name: Web build + Cloudflare Pages deploy
-    needs: test
+    needs: [test, emulator]
     runs-on: ubuntu-latest
     # Push to main → production. PR from same repo → preview URL (skip forks,
     # since secrets aren't exposed to them).
@@ -106,7 +146,14 @@ jobs:
       - name: flutter build web
         run: |
           flutter build web --release \
-            --dart-define=APP_VERSION=${{ steps.ver.outputs.v }}
+            --dart-define=APP_VERSION=${{ steps.ver.outputs.v }} \
+            --dart-define=FT_RECAPTCHA_V3_SITE_KEY=${{ secrets.RECAPTCHA_V3_SITE_KEY }}
+
+      # Flutter web build doesn't copy arbitrary root files from web/ into
+      # build/web/. _headers carries the CSP + nosniff + Referrer + Permissions
+      # policies Cloudflare Pages serves alongside every response (SEC-006).
+      - name: Copy Cloudflare Pages _headers
+        run: cp web/_headers build/web/_headers
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3

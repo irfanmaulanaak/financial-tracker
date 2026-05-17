@@ -1,8 +1,8 @@
 /**
- * Accounts + income transactional flows. Accounts live as embedded arrays
- * (`cashAccounts`, `savingsAccounts`) on the household doc.
+ * Accounts + income transactional flows. Accounts live at
+ * `households/{hid}/private/balances` (SEC-004) — full-tier only.
  */
-import { assertSucceeds } from '@firebase/rules-unit-testing';
+import { assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
 import { expect } from 'chai';
 import {
   doc,
@@ -22,7 +22,8 @@ import {
   seedWithoutRules,
 } from './_setup.js';
 
-function buildHousehold(creator, opts = {}) {
+function buildHousehold(creator, members = []) {
+  const memberIds = [creator, ...members.map((m) => m.uid)];
   return {
     name: 'Keluarga A',
     creatorId: creator,
@@ -31,7 +32,7 @@ function buildHousehold(creator, opts = {}) {
     currency: 'IDR',
     locale: 'id-ID',
     monthlyBudgetTotal: 9000000,
-    memberIds: [creator],
+    memberIds,
     members: [
       {
         userId: creator,
@@ -40,29 +41,51 @@ function buildHousehold(creator, opts = {}) {
         color: '#B8825A',
         joinedAt: new Date(),
         isCreator: true,
+        accessLevel: 'full',
       },
+      ...members.map((m) => ({
+        userId: m.uid,
+        displayName: m.uid,
+        role: 'Istri',
+        color: '#10B981',
+        joinedAt: new Date(),
+        isCreator: false,
+        accessLevel: m.access || 'limited',
+      })),
     ],
+    memberAccess: {
+      [creator]: 'full',
+      ...Object.fromEntries(members.map((m) => [m.uid, m.access || 'limited'])),
+    },
     categories: [
       { id: 'food', label: 'Food', icon: 'restaurant', color: '#F59E0B',
         monthlyBudget: 0, archived: false, sortOrder: 0 },
     ],
-    paymentMethods: [
-      { id: 'cash', label: 'Tunai', type: 'cash', builtIn: true },
-      { id: 'cc', label: 'Kartu Kredit', type: 'credit', builtIn: true },
-    ],
-    cashAccounts: [],
-    savingsAccounts: [],
-    schemaVersion: 1,
-    ...opts,
+    schemaVersion: 3,
   };
 }
 
-/** Mirrors AccountsRepository.add (cash). */
+const balancesPath = (hid) => doc.bind(null, undefined); // placeholder
+function balancesDoc(db, hid) {
+  return doc(db, 'households', hid, 'private', 'balances');
+}
+
+async function seedBalances(hid, { cashAccounts = [], savingsAccounts = [] } = {}) {
+  await seedWithoutRules(async (db) => {
+    await setDoc(balancesDoc(db, hid), {
+      cashAccounts,
+      savingsAccounts,
+      updatedAt: new Date(),
+    });
+  });
+}
+
+/** Mirrors AccountsRepository.add (cash). Full-tier only. */
 async function addCashAccount(db, hid, { id, label, value = 0 }) {
-  const ref = doc(db, 'households', hid);
+  const ref = balancesDoc(db, hid);
   await runTransaction(db, async (tx) => {
     const snap = await tx.get(ref);
-    const cur = snap.data().cashAccounts || [];
+    const cur = snap.data()?.cashAccounts || [];
     tx.update(ref, {
       cashAccounts: [...cur, { id, label, value, sortOrder: cur.length }],
     });
@@ -71,10 +94,10 @@ async function addCashAccount(db, hid, { id, label, value = 0 }) {
 
 /** Mirrors AccountsRepository.applyDelta. */
 async function applyDelta(db, hid, accountId, delta) {
-  const ref = doc(db, 'households', hid);
+  const ref = balancesDoc(db, hid);
   await runTransaction(db, async (tx) => {
     const snap = await tx.get(ref);
-    const list = snap.data().cashAccounts || [];
+    const list = snap.data()?.cashAccounts || [];
     const updated = list.map((a) =>
       a.id === accountId
         ? { ...a, value: Math.max(0, a.value + delta) }
@@ -87,11 +110,11 @@ async function applyDelta(db, hid, accountId, delta) {
 /** Mirrors IncomeRepository.add — tx writes income + bumps account. */
 async function addIncome(db, hid, { amount, destId, receivedBy }) {
   const incomeRef = doc(collection(db, 'households', hid, 'incomes'));
-  const houseRef = doc(db, 'households', hid);
+  const balRef = balancesDoc(db, hid);
   await runTransaction(db, async (tx) => {
-    const snap = await tx.get(houseRef);
-    const cash = snap.data().cashAccounts || [];
-    const savings = snap.data().savingsAccounts || [];
+    const snap = await tx.get(balRef);
+    const cash = snap.data()?.cashAccounts || [];
+    const savings = snap.data()?.savingsAccounts || [];
     const isCash = cash.some((a) => a.id === destId);
     const isSavings = savings.some((a) => a.id === destId);
     if (!isCash && !isSavings) throw new Error('account_missing');
@@ -109,25 +132,28 @@ async function addIncome(db, hid, { amount, destId, receivedBy }) {
       createdAt: new Date(),
       createdBy: receivedBy,
     });
-    tx.update(houseRef, {
+    tx.update(balRef, {
       [isCash ? 'cashAccounts' : 'savingsAccounts']: updated,
     });
   });
   return incomeRef.id;
 }
 
-describe('flows / accounts (embedded)', () => {
+describe('flows / accounts (private/balances)', () => {
   before(async () => getTestEnv());
   afterEach(async () => clearData());
   after(async () => disposeAll());
 
-  it('member can add a cash account', async () => {
+  it('full-tier member can add a cash account', async () => {
     const alice = await dbAs('alice');
     await seedWithoutRules(async (db) => {
       await setDoc(doc(db, 'households/h1'), buildHousehold('alice'));
     });
-    await assertSucceeds(addCashAccount(alice, 'h1', { id: 'a1', label: 'Dompet', value: 500000 }));
-    const snap = await getDoc(doc(alice, 'households/h1'));
+    await seedBalances('h1');
+    await assertSucceeds(addCashAccount(alice, 'h1', {
+      id: 'a1', label: 'Dompet', value: 500000,
+    }));
+    const snap = await getDoc(balancesDoc(alice, 'h1'));
     expect(snap.data().cashAccounts).to.have.lengthOf(1);
     expect(snap.data().cashAccounts[0].value).to.equal(500000);
   });
@@ -135,17 +161,73 @@ describe('flows / accounts (embedded)', () => {
   it('applyDelta increases + clamps at zero', async () => {
     const alice = await dbAs('alice');
     await seedWithoutRules(async (db) => {
-      await setDoc(doc(db, 'households/h1'), buildHousehold('alice', {
-        cashAccounts: [{ id: 'a1', label: 'Dompet', value: 100000, sortOrder: 0 }],
-      }));
+      await setDoc(doc(db, 'households/h1'), buildHousehold('alice'));
+    });
+    await seedBalances('h1', {
+      cashAccounts: [{ id: 'a1', label: 'Dompet', value: 100000, sortOrder: 0 }],
     });
     await applyDelta(alice, 'h1', 'a1', 50000);
-    let snap = await getDoc(doc(alice, 'households/h1'));
+    let snap = await getDoc(balancesDoc(alice, 'h1'));
     expect(snap.data().cashAccounts[0].value).to.equal(150000);
 
-    await applyDelta(alice, 'h1', 'a1', -1000000); // huge negative
-    snap = await getDoc(doc(alice, 'households/h1'));
-    expect(snap.data().cashAccounts[0].value).to.equal(0); // clamped
+    await applyDelta(alice, 'h1', 'a1', -1000000);
+    snap = await getDoc(balancesDoc(alice, 'h1'));
+    expect(snap.data().cashAccounts[0].value).to.equal(0);
+  });
+});
+
+describe('SEC-004 / balances privacy', () => {
+  before(async () => getTestEnv());
+  afterEach(async () => clearData());
+  after(async () => disposeAll());
+
+  it('limited-tier member is denied read of balances doc', async () => {
+    await seedWithoutRules(async (db) => {
+      await setDoc(doc(db, 'households/h1'),
+        buildHousehold('alice', [{ uid: 'bob', access: 'limited' }]));
+    });
+    await seedBalances('h1', {
+      cashAccounts: [{ id: 'a1', label: 'Secret', value: 999999, sortOrder: 0 }],
+    });
+    const bob = await dbAs('bob');
+    await assertFails(getDoc(balancesDoc(bob, 'h1')));
+  });
+
+  it('limited-tier member is denied write of balances doc', async () => {
+    await seedWithoutRules(async (db) => {
+      await setDoc(doc(db, 'households/h1'),
+        buildHousehold('alice', [{ uid: 'bob', access: 'limited' }]));
+    });
+    await seedBalances('h1');
+    const bob = await dbAs('bob');
+    await assertFails(
+      setDoc(balancesDoc(bob, 'h1'), {
+        cashAccounts: [{ id: 'x', label: 'New', value: 1, sortOrder: 0 }],
+        savingsAccounts: [],
+        updatedAt: new Date(),
+      }),
+    );
+  });
+
+  it('non-member is denied read of balances doc', async () => {
+    await seedWithoutRules(async (db) => {
+      await setDoc(doc(db, 'households/h1'), buildHousehold('alice'));
+    });
+    await seedBalances('h1');
+    const eve = await dbAs('eve');
+    await assertFails(getDoc(balancesDoc(eve, 'h1')));
+  });
+
+  it('full-tier member can read and write balances doc', async () => {
+    const alice = await dbAs('alice');
+    await seedWithoutRules(async (db) => {
+      await setDoc(doc(db, 'households/h1'), buildHousehold('alice'));
+    });
+    await seedBalances('h1', {
+      cashAccounts: [{ id: 'a1', label: 'Dompet', value: 100, sortOrder: 0 }],
+    });
+    const read = await assertSucceeds(getDoc(balancesDoc(alice, 'h1')));
+    expect(read.data().cashAccounts[0].value).to.equal(100);
   });
 });
 
@@ -157,14 +239,15 @@ describe('flows / income (transaction bumps destination)', () => {
   it('income writes doc AND bumps destination cash account atomically', async () => {
     const alice = await dbAs('alice');
     await seedWithoutRules(async (db) => {
-      await setDoc(doc(db, 'households/h1'), buildHousehold('alice', {
-        cashAccounts: [{ id: 'bca', label: 'BCA', value: 1000000, sortOrder: 0 }],
-      }));
+      await setDoc(doc(db, 'households/h1'), buildHousehold('alice'));
+    });
+    await seedBalances('h1', {
+      cashAccounts: [{ id: 'bca', label: 'BCA', value: 1000000, sortOrder: 0 }],
     });
     await addIncome(alice, 'h1', { amount: 5000000, destId: 'bca', receivedBy: 'alice' });
 
-    const hSnap = await getDoc(doc(alice, 'households/h1'));
-    expect(hSnap.data().cashAccounts[0].value).to.equal(6000000);
+    const balSnap = await getDoc(balancesDoc(alice, 'h1'));
+    expect(balSnap.data().cashAccounts[0].value).to.equal(6000000);
 
     const list = await getDocs(collection(alice, 'households/h1/incomes'));
     expect(list.size).to.equal(1);
@@ -175,13 +258,14 @@ describe('flows / income (transaction bumps destination)', () => {
   it('income to savings account bumps savingsAccounts', async () => {
     const alice = await dbAs('alice');
     await seedWithoutRules(async (db) => {
-      await setDoc(doc(db, 'households/h1'), buildHousehold('alice', {
-        savingsAccounts: [{ id: 'sv', label: 'Tabungan', value: 0, sortOrder: 0 }],
-      }));
+      await setDoc(doc(db, 'households/h1'), buildHousehold('alice'));
+    });
+    await seedBalances('h1', {
+      savingsAccounts: [{ id: 'sv', label: 'Tabungan', value: 0, sortOrder: 0 }],
     });
     await addIncome(alice, 'h1', { amount: 2000000, destId: 'sv', receivedBy: 'alice' });
-    const hSnap = await getDoc(doc(alice, 'households/h1'));
-    expect(hSnap.data().savingsAccounts[0].value).to.equal(2000000);
+    const balSnap = await getDoc(balancesDoc(alice, 'h1'));
+    expect(balSnap.data().savingsAccounts[0].value).to.equal(2000000);
   });
 
   it('rejects income to unknown account', async () => {
@@ -189,6 +273,7 @@ describe('flows / income (transaction bumps destination)', () => {
     await seedWithoutRules(async (db) => {
       await setDoc(doc(db, 'households/h1'), buildHousehold('alice'));
     });
+    await seedBalances('h1');
     let err;
     try {
       await addIncome(alice, 'h1', { amount: 100, destId: 'ghost', receivedBy: 'alice' });

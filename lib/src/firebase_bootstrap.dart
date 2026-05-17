@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
@@ -19,13 +20,38 @@ const _defaultGoogleWebClientId =
 const _googleWebClientIdOverride =
     String.fromEnvironment('FT_GOOGLE_WEB_CLIENT_ID');
 
+/// reCAPTCHA v3 site key for Firebase App Check on web. Pass at build time via
+/// `--dart-define=FT_RECAPTCHA_V3_SITE_KEY=...`. Empty by default so debug web
+/// builds fall back to the App Check debug provider.
+const _recaptchaV3SiteKey =
+    String.fromEnvironment('FT_RECAPTCHA_V3_SITE_KEY');
+
 /// Initialises Firebase. If `FT_USE_EMULATOR=1` is set (or `useEmulator` is
 /// passed manually), wires both Auth + Firestore to the local emulator.
 Future<void> bootstrapFirebase({bool? useEmulator}) async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // Native google_sign_in v7 requires a one-shot init. Web uses Firebase Auth's
-  // popup flow in AuthRepository, so it does not need google_sign_in init.
+  final shouldUseEmulator =
+      useEmulator ?? const String.fromEnvironment('FT_USE_EMULATOR') == '1';
+
+  // App Check must activate BEFORE any Firestore/Auth call. In debug / emulator
+  // builds we use the debug provider so dev machines without a real attestation
+  // signal can still talk to Firebase. Production builds use Play Integrity
+  // (Android), App Attest (iOS), and reCAPTCHA v3 (web). Enable enforcement in
+  // the Firebase console only after this is rolled out to all users.
+  final useDebugProvider = kDebugMode || shouldUseEmulator;
+  await FirebaseAppCheck.instance.activate(
+    providerAndroid: useDebugProvider
+        ? const AndroidDebugProvider()
+        : const AndroidPlayIntegrityProvider(),
+    providerApple: useDebugProvider
+        ? const AppleDebugProvider()
+        : const AppleAppAttestProvider(),
+    providerWeb: useDebugProvider || _recaptchaV3SiteKey.trim().isEmpty
+        ? ReCaptchaV3Provider('debug')
+        : ReCaptchaV3Provider(_recaptchaV3SiteKey.trim()),
+  );
+
   if (!kIsWeb) {
     final serverClientId = _googleWebClientIdOverride.trim().isEmpty
         ? _defaultGoogleWebClientId
@@ -37,11 +63,8 @@ Future<void> bootstrapFirebase({bool? useEmulator}) async {
     }
   }
 
-  final shouldUseEmulator =
-      useEmulator ?? const String.fromEnvironment('FT_USE_EMULATOR') == '1';
   if (!shouldUseEmulator) return;
 
-  // Emulators run on the host machine. Android emulator must route via 10.0.2.2.
   final host = (!kIsWeb && Platform.isAndroid) ? '10.0.2.2' : 'localhost';
   await FirebaseAuth.instance.useAuthEmulator(host, 9099);
   FirebaseFirestore.instance.useFirestoreEmulator(host, 8080);

@@ -1,5 +1,6 @@
 import { assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
 import {
+  arrayUnion,
   doc,
   getDoc,
   setDoc,
@@ -34,7 +35,9 @@ const baseHousehold = (creatorUid, memberIds) => ({
     color: '#B8825A',
     joinedAt: new Date(),
     isCreator: uid === creatorUid,
+    accessLevel: 'full',
   })),
+  memberAccess: Object.fromEntries(memberIds.map((uid) => [uid, 'full'])),
   categories: [],
   paymentMethods: [],
   schemaVersion: 1,
@@ -74,12 +77,12 @@ describe('rules / households/{hid}', () => {
     await assertSucceeds(getDoc(doc(bobDb, 'households/h1')));
   });
 
-  it('non-member (authed) can read root doc (relaxed for join flow)', async () => {
+  it('non-member is denied root read (preview lives on invite doc)', async () => {
     await seedWithoutRules(async (db) => {
       await setDoc(doc(db, 'households/h1'), baseHousehold('alice', ['alice']));
     });
     const eveDb = await dbAs('eve');
-    await assertSucceeds(getDoc(doc(eveDb, 'households/h1')));
+    await assertFails(getDoc(doc(eveDb, 'households/h1')));
   });
 
   it('member can update', async () => {
@@ -117,14 +120,26 @@ describe('rules / households/{hid}', () => {
     );
   });
 
-  // Helper: simulates the Dart join transaction (household update + invite consume).
+  // Helper: simulates the Dart join transaction.
+  // Mirrors `HouseholdRepository.joinWithInvite`: NO household root read
+  // (non-member is denied). Uses arrayUnion + dot-notation memberAccess +
+  // pins memberAccess[joiner] to the invite's accessLevel.
   function joinTx(db, hid, code, joiner) {
     return runTransaction(db, async (tx) => {
-      const hSnap = await tx.get(doc(db, 'households', hid));
-      await tx.get(doc(db, 'invites', code));
-      const ids = (hSnap.data()?.memberIds || []).concat(joiner);
+      const inviteSnap = await tx.get(doc(db, 'invites', code));
+      const access = inviteSnap.data()?.accessLevel || 'full';
       tx.update(doc(db, 'households', hid), {
-        memberIds: ids,
+        memberIds: arrayUnion(joiner),
+        members: arrayUnion({
+          userId: joiner,
+          displayName: joiner,
+          role: 'Istri',
+          color: '#10B981',
+          joinedAt: new Date(),
+          isCreator: false,
+          accessLevel: access,
+        }),
+        [`memberAccess.${joiner}`]: access,
         claimedInvite: code,
       });
       tx.update(doc(db, 'invites', code), {
@@ -144,6 +159,7 @@ describe('rules / households/{hid}', () => {
         generatedAt: new Date(),
         expiresAt: new Date(Date.now() + 24 * 3600 * 1000),
         consumed: false,
+        accessLevel: 'full',
       });
     });
     const bobDb = await dbAs('bob');
@@ -169,6 +185,7 @@ describe('rules / households/{hid}', () => {
         generatedAt: new Date(),
         expiresAt: new Date(Date.now() + 24 * 3600 * 1000),
         consumed: false,
+        accessLevel: 'full',
       });
     });
     const bobDb = await dbAs('bob');
@@ -190,6 +207,7 @@ describe('rules / households/{hid}', () => {
         expiresAt: new Date(Date.now() + 24 * 3600 * 1000),
         consumed: true,
         consumedBy: 'carol',
+        accessLevel: 'full',
       });
     });
     const bobDb = await dbAs('bob');
@@ -205,6 +223,7 @@ describe('rules / households/{hid}', () => {
         generatedAt: new Date(),
         expiresAt: new Date(Date.now() + 24 * 3600 * 1000),
         consumed: false,
+        accessLevel: 'full',
       });
     });
     const bobDb = await dbAs('bob');
@@ -220,6 +239,7 @@ describe('rules / households/{hid}', () => {
         generatedAt: new Date(),
         expiresAt: new Date(Date.now() + 24 * 3600 * 1000),
         consumed: false,
+        accessLevel: 'full',
       });
     });
     const bobDb = await dbAs('bob');

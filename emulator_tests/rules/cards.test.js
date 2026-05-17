@@ -40,8 +40,10 @@ function buildHousehold(creator) {
         color: '#B8825A',
         joinedAt: new Date(),
         isCreator: true,
+        accessLevel: 'full',
       },
     ],
+    memberAccess: { [creator]: 'full' },
     categories: [
       { id: 'food', label: 'Food', icon: 'restaurant', color: '#F59E0B',
         monthlyBudget: 0, archived: false, sortOrder: 0 },
