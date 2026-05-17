@@ -93,18 +93,7 @@ class CardsScreen extends ConsumerWidget {
             child: ListView(
               padding: const EdgeInsets.only(bottom: 120),
               children: [
-                FtSubHeader(
-                  title: 'Utang & Kartu Kredit',
-                  trailing: FtAddButton(
-                    tooltip: 'Tambah kartu',
-                    onTap: () => _openAddSheet(
-                      context,
-                      ref,
-                      household.id,
-                      household.members.first.userId,
-                    ),
-                  ),
-                ),
+                const FtSubHeader(title: 'Utang & Kartu Kredit'),
                 FtCard(
                   margin: const EdgeInsets.fromLTRB(22, 4, 22, 18),
                   child: Column(
@@ -195,6 +184,16 @@ class CardsScreen extends ConsumerWidget {
                         onTap: () => context.push('/cards/${c.id}'),
                       ),
                     ),
+                FtDashedAdd(
+                  margin: const EdgeInsets.fromLTRB(22, 4, 22, 8),
+                  label: 'Tambah kartu kredit',
+                  onTap: () => _openAddSheet(
+                    context,
+                    ref,
+                    household.id,
+                    household.members.first.userId,
+                  ),
+                ),
                 if (items.isNotEmpty)
                   _SaranTip(
                     hid: household.id,

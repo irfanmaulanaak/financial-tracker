@@ -40,13 +40,7 @@ class _ExpenseLogScreenState extends ConsumerState<ExpenseLogScreen> {
         current: FtTab.spend,
         child: Column(
           children: [
-              FtSubHeader(
-                title: 'Pengeluaran',
-                trailing: FtAddButton(
-                  tooltip: 'Catat pengeluaran',
-                  onTap: () => context.push('/expenses/new'),
-                ),
-              ),
+              const FtSubHeader(title: 'Pengeluaran'),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 0, 10),
                 child: SingleChildScrollView(

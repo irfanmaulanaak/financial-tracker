@@ -29,6 +29,11 @@ class FinancialTrackerApp extends ConsumerWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       builder: (context, child) {
+        // Sync the static FtColors brightness to the live theme. Both
+        // `theme:` and `darkTheme:` call `buildTheme()` at construction time
+        // — the second call would otherwise leave `_brightness` stuck at
+        // `dark` regardless of which theme is currently active.
+        FtColors.setBrightness(Theme.of(context).brightness);
         final mq = MediaQuery.of(context);
         final clamped = mq.textScaler.clamp(
           minScaleFactor: 0.9,

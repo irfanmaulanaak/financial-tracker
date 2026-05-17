@@ -287,7 +287,7 @@ class _AmountDisplay extends StatelessWidget {
               child: FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Text(
-                  Money.format(amount).replaceFirst('Rp ', ''),
+                  Money.format(amount).replaceFirst(RegExp(r'^Rp\s*'), ''),
                   maxLines: 1,
                   style: Theme.of(context).textTheme.displayMedium?.copyWith(
                         fontSize: 48,

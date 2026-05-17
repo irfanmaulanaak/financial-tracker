@@ -64,15 +64,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen>
         current: FtTab.assets,
         child: Column(
           children: [
-            FtSubHeader(
-              title: 'Aset',
-              trailing: _showAddButton()
-                  ? FtAddButton(
-                      tooltip: _addTooltip(),
-                      onTap: () => _onAdd(context, household),
-                    )
-                  : null,
-            ),
+            const FtSubHeader(title: 'Aset'),
             _AssetsHero(
               cash: cashTotal,
               savings: savingsTotal,
@@ -135,6 +127,11 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen>
                     total: cashTotal,
                     accent: FtColors.sky,
                     subtitle: 'Tunai & rekening cair · siap pakai',
+                    onAdd: () => _addAccount(
+                      context,
+                      household,
+                      AccountKind.cash,
+                    ),
                   ),
                   _AccountList(
                     household: household,
@@ -142,12 +139,18 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen>
                     total: savingsTotal,
                     accent: FtColors.moss,
                     subtitle: 'Dana terkunci untuk tujuan dan dana darurat',
+                    onAdd: () => _addAccount(
+                      context,
+                      household,
+                      AccountKind.savings,
+                    ),
                   ),
                   InvestasiList(
                     householdId: household.id,
                     items: investments,
                     isLoading: investmentsAsync.isLoading,
                     error: investmentsAsync.error,
+                    onAdd: () => _addInvestment(context, household),
                   ),
                   AlokasiTab(
                     household: household,
@@ -162,47 +165,43 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen>
     );
   }
 
-  bool _showAddButton() => _tabs.index != 3; // Alokasi tab has no "add"
-  String _addTooltip() => switch (_tabs.index) {
-        0 => 'Tambah rekening tunai',
-        1 => 'Tambah tabungan',
-        2 => 'Posisi baru',
-        _ => '',
-      };
+  Future<void> _addAccount(
+    BuildContext context,
+    Household household,
+    AccountKind kind,
+  ) async {
+    final draft = await showModalBottomSheet<AccountDraft>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => AccountEditSheet(initialKind: kind),
+    );
+    if (draft == null) return;
+    await ref.read(accountsRepositoryProvider).add(
+          householdId: household.id,
+          kind: draft.kind,
+          label: draft.label,
+          hint: draft.hint,
+          value: draft.value,
+        );
+  }
 
-  Future<void> _onAdd(BuildContext context, Household household) async {
-    final tab = _tabs.index;
-    if (tab == 0 || tab == 1) {
-      final draft = await showModalBottomSheet<AccountDraft>(
-        context: context,
-        isScrollControlled: true,
-        builder: (_) => AccountEditSheet(
-          initialKind: tab == 0 ? AccountKind.cash : AccountKind.savings,
-        ),
-      );
-      if (draft == null) return;
-      await ref.read(accountsRepositoryProvider).add(
-            householdId: household.id,
-            kind: draft.kind,
-            label: draft.label,
-            hint: draft.hint,
-            value: draft.value,
-          );
-    } else if (tab == 2) {
-      final draft = await showModalBottomSheet<InvestmentDraft>(
-        context: context,
-        isScrollControlled: true,
-        builder: (_) => const InvestmentEditSheet(),
-      );
-      if (draft == null) return;
-      await ref.read(investmentsRepositoryProvider).add(
-            hid: household.id,
-            label: draft.label,
-            type: draft.type,
-            currentValue: draft.currentValue,
-            costBasis: draft.costBasis,
-          );
-    }
+  Future<void> _addInvestment(
+    BuildContext context,
+    Household household,
+  ) async {
+    final draft = await showModalBottomSheet<InvestmentDraft>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => const InvestmentEditSheet(),
+    );
+    if (draft == null) return;
+    await ref.read(investmentsRepositoryProvider).add(
+          hid: household.id,
+          label: draft.label,
+          type: draft.type,
+          currentValue: draft.currentValue,
+          costBasis: draft.costBasis,
+        );
   }
 }
 
@@ -388,45 +387,55 @@ class _AccountList extends ConsumerWidget {
     required this.total,
     required this.accent,
     required this.subtitle,
+    required this.onAdd,
   });
   final Household household;
   final AccountKind kind;
   final int total;
   final Color accent;
   final String subtitle;
+  final VoidCallback onAdd;
 
   List<Account> _items() => kind == AccountKind.cash
       ? household.cashAccounts.toList()
       : household.savingsAccounts.toList();
 
+  String get _addLabel => kind == AccountKind.cash
+      ? 'Tambah rekening tunai'
+      : 'Tambah tabungan';
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final items = _items()..sort((a, b) => b.value.compareTo(a.value));
     if (items.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(22, 28, 22, 0),
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                kind == AccountKind.cash
-                    ? Icons.account_balance_wallet_outlined
-                    : Icons.savings_outlined,
-                size: 40,
-                color: FtColors.ink4,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                kind == AccountKind.cash
-                    ? 'Belum ada rekening tunai.\nTambah lewat tombol "+".'
-                    : 'Belum ada tabungan.\nTambah lewat tombol "+".',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: FtColors.ink3),
-              ),
-            ],
+      return ListView(
+        padding: const EdgeInsets.fromLTRB(22, 28, 22, 120),
+        children: [
+          Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  kind == AccountKind.cash
+                      ? Icons.account_balance_wallet_outlined
+                      : Icons.savings_outlined,
+                  size: 40,
+                  color: FtColors.ink4,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  kind == AccountKind.cash
+                      ? 'Belum ada rekening tunai.'
+                      : 'Belum ada tabungan.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: FtColors.ink3),
+                ),
+              ],
+            ),
           ),
-        ),
+          const SizedBox(height: 20),
+          FtDashedAdd(label: _addLabel, onTap: onAdd),
+        ],
       );
     }
     return ListView(
@@ -473,6 +482,8 @@ class _AccountList extends ConsumerWidget {
             ],
           ),
         ),
+        const SizedBox(height: 12),
+        FtDashedAdd(label: _addLabel, onTap: onAdd),
       ],
     );
   }

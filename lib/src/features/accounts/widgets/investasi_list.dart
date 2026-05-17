@@ -14,11 +14,13 @@ class InvestasiList extends ConsumerWidget {
     required this.items,
     required this.isLoading,
     required this.error,
+    this.onAdd,
   });
   final String householdId;
   final List<Investment> items;
   final bool isLoading;
   final Object? error;
+  final VoidCallback? onAdd;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -65,7 +67,7 @@ class InvestasiList extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(vertical: 36),
             child: Center(
               child: Text(
-                'Belum ada investasi.\nTambah posisi via tombol "+".',
+                'Belum ada investasi.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: FtColors.ink3),
               ),
@@ -78,6 +80,10 @@ class InvestasiList extends ConsumerWidget {
               onUpdate: () => _openUpdate(context, ref, i),
               onDelete: () => _confirmDelete(context, ref, i),
             ),
+        if (onAdd != null) ...[
+          const SizedBox(height: 12),
+          FtDashedAdd(label: 'Tambah posisi investasi', onTap: onAdd!),
+        ],
       ],
     );
   }

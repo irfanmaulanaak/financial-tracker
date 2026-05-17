@@ -33,13 +33,7 @@ class InvestmentsScreen extends ConsumerWidget {
         current: FtTab.assets,
         child: Column(
           children: [
-            FtSubHeader(
-              title: 'Investasi',
-              trailing: FtAddButton(
-                tooltip: 'Posisi baru',
-                onTap: () => _openAdd(context, ref, household.id),
-              ),
-            ),
+            const FtSubHeader(title: 'Investasi'),
             Expanded(
                 child: invAsync.when(
                   loading: () =>
@@ -57,7 +51,7 @@ class InvestmentsScreen extends ConsumerWidget {
                             padding: EdgeInsets.symmetric(vertical: 48),
                             child: Center(
                               child: Text(
-                                'Belum ada investasi.\nTambah posisi manual via tombol "+".',
+                                'Belum ada investasi.',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(color: FtColors.ink3),
                               ),
@@ -77,6 +71,11 @@ class InvestmentsScreen extends ConsumerWidget {
                                   _confirmDelete(context, ref, household.id, i),
                             ),
                           ),
+                        const SizedBox(height: 12),
+                        FtDashedAdd(
+                          label: 'Tambah posisi investasi',
+                          onTap: () => _openAdd(context, ref, household.id),
+                        ),
                       ],
                     );
                   },

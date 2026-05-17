@@ -33,13 +33,7 @@ class IncomeLogScreen extends ConsumerWidget {
         current: FtTab.assets,
         child: Column(
           children: [
-              FtSubHeader(
-                title: 'Pemasukan',
-                trailing: FtAddButton(
-                  tooltip: 'Catat pemasukan',
-                  onTap: () => context.push('/incomes/new'),
-                ),
-              ),
+              const FtSubHeader(title: 'Pemasukan'),
               Expanded(
                 child: incomes.when(
                   loading: () =>

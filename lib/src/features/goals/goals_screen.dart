@@ -42,14 +42,7 @@ class GoalsScreen extends ConsumerWidget {
             child: ListView(
               padding: const EdgeInsets.only(bottom: 120),
               children: [
-                FtSubHeader(
-                  title: 'Tujuan',
-                  trailing: FtAddButton(
-                    tooltip: 'Tambah tujuan',
-                    onTap: () =>
-                        _openSheet(context, ref, household.id, user.uid),
-                  ),
-                ),
+                const FtSubHeader(title: 'Tujuan'),
                 FtCard(
                   margin: const EdgeInsets.fromLTRB(22, 4, 22, 18),
                   child: Column(
@@ -105,6 +98,12 @@ class GoalsScreen extends ConsumerWidget {
                       onDelete: () =>
                           _confirmDelete(context, ref, household.id, g),
                     ),
+                FtDashedAdd(
+                  margin: const EdgeInsets.fromLTRB(22, 8, 22, 4),
+                  label: 'Tambah tujuan',
+                  onTap: () =>
+                      _openSheet(context, ref, household.id, user.uid),
+                ),
               ],
             ),
           );

@@ -382,7 +382,9 @@ class _AmountDisplay extends StatelessWidget {
               child: FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Text(
-                  Money.format(amount).replaceFirst('Rp ', ''),
+                  // Strip the leading "Rp" (with or without trailing space) —
+                  // the static "Rp" prefix is rendered separately above.
+                  Money.format(amount).replaceFirst(RegExp(r'^Rp\s*'), ''),
                   maxLines: 1,
                   style: Theme.of(context).textTheme.displayMedium?.copyWith(
                         fontSize: 48,
