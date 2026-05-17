@@ -44,3 +44,20 @@ int _lastDayOfMonth(int year, int month) {
       (month == 12) ? DateTime(year + 1, 1, 1) : DateTime(year, month + 1, 1);
   return beginningNext.subtract(const Duration(days: 1)).day;
 }
+
+/// Returns true when the investment "nilai sekarang" hasn't been refreshed
+/// in [staleAfterDays] days. Pure so we can test the threshold deterministically.
+/// Zero-value positions never count as stale (avoid nagging on dormant entries).
+bool isInvestmentStale({
+  required DateTime updatedAt,
+  required DateTime now,
+  required int currentValue,
+  int staleAfterDays = 7,
+}) {
+  if (currentValue <= 0) return false;
+  final diffDays =
+      DateTime(now.year, now.month, now.day)
+          .difference(DateTime(updatedAt.year, updatedAt.month, updatedAt.day))
+          .inDays;
+  return diffDays >= staleAfterDays;
+}

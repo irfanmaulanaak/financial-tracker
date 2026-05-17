@@ -71,7 +71,7 @@ class _JoinHouseholdScreenState extends ConsumerState<JoinHouseholdScreen> {
           children: [
             FtSubHeader(
               title: 'Gabung rumah tangga',
-              onBack: () => context.go('/'),
+              onBack: () => context.go('/landing'),
             ),
             Expanded(
               child: ListView(

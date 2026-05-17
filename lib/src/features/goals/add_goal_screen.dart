@@ -8,7 +8,6 @@ import '../../ui/ft_haptics.dart';
 import '../../ui/ft_submit_dot.dart';
 import '../../ui/ft_ui.dart';
 import '../household/household_providers.dart';
-import '../record_common/keypad.dart';
 import 'goal.dart';
 import 'goal_repository.dart';
 import 'widgets/goal_amount_fields.dart';
@@ -33,7 +32,6 @@ class _AddGoalScreenState extends ConsumerState<AddGoalScreen> {
   Color _tone = FtColors.clay;
   int _target = 0;
   int _current = 0;
-  GoalAmountField _activeField = GoalAmountField.target;
   int _monthsTo = 12;
   String? _sourceAccountId;
   bool _autoDebit = true;
@@ -46,17 +44,6 @@ class _AddGoalScreenState extends ConsumerState<AddGoalScreen> {
   void dispose() {
     _label.dispose();
     super.dispose();
-  }
-
-  void _tapKey(String k) {
-    FtHaptics.tap();
-    setState(() {
-      if (_activeField == GoalAmountField.target) {
-        _target = applyRecordKey(_target, k);
-      } else {
-        _current = applyRecordKey(_current, k);
-      }
-    });
   }
 
   void _selectPreset(GoalPreset p) {
@@ -195,14 +182,11 @@ class _AddGoalScreenState extends ConsumerState<AddGoalScreen> {
                 const Eyebrow('Jumlah'),
                 const SizedBox(height: 8),
                 GoalAmountFields(
-                  activeField: _activeField,
                   target: _target,
                   current: _current,
                   tone: _tone,
-                  onSelect: (f) {
-                    FtHaptics.select();
-                    setState(() => _activeField = f);
-                  },
+                  onChangeTarget: (v) => setState(() => _target = v),
+                  onChangeCurrent: (v) => setState(() => _current = v),
                 ),
                 const SizedBox(height: 14),
                 GoalMonthsRow(
@@ -255,7 +239,6 @@ class _AddGoalScreenState extends ConsumerState<AddGoalScreen> {
               ],
             ),
           ),
-          RecordKeypad(onTap: _tapKey),
         ],
       ),
     );

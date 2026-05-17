@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/formatters.dart';
 import '../../theme.dart';
@@ -160,10 +161,18 @@ class ExpenseDetailSheet extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 18),
-            if (canDelete)
+            if (canDelete) ...[
+              _EditButton(
+                onTap: () {
+                  Navigator.of(context).pop();
+                  context.push('/expenses/${expense.id}/edit');
+                },
+              ),
+              const SizedBox(height: 10),
               _DeleteButton(
                 onTap: () => _confirmDelete(context, ref, household),
               ),
+            ],
           ],
         ),
       ),
@@ -332,6 +341,41 @@ class _Grabber extends StatelessWidget {
         decoration: BoxDecoration(
           color: FtColors.lineStrong,
           borderRadius: BorderRadius.circular(4),
+        ),
+      ),
+    );
+  }
+}
+
+class _EditButton extends StatelessWidget {
+  const _EditButton({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return FtTapScale(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          color: FtColors.ink.withValues(alpha: 0.04),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: FtColors.line, width: 0.5),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.edit_outlined, size: 18, color: FtColors.ink),
+            const SizedBox(width: 8),
+            Text(
+              'Edit pengeluaran',
+              style: TextStyle(
+                color: FtColors.ink,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ),
       ),
     );

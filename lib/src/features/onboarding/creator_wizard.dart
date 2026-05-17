@@ -121,7 +121,7 @@ class _CreatorWizardScreenState extends ConsumerState<CreatorWizardScreen> {
             FtSubHeader(
               title: 'Buat rumah tangga',
               onBack: _step == 0 || _step == 3
-                  ? () => context.go(_step == 3 ? '/home' : '/')
+                  ? () => context.go(_step == 3 ? '/home' : '/landing')
                   : () => setState(() => _step--),
             ),
             Expanded(

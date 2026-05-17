@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/expense_aggregations.dart';
@@ -8,9 +9,16 @@ import '../expenses/expense_providers.dart';
 import '../goals/goal.dart' show Goal;
 import '../goals/goals_screen.dart' show goalsProvider;
 import '../household/household_providers.dart';
+import '../investments/investments_screen.dart' show investmentsProvider;
 
 /// Notification kinds drive the icon + tone in the UI.
-enum NotificationKind { overBudget, dueSoon, goalMilestone, memberSpend }
+enum NotificationKind {
+  overBudget,
+  dueSoon,
+  goalMilestone,
+  memberSpend,
+  investmentStale,
+}
 
 /// Group buckets shown on the screen.
 enum NotificationGroup { fresh, thisWeek }
@@ -37,7 +45,11 @@ class AppNotification {
 
 /// Derives a notification feed from existing providers. No new Firestore
 /// collection — surfaces budget over-warnings, CC dues ≤5d, goal milestones,
-/// and member spend activity.
+/// member spend activity, and stale-investment reminders.
+///
+/// Each notification carries a **stable** `ts` (tied to the underlying event
+/// or condition) rather than `DateTime.now()` so the per-user "Bersihkan"
+/// timestamp cutoff actually hides items until something new happens.
 final notificationsProvider = Provider<List<AppNotification>>((ref) {
   final household = ref.watch(currentHouseholdProvider).value;
   if (household == null) return const [];
@@ -58,6 +70,16 @@ final notificationsProvider = Provider<List<AppNotification>>((ref) {
         date: e.date,
       ),
   ]);
+  // Stable ts per category = latest expense date in that category. Advances
+  // when new spending lands, so a cleared notification re-surfaces only
+  // after the next expense in that category.
+  final latestExpenseByCat = <String, DateTime>{};
+  for (final e in cycleExpenses) {
+    final prev = latestExpenseByCat[e.categoryId];
+    if (prev == null || e.date.isAfter(prev)) {
+      latestExpenseByCat[e.categoryId] = e.date;
+    }
+  }
   for (final c in household.categories) {
     if (c.archived || c.monthlyBudget <= 0) continue;
     final spent = byCat[c.id] ?? 0;
@@ -73,7 +95,7 @@ final notificationsProvider = Provider<List<AppNotification>>((ref) {
         title: '${c.label} melebihi anggaran',
         detail:
             'Sudah Rp ${_short(spent)} dari batas Rp ${_short(c.monthlyBudget)}',
-        ts: now,
+        ts: latestExpenseByCat[c.id] ?? now,
         route: '/categories/${c.id}',
       ));
     }
@@ -86,6 +108,9 @@ final notificationsProvider = Provider<List<AppNotification>>((ref) {
     if (c.used <= 0) continue;
     final daysLeft = daysUntilDue(dueDay: c.dueDay, now: now);
     if (daysLeft == null) continue;
+    // Stable ts = the actual due date for this cycle, so "Bersihkan" hides
+    // it until next month's cycle (different due date → different ts).
+    final dueTs = _resolveDueDate(dueDay: c.dueDay, now: now);
     out.add(AppNotification(
       id: 'due-${c.id}',
       kind: NotificationKind.dueSoon,
@@ -94,7 +119,7 @@ final notificationsProvider = Provider<List<AppNotification>>((ref) {
       detail: daysLeft <= 0
           ? 'Hari ini · Rp ${_short(c.used)}'
           : '$daysLeft hari lagi · Rp ${_short(c.used)}',
-      ts: now,
+      ts: dueTs,
       route: '/cards',
     ));
   }
@@ -152,10 +177,81 @@ final notificationsProvider = Provider<List<AppNotification>>((ref) {
     ));
   }
 
+  // Stale investments (≥7 days since "nilai sekarang" update) --------------
+  final investments = ref.watch(investmentsProvider(household.id)).value ??
+      const [];
+  for (final inv in investments) {
+    if (!isInvestmentStale(
+      updatedAt: inv.updatedAt,
+      now: now,
+      currentValue: inv.currentValue,
+    )) {
+      continue;
+    }
+    final daysAgo = now.difference(inv.updatedAt).inDays;
+    out.add(AppNotification(
+      id: 'inv-stale-${inv.id}',
+      kind: NotificationKind.investmentStale,
+      group: NotificationGroup.thisWeek,
+      title: '${inv.label} belum diperbarui',
+      detail: '${daysAgo}h sejak update nilai sekarang',
+      // Stable ts = the moment this investment crossed the staleness
+      // threshold (updatedAt + 7d). Advances only when the user updates,
+      // so "Bersihkan" works correctly.
+      ts: inv.updatedAt.add(const Duration(days: 7)),
+      route: '/investments',
+    ));
+  }
+
+  // Per-user clear-all cutoff. Hide everything older than the user's
+  // `notificationsClearedAt` so new events still surface but old ones stay
+  // dismissed.
+  final userDoc = ref.watch(currentUserDocProvider).value;
+  final clearedAtRaw = userDoc?['notificationsClearedAt'];
+  final DateTime? clearedAt = clearedAtRaw is Timestamp
+      ? clearedAtRaw.toDate()
+      : (clearedAtRaw is DateTime ? clearedAtRaw : null);
+  final filtered = clearedAt == null
+      ? out
+      : out.where((n) => n.ts.isAfter(clearedAt)).toList();
+
   // Sort newest first within each group order is preserved by ts desc.
-  out.sort((a, b) => b.ts.compareTo(a.ts));
-  return out;
+  filtered.sort((a, b) => b.ts.compareTo(a.ts));
+  return filtered;
 });
+
+/// Per-user "Bersihkan semua" — writes `notificationsClearedAt` on the user
+/// doc so [notificationsProvider] hides everything older.
+final clearNotificationsProvider =
+    Provider<Future<void> Function()>((ref) {
+  return () async {
+    final user = ref.read(authStateProvider).value;
+    if (user == null) return;
+    final db = ref.read(firestoreProvider);
+    await db.collection('users').doc(user.uid).set(
+      {'notificationsClearedAt': FieldValue.serverTimestamp()},
+      SetOptions(merge: true),
+    );
+  };
+});
+
+/// Resolves the actual due date for the current cycle. Mirrors the rollover
+/// behaviour in [daysUntilDue] so the two stay in sync.
+DateTime _resolveDueDate({required int dueDay, required DateTime now}) {
+  final today = DateTime(now.year, now.month, now.day);
+  final lastInMonth =
+      DateTime(now.year, now.month + 1, 0).day; // last day of this month
+  final dom = dueDay > lastInMonth ? lastInMonth : dueDay;
+  var due = DateTime(now.year, now.month, dom);
+  if (due.isBefore(today)) {
+    final ny = now.month == 12 ? now.year + 1 : now.year;
+    final nm = now.month == 12 ? 1 : now.month + 1;
+    final lastNext = DateTime(ny, nm + 1, 0).day;
+    final domNext = dueDay > lastNext ? lastNext : dueDay;
+    due = DateTime(ny, nm, domNext);
+  }
+  return due;
+}
 
 String _short(int v) {
   if (v >= 1000000) return '${(v / 1000000).toStringAsFixed(1)} jt';

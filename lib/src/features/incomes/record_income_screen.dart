@@ -10,9 +10,8 @@ import '../../ui/ft_submit_dot.dart';
 import '../../ui/ft_ui.dart';
 import '../household/household_providers.dart';
 import '../record_common/account_picker.dart';
-import '../record_common/amount_display.dart';
-import '../record_common/keypad.dart';
 import '../record_common/meta_row.dart';
+import '../record_common/money_field.dart';
 import 'income.dart';
 import 'income_repository.dart';
 
@@ -38,11 +37,6 @@ class _RecordIncomeScreenState extends ConsumerState<RecordIncomeScreen> {
   void dispose() {
     _note.dispose();
     super.dispose();
-  }
-
-  void _tapKey(String k) {
-    FtHaptics.tap();
-    setState(() => _amount = applyRecordKey(_amount, k));
   }
 
   Future<void> _pickDate() async {
@@ -140,11 +134,11 @@ class _RecordIncomeScreenState extends ConsumerState<RecordIncomeScreen> {
                   physics: const BouncingScrollPhysics(),
                   padding: const EdgeInsets.fromLTRB(22, 8, 22, 24),
                   children: [
-                    RecordAmountDisplay(
+                    MoneyField(
                       amount: _amount,
+                      onChanged: (v) => setState(() => _amount = v),
                       eyebrow: 'Jumlah pendapatan',
                       prefix: '+Rp',
-                      cursorColor: FtColors.moss,
                       activeColor: FtColors.moss,
                     ),
                     const SizedBox(height: 24),
@@ -197,7 +191,6 @@ class _RecordIncomeScreenState extends ConsumerState<RecordIncomeScreen> {
                 ),
               ),
             ),
-            RecordKeypad(onTap: _tapKey),
           ],
         ),
       ),

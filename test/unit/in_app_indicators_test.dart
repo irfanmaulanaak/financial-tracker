@@ -63,4 +63,82 @@ void main() {
       expect(d, 4);
     });
   });
+
+  group('isInvestmentStale', () {
+    test('fresh (0 days) → not stale', () {
+      expect(
+        isInvestmentStale(
+          updatedAt: DateTime(2025, 10, 15),
+          now: DateTime(2025, 10, 15),
+          currentValue: 1_000_000,
+        ),
+        false,
+      );
+    });
+
+    test('6 days old → not stale (just under threshold)', () {
+      expect(
+        isInvestmentStale(
+          updatedAt: DateTime(2025, 10, 15),
+          now: DateTime(2025, 10, 21),
+          currentValue: 1_000_000,
+        ),
+        false,
+      );
+    });
+
+    test('exactly 7 days old → stale', () {
+      expect(
+        isInvestmentStale(
+          updatedAt: DateTime(2025, 10, 15),
+          now: DateTime(2025, 10, 22),
+          currentValue: 1_000_000,
+        ),
+        true,
+      );
+    });
+
+    test('30 days old → stale', () {
+      expect(
+        isInvestmentStale(
+          updatedAt: DateTime(2025, 10, 1),
+          now: DateTime(2025, 10, 31),
+          currentValue: 1_000_000,
+        ),
+        true,
+      );
+    });
+
+    test('zero currentValue → never stale (dormant position)', () {
+      expect(
+        isInvestmentStale(
+          updatedAt: DateTime(2024, 1, 1),
+          now: DateTime(2025, 10, 22),
+          currentValue: 0,
+        ),
+        false,
+      );
+    });
+
+    test('custom threshold honoured', () {
+      expect(
+        isInvestmentStale(
+          updatedAt: DateTime(2025, 10, 15),
+          now: DateTime(2025, 10, 22),
+          currentValue: 1_000_000,
+          staleAfterDays: 14,
+        ),
+        false,
+      );
+      expect(
+        isInvestmentStale(
+          updatedAt: DateTime(2025, 10, 1),
+          now: DateTime(2025, 10, 22),
+          currentValue: 1_000_000,
+          staleAfterDays: 14,
+        ),
+        true,
+      );
+    });
+  });
 }

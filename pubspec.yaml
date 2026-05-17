@@ -57,6 +57,18 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
 
+  # Generates iOS/Android native launch screens from a single config block.
+  # Run `dart run flutter_native_splash:create` after changing the config below.
+  flutter_native_splash: ^2.4.7
+
+# Native splash config — cream brand background matching FtColors.bg, no
+# image so the native splash hands off seamlessly to the in-app SplashScreen
+# (which paints the wordmark + spinner on the same cream).
+flutter_native_splash:
+  color: "#F1EDE4"
+  android_12:
+    color: "#F1EDE4"
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 

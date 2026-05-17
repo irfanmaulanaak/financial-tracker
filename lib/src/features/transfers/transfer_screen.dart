@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -11,8 +12,7 @@ import '../../ui/ft_submit_dot.dart';
 import '../../ui/ft_ui.dart';
 import '../household/household_providers.dart';
 import '../record_common/account_picker.dart';
-import '../record_common/amount_display.dart';
-import '../record_common/keypad.dart';
+import '../record_common/money_field.dart';
 import 'transfer_repository.dart';
 
 /// Move money between two of the household's tracked accounts. Tracked
@@ -31,9 +31,6 @@ class TransferScreen extends ConsumerStatefulWidget {
 }
 
 class _TransferScreenState extends ConsumerState<TransferScreen> {
-  /// Which numeric input is "live" — the one the bottom keypad edits.
-  /// Switching focus between Amount and Fee just flips this flag.
-  bool _amountActive = true;
   int _amount = 0;
   int _fee = 0;
   String? _sourceId;
@@ -47,17 +44,6 @@ class _TransferScreenState extends ConsumerState<TransferScreen> {
   void dispose() {
     _note.dispose();
     super.dispose();
-  }
-
-  void _tapKey(String k) {
-    FtHaptics.tap();
-    setState(() {
-      if (_amountActive) {
-        _amount = applyRecordKey(_amount, k);
-      } else {
-        _fee = applyRecordKey(_fee, k);
-      }
-    });
   }
 
   Future<void> _pickDate() async {
@@ -191,21 +177,16 @@ class _TransferScreenState extends ConsumerState<TransferScreen> {
                   physics: const BouncingScrollPhysics(),
                   padding: const EdgeInsets.fromLTRB(22, 8, 22, 24),
                   children: [
-                    GestureDetector(
-                      onTap: () => setState(() => _amountActive = true),
-                      behavior: HitTestBehavior.opaque,
-                      child: RecordAmountDisplay(
-                        amount: _amount,
-                        eyebrow: 'Jumlah pindah',
-                        cursorColor: FtColors.sky,
-                        activeColor: _amountActive ? FtColors.sky : FtColors.ink,
-                      ),
+                    MoneyField(
+                      amount: _amount,
+                      onChanged: (v) => setState(() => _amount = v),
+                      eyebrow: 'Jumlah pindah',
+                      activeColor: FtColors.sky,
                     ),
                     const SizedBox(height: 14),
                     _FeeRow(
                       fee: _fee,
-                      active: !_amountActive,
-                      onTap: () => setState(() => _amountActive = false),
+                      onChanged: (v) => setState(() => _fee = v),
                     ),
                     if (_fee > 0) ...[
                       const SizedBox(height: 6),
@@ -265,7 +246,6 @@ class _TransferScreenState extends ConsumerState<TransferScreen> {
                 ),
               ),
             ),
-            RecordKeypad(onTap: _tapKey),
           ],
         ),
       ),
@@ -273,73 +253,107 @@ class _TransferScreenState extends ConsumerState<TransferScreen> {
   }
 }
 
-class _FeeRow extends StatelessWidget {
-  const _FeeRow({
-    required this.fee,
-    required this.active,
-    required this.onTap,
-  });
+class _FeeRow extends StatefulWidget {
+  const _FeeRow({required this.fee, required this.onChanged});
   final int fee;
-  final bool active;
-  final VoidCallback onTap;
+  final ValueChanged<int> onChanged;
+
+  @override
+  State<_FeeRow> createState() => _FeeRowState();
+}
+
+class _FeeRowState extends State<_FeeRow> {
+  late final TextEditingController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = TextEditingController(text: _displayFor(widget.fee));
+  }
+
+  @override
+  void didUpdateWidget(covariant _FeeRow old) {
+    super.didUpdateWidget(old);
+    final next = _displayFor(widget.fee);
+    if (_ctrl.text != next) {
+      _ctrl.value = TextEditingValue(
+        text: next,
+        selection: TextSelection.collapsed(offset: next.length),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  static String _displayFor(int v) =>
+      v == 0 ? '' : Money.format(v).replaceFirst(RegExp(r'^Rp\s*'), '');
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: active
-              ? FtColors.sky.withValues(alpha: 0.08)
-              : FtColors.surface,
-          border: Border.all(
-            color: active ? FtColors.sky : FtColors.line,
-            width: 0.5,
-          ),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              Icons.bolt_rounded,
-              size: 16,
-              color: active ? FtColors.sky : FtColors.ink3,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Biaya transfer / top-up (opsional)',
-                    style: TextStyle(
-                      color: FtColors.ink,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Tap untuk isi pakai keypad',
-                    style: TextStyle(color: FtColors.ink3, fontSize: 11),
-                  ),
-                ],
-              ),
-            ),
-            Text(
-              Money.format(fee),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: FtColors.surface,
+        border: Border.all(color: FtColors.line, width: 0.5),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.bolt_rounded, size: 16, color: FtColors.ink3),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Biaya transfer / top-up (opsional)',
               style: TextStyle(
-                color: active ? FtColors.sky : FtColors.ink2,
-                fontSize: 14,
-                fontFeatures: const [FontFeature.tabularFigures()],
-                fontWeight: FontWeight.w600,
+                color: FtColors.ink,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
               ),
             ),
-          ],
-        ),
+          ),
+          Text(
+            'Rp ',
+            style: TextStyle(color: FtColors.ink3, fontSize: 13),
+          ),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 110, minWidth: 40),
+            child: IntrinsicWidth(
+              child: TextField(
+                controller: _ctrl,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: false),
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  ThousandsSeparatorFormatter(),
+                ],
+                textAlign: TextAlign.right,
+                decoration: const InputDecoration(
+                  isDense: true,
+                  isCollapsed: true,
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  hintText: '0',
+                  contentPadding: EdgeInsets.zero,
+                ),
+                style: TextStyle(
+                  color: FtColors.ink,
+                  fontSize: 14,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                  fontWeight: FontWeight.w600,
+                ),
+                onChanged: (raw) {
+                  final v = Money.parse(raw) ?? 0;
+                  if (v != widget.fee) widget.onChanged(v);
+                },
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -10,6 +10,7 @@ import 'features/cards/card_detail_screen.dart';
 import 'features/cards/cards_screen.dart';
 import 'features/categories/category_detail_screen.dart';
 import 'features/categories/category_manage_screen.dart';
+import 'features/expenses/edit_expense_screen.dart';
 import 'features/expenses/expense_log_screen.dart';
 import 'features/expenses/record_expense_screen.dart';
 import 'features/export/export_screen.dart';
@@ -28,6 +29,7 @@ import 'features/notifications/notifications_screen.dart';
 import 'features/onboarding/creator_wizard.dart';
 import 'features/onboarding/join_household_screen.dart';
 import 'features/onboarding/landing_screen.dart';
+import 'features/onboarding/splash_screen.dart';
 import 'features/profile/edit_profile_screen.dart';
 import 'features/settings/settings_screen.dart';
 import 'features/spend/spend_screen.dart';
@@ -51,26 +53,32 @@ final routerProvider = Provider<GoRouter>((ref) {
       final hasHousehold = hid != null && hid.isNotEmpty;
       final userDocLoading = signedIn && userDoc.isLoading;
 
-      if (loadingAuth) return null;
+      // `/` renders the in-app splash. While auth or user-doc is still
+      // loading we keep the user there so they never see a flash of
+      // landing/home before state resolves.
+      if (loadingAuth) return loc == '/' ? null : '/';
 
       final authRoutes = {'/sign-in', '/sign-up', '/sign-in-link'};
-      final onboardRoutes = {'/', '/onboard/create', '/onboard/join'};
+      final onboardRoutes = {'/landing', '/onboard/create', '/onboard/join'};
 
       if (!signedIn) {
         return authRoutes.contains(loc) ? null : '/sign-in';
       }
-      if (userDocLoading) return null;
+      if (userDocLoading) return loc == '/' ? null : '/';
       if (!hasHousehold) {
-        return onboardRoutes.contains(loc) ? null : '/';
+        return onboardRoutes.contains(loc) ? null : '/landing';
       }
-      // Signed in + has household: keep them out of auth/onboarding screens.
-      if (authRoutes.contains(loc) || onboardRoutes.contains(loc)) {
+      // Signed in + has household: keep them out of splash / auth / onboarding.
+      if (loc == '/' ||
+          authRoutes.contains(loc) ||
+          onboardRoutes.contains(loc)) {
         return '/home';
       }
       return null;
     },
     routes: [
-      GoRoute(path: '/', builder: (_, _) => const LandingScreen()),
+      GoRoute(path: '/', builder: (_, _) => const SplashScreen()),
+      GoRoute(path: '/landing', builder: (_, _) => const LandingScreen()),
       GoRoute(path: '/sign-in', builder: (_, _) => const SignInScreen()),
       GoRoute(path: '/sign-up', builder: (_, _) => const SignUpScreen()),
       GoRoute(
@@ -88,6 +96,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       _fadeRoute('/spend', (_) => const SpendScreen()),
       _fadeRoute('/expenses', (_) => const ExpenseLogScreen()),
       _fadeRoute('/expenses/new', (_) => const RecordExpenseScreen()),
+      _fadeRoute('/expenses/:expenseId/edit', (state) =>
+          EditExpenseScreen(expenseId: state.pathParameters['expenseId']!)),
       _fadeRoute('/categories', (_) => const CategoryManageScreen()),
       _fadeRoute('/categories/:categoryId', (state) =>
           CategoryDetailScreen(categoryId: state.pathParameters['categoryId']!)),

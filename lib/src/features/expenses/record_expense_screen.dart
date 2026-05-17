@@ -13,17 +13,24 @@ import '../cards/cards_screen.dart';
 import '../household/household.dart';
 import '../household/household_providers.dart';
 import '../record_common/account_picker.dart';
-import '../record_common/amount_display.dart';
 import '../record_common/card_picker.dart';
 import '../record_common/category_chip_row.dart';
 import '../record_common/installment_picker.dart';
-import '../record_common/keypad.dart';
 import '../record_common/meta_row.dart';
+import '../record_common/money_field.dart';
 import '../record_common/pay_type_toggle.dart';
+import 'expense.dart';
 import 'expense_repository.dart';
 
 class RecordExpenseScreen extends ConsumerStatefulWidget {
-  const RecordExpenseScreen({super.key});
+  const RecordExpenseScreen({super.key, this.initial});
+
+  /// When set, the screen runs in edit mode: prefills all fields and writes
+  /// via `ExpenseRepository.update` instead of `add*`.
+  final Expense? initial;
+
+  bool get isEdit => initial != null;
+  bool get isCicilan => initial?.installmentPlanId != null;
 
   @override
   ConsumerState<RecordExpenseScreen> createState() =>
@@ -47,14 +54,27 @@ class _RecordExpenseScreenState extends ConsumerState<RecordExpenseScreen> {
   String? _error;
 
   @override
+  void initState() {
+    super.initState();
+    final init = widget.initial;
+    if (init != null) {
+      _amount = init.amount;
+      _categoryId = init.categoryId;
+      _payType = init.cardId != null ? 'credit' : 'cash';
+      _sourceAccountId = init.sourceAccountId;
+      _cardId = init.cardId;
+      _spentBy = init.spentBy;
+      _date = init.date;
+      _note.text = init.note ?? '';
+      _recurring = init.recurring;
+      _cicilan = init.installmentPlanId != null;
+    }
+  }
+
+  @override
   void dispose() {
     _note.dispose();
     super.dispose();
-  }
-
-  void _tapKey(String k) {
-    FtHaptics.tap();
-    setState(() => _amount = applyRecordKey(_amount, k));
   }
 
   Future<void> _pickDate() async {
@@ -97,7 +117,20 @@ class _RecordExpenseScreenState extends ConsumerState<RecordExpenseScreen> {
       final user = ref.read(firebaseAuthProvider).currentUser!;
       final spentBy = _spentBy ?? user.uid;
 
-      if (_payType == 'credit' && _cicilan) {
+      if (widget.isEdit) {
+        await repo.update(
+          householdId: h.id,
+          expenseId: widget.initial!.id,
+          newAmount: _amount,
+          newCategoryId: _categoryId!,
+          newSpentBy: spentBy,
+          newDate: _date,
+          newSourceAccountId: _payType == 'cash' ? _sourceAccountId : null,
+          newCardId: _payType == 'credit' ? _cardId : null,
+          newNote: note,
+          newRecurring: _recurring,
+        );
+      } else if (_payType == 'credit' && _cicilan) {
         await repo.addCicilanExpense(
           householdId: h.id,
           principal: _amount,
@@ -141,6 +174,9 @@ class _RecordExpenseScreenState extends ConsumerState<RecordExpenseScreen> {
       final msg = switch (e.message) {
         'insufficient' => 'Saldo rekening sumber tidak cukup',
         'account_missing' => 'Rekening sumber tidak ditemukan',
+        'cicilan_edit_locked' =>
+          'Cicilan tidak bisa ubah jumlah/kartu. Hapus & catat ulang.',
+        'expense_missing' => 'Pengeluaran tidak ditemukan',
         _ => 'Gagal: ${e.message}',
       };
       setState(() => _error = msg);
@@ -172,6 +208,7 @@ class _RecordExpenseScreenState extends ConsumerState<RecordExpenseScreen> {
       _cardId = cards.first.id;
       _cicilanApr = cards.first.apr;
     }
+    final cicilanLock = widget.isCicilan;
     final sourceAccounts = recordAccountChoices(
       cashAccounts: household.cashAccounts,
       savingsAccounts: household.savingsAccounts,
@@ -196,7 +233,7 @@ class _RecordExpenseScreenState extends ConsumerState<RecordExpenseScreen> {
         child: Column(
           children: [
             FtSubHeader(
-              title: 'Catat pengeluaran',
+              title: widget.isEdit ? 'Edit pengeluaran' : 'Catat pengeluaran',
               trailing: FtSubmitDot(
                 busy: _busy,
                 enabled: canSubmit,
@@ -210,7 +247,20 @@ class _RecordExpenseScreenState extends ConsumerState<RecordExpenseScreen> {
                   physics: const BouncingScrollPhysics(),
                   padding: const EdgeInsets.fromLTRB(22, 8, 22, 24),
                   children: [
-                    RecordAmountDisplay(amount: _amount),
+                    if (cicilanLock) ...[
+                      _CicilanLockedBanner(),
+                      const SizedBox(height: 16),
+                    ],
+                    AbsorbPointer(
+                      absorbing: cicilanLock,
+                      child: Opacity(
+                        opacity: cicilanLock ? 0.5 : 1,
+                        child: MoneyField(
+                          amount: _amount,
+                          onChanged: (v) => setState(() => _amount = v),
+                        ),
+                      ),
+                    ),
                     const SizedBox(height: 24),
                     const Eyebrow('Kategori'),
                     const SizedBox(height: 10),
@@ -225,40 +275,56 @@ class _RecordExpenseScreenState extends ConsumerState<RecordExpenseScreen> {
                     const SizedBox(height: 22),
                     const Eyebrow('Pembayaran'),
                     const SizedBox(height: 10),
-                    PayTypeToggle(
-                      value: _payType,
-                      onChange: (v) {
-                        FtHaptics.select();
-                        setState(() => _payType = v);
-                      },
-                    ),
-                    const SizedBox(height: 14),
-                    if (_payType == 'cash')
-                      RecordAccountPicker(
-                        accounts: sourceAccounts,
-                        selectedId: _sourceAccountId,
-                        accent: FtColors.ink,
-                        onSelect: (id) {
-                          FtHaptics.select();
-                          setState(() => _sourceAccountId = id);
-                        },
-                        emptyNote:
-                            'Belum ada rekening. Pengeluaran tetap tercatat tapi saldo tidak terpotong. Tambah dari Aset → Tunai.',
-                      )
-                    else
-                      CardPicker(
-                        cards: cards,
-                        selected: _cardId,
-                        onSelect: (id) {
-                          FtHaptics.select();
-                          setState(() {
-                            _cardId = id;
-                            final c = cards.firstWhere((x) => x.id == id);
-                            _cicilanApr = c.apr;
-                          });
-                        },
+                    AbsorbPointer(
+                      absorbing: cicilanLock,
+                      child: Opacity(
+                        opacity: cicilanLock ? 0.5 : 1,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            PayTypeToggle(
+                              value: _payType,
+                              onChange: (v) {
+                                FtHaptics.select();
+                                setState(() => _payType = v);
+                              },
+                            ),
+                            const SizedBox(height: 14),
+                            if (_payType == 'cash')
+                              RecordAccountPicker(
+                                accounts: sourceAccounts,
+                                selectedId: _sourceAccountId,
+                                accent: FtColors.ink,
+                                onSelect: (id) {
+                                  FtHaptics.select();
+                                  setState(() => _sourceAccountId = id);
+                                },
+                                emptyNote:
+                                    'Belum ada rekening. Pengeluaran tetap tercatat tapi saldo tidak terpotong. Tambah dari Aset → Tunai.',
+                              )
+                            else
+                              CardPicker(
+                                cards: cards,
+                                selected: _cardId,
+                                onSelect: (id) {
+                                  FtHaptics.select();
+                                  setState(() {
+                                    _cardId = id;
+                                    final c = cards
+                                        .firstWhere((x) => x.id == id);
+                                    _cicilanApr = c.apr;
+                                  });
+                                },
+                              ),
+                          ],
+                        ),
                       ),
-                    if (_payType == 'credit' && cards.isNotEmpty) ...[
+                    ),
+                    // Cicilan picker only shown when creating a new credit
+                    // expense — in edit mode the plan is immutable.
+                    if (!widget.isEdit &&
+                        _payType == 'credit' &&
+                        cards.isNotEmpty) ...[
                       const SizedBox(height: 18),
                       const Eyebrow('Cicilan'),
                       const SizedBox(height: 10),
@@ -313,9 +379,42 @@ class _RecordExpenseScreenState extends ConsumerState<RecordExpenseScreen> {
                 ),
               ),
             ),
-            RecordKeypad(onTap: _tapKey),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _CicilanLockedBanner extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      decoration: BoxDecoration(
+        color: FtColors.plum.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: FtColors.plum.withValues(alpha: 0.24),
+          width: 0.5,
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.lock_outline, size: 16, color: FtColors.plum),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Cicilan: hanya kategori, catatan, tanggal & pencatat yang bisa diubah. Hapus & catat ulang untuk ubah jumlah/kartu.',
+              style: TextStyle(
+                color: FtColors.ink2,
+                fontSize: 12,
+                height: 1.45,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

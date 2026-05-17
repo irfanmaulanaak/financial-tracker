@@ -13,6 +13,7 @@ import '../home/widgets/mini_donut.dart';
 import '../household/household.dart';
 import '../household/household_providers.dart';
 import '../insights/insights_providers.dart';
+import 'budget_edit_sheet.dart';
 
 /// "Pengeluaran Bulanan" — donut + category breakdown drilldown.
 /// Mirrors `claude-design/screens-deep.jsx` `SpendScreen`. Tapping a category
@@ -135,8 +136,14 @@ class _SpendScreenState extends ConsumerState<SpendScreen> {
                           total: total,
                           focused:
                               _focusedCategoryId == categories[i].id,
+                          canEditBudget:
+                              ref.watch(canRecordTxnProvider),
                           onTap: () =>
                               context.push('/categories/${categories[i].id}'),
+                          onEditBudget: () => BudgetEditSheet.show(
+                            context: context,
+                            category: categories[i],
+                          ),
                           onHover: (entered) => setState(() {
                             _focusedCategoryId =
                                 entered ? categories[i].id : null;
@@ -306,14 +313,18 @@ class _CategoryRow extends StatelessWidget {
     required this.spent,
     required this.total,
     required this.focused,
+    required this.canEditBudget,
     required this.onTap,
+    required this.onEditBudget,
     required this.onHover,
   });
   final Category category;
   final int spent;
   final int total;
   final bool focused;
+  final bool canEditBudget;
   final VoidCallback onTap;
+  final VoidCallback onEditBudget;
   final ValueChanged<bool> onHover;
 
   @override
@@ -407,15 +418,41 @@ class _CategoryRow extends StatelessWidget {
                   ],
                 ),
               ),
-              Icon(
-                Icons.chevron_right_rounded,
-                size: 16,
-                color: FtColors.ink4,
-              ),
+              if (canEditBudget)
+                _BudgetMenu(onEdit: onEditBudget)
+              else
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: 16,
+                  color: FtColors.ink4,
+                ),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+class _BudgetMenu extends StatelessWidget {
+  const _BudgetMenu({required this.onEdit});
+  final VoidCallback onEdit;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<String>(
+      tooltip: 'Aksi',
+      icon: Icon(Icons.more_vert_rounded, size: 18, color: FtColors.ink3),
+      padding: EdgeInsets.zero,
+      onSelected: (v) {
+        if (v == 'budget') onEdit();
+      },
+      itemBuilder: (_) => const [
+        PopupMenuItem(
+          value: 'budget',
+          child: Text('Atur anggaran'),
+        ),
+      ],
     );
   }
 }

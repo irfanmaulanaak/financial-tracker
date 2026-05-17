@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../theme.dart';
+import '../../ui/ft_haptics.dart';
 import '../../ui/ft_ui.dart';
 import 'notification_providers.dart';
 
@@ -26,7 +27,14 @@ class NotificationsScreen extends ConsumerWidget {
         bottom: false,
         child: Column(
           children: [
-            const FtSubHeader(title: 'Notifikasi'),
+            FtSubHeader(
+              title: 'Notifikasi',
+              trailing: feed.isEmpty
+                  ? null
+                  : _ClearButton(
+                      onTap: () => _confirmClear(context, ref),
+                    ),
+            ),
             Expanded(
               child: feed.isEmpty
                   ? _Empty()
@@ -41,6 +49,51 @@ class NotificationsScreen extends ConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Future<void> _confirmClear(BuildContext context, WidgetRef ref) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Bersihkan notifikasi?'),
+        content: const Text(
+          'Semua notifikasi saat ini akan disembunyikan. Notifikasi baru tetap muncul jika ada kejadian baru.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Bersihkan'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    await ref.read(clearNotificationsProvider)();
+    FtHaptics.success();
+  }
+}
+
+class _ClearButton extends StatelessWidget {
+  const _ClearButton({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton(
+      onPressed: onTap,
+      style: TextButton.styleFrom(
+        foregroundColor: FtColors.ink2,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+      ),
+      child: const Text(
+        'Bersihkan',
+        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
       ),
     );
   }
@@ -199,6 +252,8 @@ _Tone _toneFor(NotificationKind kind) => switch (kind) {
         _Tone(FtColors.moss, Icons.flag_rounded),
       NotificationKind.memberSpend =>
         _Tone(FtColors.sky, Icons.shopping_bag_outlined),
+      NotificationKind.investmentStale =>
+        _Tone(FtColors.clay, Icons.trending_up_rounded),
     };
 
 String _ago(DateTime ts) {

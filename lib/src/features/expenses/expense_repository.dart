@@ -302,6 +302,215 @@ class ExpenseRepository {
     );
   }
 
+  /// Edits an expense atomically. Reverses the old balance side-effect
+  /// (account refund or `card.used` reduction) and applies the new one in
+  /// a single transaction. Supports lane swap (cash <-> credit) and changing
+  /// the source account or card.
+  ///
+  /// Cicilan rule: when the existing row is a cicilan expense
+  /// (`installmentPlanId != null`), only [newCategoryId], [newSpentBy],
+  /// [newDate], [newNote], and [newRecurring] are honoured — the lane,
+  /// amount, card, and installment plan stay locked. Pass through the
+  /// original values for those fields. The repo throws
+  /// `cicilan_edit_locked` if the caller tries to change them.
+  ///
+  /// Errors mirror the create paths:
+  /// - `expense_missing`, `household_missing`, `card_missing`
+  /// - `account_missing` if [newSourceAccountId] doesn't resolve
+  /// - `insufficient` if the new source account can't cover the delta
+  Future<void> update({
+    required String householdId,
+    required String expenseId,
+    required int newAmount,
+    required String newCategoryId,
+    required String newSpentBy,
+    required DateTime newDate,
+    String? newSourceAccountId,
+    String? newCardId,
+    String? newNote,
+    bool newRecurring = false,
+  }) async {
+    final expenseRef = _col(householdId).doc(expenseId);
+    final householdRef = _db.collection('households').doc(householdId);
+
+    await _db.runTransaction((tx) async {
+      final eSnap = await tx.get(expenseRef);
+      if (!eSnap.exists) throw StateError('expense_missing');
+      final old = Expense.fromSnapshot(eSnap);
+
+      // Cicilan: lock financial fields. Allow only meta edits.
+      final isCicilan = old.installmentPlanId != null;
+      if (isCicilan) {
+        final laneChanged = newCardId != old.cardId ||
+            newSourceAccountId != old.sourceAccountId ||
+            newAmount != old.amount;
+        if (laneChanged) throw StateError('cicilan_edit_locked');
+      }
+
+      // Resolve old + new lane refs up front.
+      final oldCardRef = old.cardId != null
+          ? _cardDoc(householdId, old.cardId!)
+          : null;
+      final newCardRef = (!isCicilan && newCardId != null)
+          ? _cardDoc(householdId, newCardId)
+          : null;
+
+      // 1) Read everything we may need.
+      final hSnap = await tx.get(householdRef);
+      if (!hSnap.exists) throw StateError('household_missing');
+      final household = Household.fromSnapshot(hSnap);
+
+      CreditCard? oldCard;
+      if (oldCardRef != null) {
+        final s = await tx.get(oldCardRef);
+        if (s.exists) oldCard = CreditCard.fromSnapshot(s);
+      }
+      CreditCard? newCard;
+      if (newCardRef != null && newCardRef.path != oldCardRef?.path) {
+        final s = await tx.get(newCardRef);
+        if (!s.exists) throw StateError('card_missing');
+        newCard = CreditCard.fromSnapshot(s);
+      }
+
+      // 2) Reverse old account/card effect in-memory.
+      var cashAccounts = household.cashAccounts;
+      var savingsAccounts = household.savingsAccounts;
+      final cardUsed = <String, int>{};
+      if (oldCard != null) cardUsed[oldCard.id] = oldCard.used;
+      if (newCard != null) cardUsed[newCard.id] = newCard.used;
+
+      if (old.cardId != null && !isCicilan) {
+        // Plain CC: reverse oldAmount.
+        final cur = cardUsed[old.cardId!] ?? 0;
+        cardUsed[old.cardId!] = (cur - old.amount).clamp(0, 1 << 31).toInt();
+      } else if (old.sourceAccountId != null) {
+        final res = _refundAccount(
+          cashAccounts: cashAccounts,
+          savingsAccounts: savingsAccounts,
+          accountId: old.sourceAccountId!,
+          amount: old.amount,
+        );
+        if (res != null) {
+          cashAccounts = res.$1;
+          savingsAccounts = res.$2;
+        }
+      }
+
+      // 3) Apply new side-effect. Cicilan keeps the original lane untouched
+      //    (we already reversed nothing for cicilan above).
+      if (!isCicilan) {
+        if (newCardId != null) {
+          final cur = cardUsed[newCardId] ?? 0;
+          cardUsed[newCardId] = cur + newAmount;
+        } else if (newSourceAccountId != null) {
+          final res = _debitAccount(
+            cashAccounts: cashAccounts,
+            savingsAccounts: savingsAccounts,
+            accountId: newSourceAccountId,
+            amount: newAmount,
+          );
+          cashAccounts = res.$1;
+          savingsAccounts = res.$2;
+        }
+      }
+
+      // 4) Persist updated expense + balances.
+      final updated = Expense(
+        id: old.id,
+        amount: isCicilan ? old.amount : newAmount,
+        categoryId: newCategoryId,
+        paymentMethodId: old.paymentMethodId,
+        note: (newNote ?? '').isEmpty ? null : newNote,
+        spentBy: newSpentBy,
+        date: newDate,
+        recurring: isCicilan ? old.recurring : newRecurring,
+        cardId: isCicilan ? old.cardId : newCardId,
+        installmentPlanId: old.installmentPlanId,
+        sourceAccountId: isCicilan ? old.sourceAccountId : newSourceAccountId,
+        createdAt: old.createdAt,
+        createdBy: old.createdBy,
+      );
+      tx.set(expenseRef, updated.toMap());
+
+      final touchedAccounts = !identical(cashAccounts, household.cashAccounts) ||
+          !identical(savingsAccounts, household.savingsAccounts);
+      if (touchedAccounts) {
+        tx.update(householdRef, {
+          'cashAccounts': cashAccounts.map((a) => a.toMap()).toList(),
+          'savingsAccounts': savingsAccounts.map((a) => a.toMap()).toList(),
+        });
+      }
+      cardUsed.forEach((cid, used) {
+        tx.update(_cardDoc(householdId, cid), {'used': used});
+      });
+    });
+  }
+
+  /// Returns updated (cash, savings) lists with [amount] added back to the
+  /// account matching [accountId]. Returns null if the account doesn't exist
+  /// any more (account was deleted between record + edit) — caller drops the
+  /// refund silently, same fallback as [delete].
+  (List<Account>, List<Account>)? _refundAccount({
+    required List<Account> cashAccounts,
+    required List<Account> savingsAccounts,
+    required String accountId,
+    required int amount,
+  }) {
+    final inCash = cashAccounts.where((a) => a.id == accountId).toList();
+    final inSavings = savingsAccounts.where((a) => a.id == accountId).toList();
+    if (inCash.isEmpty && inSavings.isEmpty) return null;
+    if (inCash.isNotEmpty) {
+      return (
+        cashAccounts
+            .map((a) =>
+                a.id == accountId ? a.copyWith(value: a.value + amount) : a)
+            .toList(),
+        savingsAccounts,
+      );
+    }
+    return (
+      cashAccounts,
+      savingsAccounts
+          .map((a) =>
+              a.id == accountId ? a.copyWith(value: a.value + amount) : a)
+          .toList(),
+    );
+  }
+
+  /// Returns updated (cash, savings) lists with [amount] debited from the
+  /// account matching [accountId]. Throws `account_missing` or
+  /// `insufficient` mirroring [add].
+  (List<Account>, List<Account>) _debitAccount({
+    required List<Account> cashAccounts,
+    required List<Account> savingsAccounts,
+    required String accountId,
+    required int amount,
+  }) {
+    final inCash = cashAccounts.where((a) => a.id == accountId).toList();
+    final inSavings = savingsAccounts.where((a) => a.id == accountId).toList();
+    if (inCash.isEmpty && inSavings.isEmpty) {
+      throw StateError('account_missing');
+    }
+    final source = (inCash.isNotEmpty ? inCash : inSavings).first;
+    if (source.value < amount) throw StateError('insufficient');
+    if (inCash.isNotEmpty) {
+      return (
+        cashAccounts
+            .map((a) =>
+                a.id == accountId ? a.copyWith(value: a.value - amount) : a)
+            .toList(),
+        savingsAccounts,
+      );
+    }
+    return (
+      cashAccounts,
+      savingsAccounts
+          .map((a) =>
+              a.id == accountId ? a.copyWith(value: a.value - amount) : a)
+          .toList(),
+    );
+  }
+
   /// Deletes an expense and reverses derived balances atomically:
   /// - cash/debit/e-wallet expense w/ `sourceAccountId`: refunds that
   ///   household cash- or savings-account by the same `amount`
