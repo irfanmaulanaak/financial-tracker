@@ -11,7 +11,6 @@ import '../../core/payday.dart';
 import '../../core/providers.dart';
 import '../../core/recurring_runner.dart';
 import '../../theme.dart';
-import '../../ui/ft_motion.dart';
 import '../../ui/ft_ui.dart';
 import '../auth/auth_repository.dart';
 import '../cards/credit_card.dart';
@@ -19,6 +18,7 @@ import '../cards/cards_screen.dart';
 import '../household/name_format.dart';
 import '../expenses/expense.dart';
 import '../expenses/expense_providers.dart';
+import '../goals/auto_debit_runner.dart';
 import '../goals/goal.dart';
 import '../goals/goals_screen.dart';
 import '../household/household_providers.dart';
@@ -55,6 +55,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       // Fire-and-forget; failures are non-fatal (next session retries).
       // ignore: discarded_futures
       ref.read(recurringRunnerProvider).run(householdId: loadedHid);
+      // ignore: discarded_futures
+      ref.read(autoDebitRunnerProvider).run(householdId: loadedHid);
     }
     final cycleAsync = ref.watch(cycleExpensesProvider);
     final recentAsync = ref.watch(recentExpensesProvider(5));
@@ -202,7 +204,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 onExpenses: () => context.push('/expenses'),
                 onCards: () => context.push('/cards'),
                 onGoals: () => context.push('/goals'),
-                onInsights: () => context.push('/insights'),
+                onInsights: () => context.push('/health'),
               ),
             );
           }
@@ -265,7 +267,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             flex: 10,
                             child: HealthSnapshot(
                               score: health,
-                              onTap: () => context.push('/insights'),
+                              onTap: () => context.push('/health'),
                               compact: true,
                             ),
                           ),

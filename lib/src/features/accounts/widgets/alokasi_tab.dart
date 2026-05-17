@@ -1,49 +1,58 @@
 import 'package:flutter/material.dart';
-import 'package:fl_chart/fl_chart.dart';
 
-import '../../../core/formatters.dart';
+import '../../../core/allocation_recommendation.dart';
 import '../../../theme.dart';
+import '../../../ui/ft_donut.dart';
+import '../../../ui/ft_haptics.dart';
 import '../../../ui/ft_ui.dart';
 import '../../household/household.dart';
 import '../../investments/investment.dart';
+import 'rebalance_moves.dart';
 
-class AlokasiTab extends StatelessWidget {
-  const AlokasiTab({required this.household, required this.investments});
+/// Allocation tab body: market context card → current/target donut +
+/// breakdown + summary → rebalancing moves list. Mirrors `AllocationView`
+/// in `claude-design/screens-assets.jsx`.
+class AlokasiTab extends StatefulWidget {
+  const AlokasiTab({
+    super.key,
+    required this.household,
+    required this.investments,
+  });
   final Household household;
   final List<Investment> investments;
 
   @override
+  State<AlokasiTab> createState() => _AlokasiTabState();
+}
+
+class _AlokasiTabState extends State<AlokasiTab> {
+  /// `false` = Sekarang (actual), `true` = Direkomendasikan (target).
+  bool _showTarget = true;
+
+  @override
   Widget build(BuildContext context) {
-    final cash = household.cashAccounts.fold<int>(0, (a, b) => a + b.value);
-    final savings =
-        household.savingsAccounts.fold<int>(0, (a, b) => a + b.value);
-    final byType = <InvestmentType, int>{};
-    for (final i in investments) {
-      byType[i.type] = (byType[i.type] ?? 0) + i.currentValue;
-    }
-
-    final liquid = cash + savings;
-    final growth = (byType[InvestmentType.saham] ?? 0) +
-        (byType[InvestmentType.reksadana] ?? 0);
-    final stable = (byType[InvestmentType.deposito] ?? 0) +
-        (byType[InvestmentType.lainnya] ?? 0);
-    final alt = (byType[InvestmentType.emas] ?? 0) +
-        (byType[InvestmentType.crypto] ?? 0);
-    final total = liquid + growth + stable + alt;
-
-    final buckets = [
-      _Bucket('Liquid', liquid, FtColors.sky, 0.30),
-      _Bucket('Growth', growth, FtColors.sage, 0.45),
-      _Bucket('Stable', stable, FtColors.ochre, 0.20),
-      _Bucket('Alternatif', alt, FtColors.plum, 0.05),
+    final cash = widget.household.cashAccounts
+        .fold<int>(0, (a, b) => a + b.value);
+    final savings = widget.household.savingsAccounts
+        .fold<int>(0, (a, b) => a + b.value);
+    final rec = computeAllocation(
+      cashTotal: cash,
+      savingsTotal: savings,
+      investments: widget.investments,
+    );
+    final segments = (_showTarget ? rec.target : rec.current);
+    final donutSegments = [
+      for (final s in segments)
+        if (s.pct > 0)
+          FtDonutSegment(value: s.pct, color: s.color),
     ];
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(22, 4, 22, 120),
-      children: [
-        if (total == 0)
+    if (rec.totalValue == 0) {
+      return ListView(
+        padding: const EdgeInsets.fromLTRB(22, 16, 22, 120),
+        children: [
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 48),
+            padding: const EdgeInsets.symmetric(vertical: 36),
             child: Center(
               child: Text(
                 'Belum ada data aset untuk dialokasikan.',
@@ -51,191 +60,264 @@ class AlokasiTab extends StatelessWidget {
                 style: TextStyle(color: FtColors.ink3),
               ),
             ),
-          )
-        else ...[
-          SizedBox(
-            height: 180,
-            child: PieChart(
-              PieChartData(
-                sectionsSpace: 2,
-                centerSpaceRadius: 36,
-                sections: [
-                  for (final b in buckets)
-                    if (b.value > 0)
-                      PieChartSectionData(
-                        value: b.value.toDouble(),
-                        color: b.color,
-                        radius: 28,
-                        title: '${(b.value / total * 100).round()}%',
-                        titleStyle: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-                ],
-              ),
-            ),
           ),
-          const SizedBox(height: 18),
-          FtCard(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Eyebrow('Alokasi saat ini vs rekomendasi'),
-                const SizedBox(height: 14),
-                for (final b in buckets) ...[
-                  AllocRow(
-                    label: b.label,
-                    color: b.color,
-                    actualPct: total > 0 ? b.value / total : 0,
-                    targetPct: b.target,
-                    value: b.value,
-                  ),
-                  const SizedBox(height: 12),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(height: 14),
-          if (buckets.any((b) => (b.actualPct - b.target).abs() > 0.05))
-            FtCard(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Eyebrow('Saran rebalance'),
-                  const SizedBox(height: 10),
-                  for (final b in buckets)
-                    if ((b.actualPct - b.target).abs() > 0.05)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 6),
-                        child: Text(
-                          '${b.actualPct > b.target ? 'Kurangi' : 'Tambah'} ${b.label} sebesar ${Money.format((b.target * total - b.value).abs().round())}',
-                          style: TextStyle(
-                            color: b.actualPct > b.target
-                                ? FtColors.danger
-                                : FtColors.sage,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                ],
-              ),
-            ),
         ],
+      );
+    }
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(22, 4, 22, 120),
+      children: [
+        const _ContextCard(),
+        const SizedBox(height: 14),
+        _AllocationCard(
+          showTarget: _showTarget,
+          onToggle: (v) {
+            FtHaptics.select();
+            setState(() => _showTarget = v);
+          },
+          segments: segments,
+          donutSegments: donutSegments,
+          summary: rec.summary,
+        ),
+        const SizedBox(height: 18),
+        RebalanceMoves(rec: rec),
+        const SizedBox(height: 14),
+        Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Text(
+              'Rekomendasi bersifat indikatif. Bukan saran investasi.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: FtColors.ink4,
+                fontSize: 10,
+                height: 1.45,
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }
 }
 
-class _Bucket {
-  final String label;
-  final int value;
-  final Color color;
-  final double target;
-  double get actualPct => 0;
-  _Bucket(this.label, this.value, this.color, this.target);
-}
-
-class AllocRow extends StatelessWidget {
-  const AllocRow({
-    required this.label,
-    required this.color,
-    required this.actualPct,
-    required this.targetPct,
-    required this.value,
-  });
-  final String label;
-  final Color color;
-  final double actualPct;
-  final double targetPct;
-  final int value;
+class _ContextCard extends StatelessWidget {
+  const _ContextCard();
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Container(
-              width: 8,
-              height: 8,
-              decoration:
-                  BoxDecoration(color: color, shape: BoxShape.circle),
+    return FtCard(
+      backgroundColor: FtColors.surfaceAlt,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.auto_awesome_outlined, size: 14, color: FtColors.clay),
+              const SizedBox(width: 6),
+              const Eyebrow('Profil Investasi'),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Profil moderat: pertahankan ekuitas, tambah obligasi seiring stabilitas suku bunga.',
+            style: TextStyle(
+              color: FtColors.ink,
+              fontSize: 13,
+              fontFamily: 'Newsreader',
+              height: 1.45,
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  color: FtColors.ink,
-                  fontWeight: FontWeight.w500,
-                  fontSize: 12,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AllocationCard extends StatelessWidget {
+  const _AllocationCard({
+    required this.showTarget,
+    required this.onToggle,
+    required this.segments,
+    required this.donutSegments,
+    required this.summary,
+  });
+  final bool showTarget;
+  final ValueChanged<bool> onToggle;
+  final List<AllocationSegment> segments;
+  final List<FtDonutSegment> donutSegments;
+  final String summary;
+
+  @override
+  Widget build(BuildContext context) {
+    return FtCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(child: Eyebrow('Alokasi Portofolio')),
+              _Toggle(showTarget: showTarget, onToggle: onToggle),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              FtDonut(segments: donutSegments, size: 130, thickness: 18),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (final s in segments) ...[
+                      _LegendRow(segment: s),
+                      const SizedBox(height: 8),
+                    ],
+                  ],
                 ),
               ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: FtColors.bg,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: FtColors.line, width: 0.5),
             ),
-            Text(
-              Money.format(value),
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 12,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        Stack(
-          children: [
-            Container(
-              height: 6,
-              decoration: BoxDecoration(
-                color: FtColors.line,
-                borderRadius: BorderRadius.circular(3),
-              ),
-            ),
-            FractionallySizedBox(
-              widthFactor: actualPct.clamp(0.0, 1.0),
-              child: Container(
-                height: 6,
-                decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: BorderRadius.circular(3),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.eco_outlined, size: 12, color: FtColors.moss),
+                    const SizedBox(width: 6),
+                    const Eyebrow('Ringkasan'),
+                  ],
                 ),
-              ),
-            ),
-            FractionallySizedBox(
-              widthFactor: targetPct.clamp(0.0, 1.0),
-              child: Container(
-                height: 6,
-                decoration: BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(
-                      color: FtColors.ink2,
-                      width: 2,
-                    ),
+                const SizedBox(height: 6),
+                Text(
+                  summary,
+                  style: TextStyle(
+                    color: FtColors.ink,
+                    fontSize: 13,
+                    fontFamily: 'Newsreader',
+                    height: 1.45,
                   ),
                 ),
-              ),
+              ],
             ),
-          ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Toggle extends StatelessWidget {
+  const _Toggle({required this.showTarget, required this.onToggle});
+  final bool showTarget;
+  final ValueChanged<bool> onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: FtColors.surfaceAlt,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: FtColors.line, width: 0.5),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _ToggleButton(
+            label: 'Sekarang',
+            active: !showTarget,
+            onTap: () => onToggle(false),
+          ),
+          _ToggleButton(
+            label: 'Target',
+            active: showTarget,
+            onTap: () => onToggle(true),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ToggleButton extends StatelessWidget {
+  const _ToggleButton({
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+        decoration: BoxDecoration(
+          color: active ? FtColors.ink : Colors.transparent,
+          borderRadius: BorderRadius.circular(999),
         ),
-        const SizedBox(height: 4),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Aktual ${(actualPct * 100).toStringAsFixed(0)}%',
-              style: TextStyle(color: FtColors.ink3, fontSize: 10),
-            ),
-            Text(
-              'Target ${(targetPct * 100).toStringAsFixed(0)}%',
-              style: TextStyle(color: FtColors.ink3, fontSize: 10),
-            ),
-          ],
+        child: Text(
+          label,
+          style: TextStyle(
+            color: active ? FtColors.bg : FtColors.ink2,
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LegendRow extends StatelessWidget {
+  const _LegendRow({required this.segment});
+  final AllocationSegment segment;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: segment.color,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            segment.label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: FtColors.ink2, fontSize: 11),
+          ),
+        ),
+        Text(
+          '${segment.pct.round()}%',
+          style: TextStyle(
+            color: FtColors.ink,
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
         ),
       ],
     );

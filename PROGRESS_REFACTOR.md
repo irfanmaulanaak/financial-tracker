@@ -9,7 +9,7 @@ Tracking implementation of [REFACTOR_PLAN.md](REFACTOR_PLAN.md). Each phase logs
 | 1 | Design tokens & shared widgets | completed |
 | 2 | Home / Beranda | completed |
 | 3 | Core ledger screens | completed |
-| 4 | Assets / Allocation, Goals, Health | pending |
+| 4 | Assets / Allocation, Goals, Health | completed |
 | 5 | Profile, Members, Notifications, Settings, Access Control | pending |
 
 ---
@@ -147,7 +147,67 @@ Also new in `lib/src/ui/`:
 
 ## Phase 4 — Assets / Allocation, Goals, Health
 
-_(not started)_
+**Started:** 2026-05-17
+**Completed:** 2026-05-17
+
+### Changes
+
+**4a — Allocation engine + Aset Alokasi tab**:
+- New `lib/src/core/allocation_recommendation.dart` — pure `computeAllocation({totalLiquid, totalSavings, investments, profile})` that returns `AllocationRecommendation` (current segments, target segments, rebalancing moves, summary text, in-balance flag). Maps investment kinds to four buckets: `liquid` (cash + savings), `growth` (stocks/etf/funds/crypto-volatile), `stable` (gold/bonds/deposits), `alternatif` (crypto + others). Default `moderate` profile mirrors `data.jsx`: 30/45/20/5.
+- `lib/src/features/accounts/widgets/alokasi_tab.dart` — rewrote: context card → current/target toggle (`_Toggle`) → `FtDonut` allocation card with legend rows (`_LegendRow`) → rebalancing list. Replaces the old `PieChart` view.
+- New `lib/src/features/accounts/widgets/rebalance_moves.dart` — extracted moves list (`RebalanceMoves`, `_MoveRow`, `_Pill`) to keep `alokasi_tab.dart` under 400 LOC.
+- New `lib/src/features/accounts/widgets/account_tab.dart` — generic list body shared between cash + savings tabs.
+- New `cash_tab.dart` / `savings_tab.dart` — thin wrappers picking the right `AccountKind`.
+- New `lib/src/features/accounts/widgets/assets_hero.dart` — extracted hero (Total Aset + composition bar + 3-col breakdown) from `accounts_screen.dart`.
+- `accounts_screen.dart` — slimmed from 635 LOC → 199 LOC, delegating to the four widget files above. Tab bodies now just instantiate `CashTab`/`SavingsTab`/`InvestasiList`/`AlokasiTab`.
+
+**4b — Goal model + add-goal flow**:
+- `lib/src/features/goals/goal.dart` — extended model with `autoDebit`, `autoDebitDay`, `sourceAccountId`, `presetId`, `lastAutoDebitMonth`. `toMap` / `fromSnapshot` updated.
+- `lib/src/features/goals/goal_repository.dart` — `add` / `updateGoal` accept the new fields; new `markAutoDebitDone(...)` writes `lastAutoDebitMonth` for the runner's idempotency.
+- New `lib/src/features/goals/widgets/goal_preset_grid.dart` — 3×2 preset cards (Dana Darurat / Liburan / Rumah / Gadget / Pernikahan / Lainnya) seeding default amount + tone color.
+- New `lib/src/features/goals/widgets/goal_amount_fields.dart` — twin Target / Saat ini fields with the active field highlighted (input drives the keypad).
+- New `lib/src/features/goals/widgets/goal_form_parts.dart` — `GoalPreviewHero`, `GoalToneRow`, `GoalMonthsRow`, `GoalProjectionCard` + helper formatters.
+- New `lib/src/features/goals/widgets/goal_source_picker.dart` — `GoalSourceAccounts` (cash account picker) + `GoalAutoDebitToggle`. Split out of `goal_form_parts.dart` to stay under the LOC limit.
+- New `lib/src/features/goals/add_goal_screen.dart` — full new flow at `/goals/new`: preset picker → preview hero → name input → tone row → target/current amounts → duration months → projection card → source account → auto-debit toggle → keypad → submit dot. Replaces the old `goal_edit_sheet.dart` (trashed).
+- `goals_screen.dart` — restyled list: tone-colored `goal_card.dart` rows with progress bar + warning chip when `daysOff > 14`. Add-goal CTA + dashed "Tambah goal" tile both push `/goals/new`.
+- `goal_card.dart` — restyled to colored icon badge + compact money formatter + warning indicator + soft progress bar.
+- `goal_detail_screen.dart` — replaced `CircularProgressIndicator` with `FtRing` for the hero ring; kept stats, contribution history, and edit/delete actions.
+
+**4c — Auto-debit runner**:
+- New `lib/src/features/goals/auto_debit_runner.dart` — client-side runner mirroring `recurring_runner.dart`. Pure `monthsToMaterialise({lastSeen, now})` returns the YYYY-MM list to materialise (capped to 6 to handle stale users). `runAutoDebitOnce` reads goals with `autoDebit && !done && cycleEnd <= now`, debits the linked source account, increments `current`, and stamps `lastAutoDebitMonth` for idempotency. Runs **once per app session** via `autoDebitRunnerProvider`.
+- `home_screen.dart` — mounts `autoDebitRunnerProvider` alongside `recurringRunnerProvider` once a household is loaded.
+
+**4d — Health screen**:
+- New `lib/src/features/health/health_screen.dart` — `/health` route. Pulls live cycle expenses, previous-cycles average, household income/budget, cards, investments → builds `HealthScoreInputs` → renders score + factors + findings + recommendations. Layout mirrors `screens-rest.jsx > HealthScreen`.
+- New `lib/src/features/health/widgets/health_hero.dart` — vertical `FtTrafficLight` + score + verdict copy.
+- New `lib/src/features/health/widgets/health_findings.dart` — "Temuan Pengeluaran" top-N category deltas vs the previous-cycles average; tap drills into `/categories/:id`.
+- New `lib/src/features/health/widgets/health_recommendations.dart` — derived recommendations (debt-priority, build-emergency-fund, start-investing, review-budget) routing to relevant screens.
+- `health_screen.dart` itself: factor breakdown rows use `FtRing` per metric.
+
+**4e — Routing + navigation**:
+- `lib/src/router.dart` — added `/health` (HealthScreen) and `/goals/new` (AddGoalScreen). Both `_fadeRoute`-wrapped. `/goals/new` registered before `/goals/:goalId` so the path-segment matcher resolves correctly.
+- `home_screen.dart` — both the side-by-side `HealthSnapshot` and the layout B `onInsights` callback now push `/health` instead of `/insights`. The `insights` menu entry still routes to `/insights` (legacy analytics screen) — slated for removal in Phase 5.
+
+### Deviations from plan
+
+- Allocation profile is hard-coded to `moderate` (30/45/20/5). The plan left "static allocation shape" open; we expose `AllocationProfile` enum + an unused profile param so a future risk-tier picker can flip to conservative/aggressive without touching callers.
+- Auto-debit runner is **client-side only** (idempotent via `lastAutoDebitMonth` per goal). A backend Cloud Function would be safer for multi-device households but is out of scope per the household size note in `AGENTS.md`.
+- `goal_edit_sheet.dart` was deleted (`trash`) instead of left as a shim — `AddGoalScreen` covers create + edit by passing an existing goal id.
+- `insights_screen.dart` is **not deleted**; only the home health card was redirected to `/health`. The `insights` menu item and the `/insights` route stay alive until Phase 5 cleanup.
+- Two new widget files (`assets_hero.dart` + `account_tab.dart`) appeared in the accounts split that the plan didn't explicitly call out — they were necessary to land `accounts_screen.dart` under the LOC budget.
+
+### Verification
+
+- `flutter analyze` → **13 issues**, all pre-existing info-level lints in code outside Phase 4 scope (unnecessary `ft_motion.dart` imports in record/insights/spend/settings; const-constructor hints in `ft_ui.dart`; one unused `_runIncomes` from earlier work). **0 new warnings/errors from Phase 4.** All Phase 4-touched files cleared their own redundant imports as part of this phase.
+- File LOC after Phase 4 (all under 400 ✓):
+  - `accounts_screen.dart`: 199 (was 635)
+  - `widgets/alokasi_tab.dart`: 325; `widgets/rebalance_moves.dart`: 161; `widgets/account_tab.dart`: 271; `widgets/assets_hero.dart`: 183; `widgets/cash_tab.dart`: 31; `widgets/savings_tab.dart`: 29
+  - `add_goal_screen.dart`: 268; `widgets/goal_form_parts.dart`: 307; `widgets/goal_source_picker.dart`: 219; `widgets/goal_amount_fields.dart`: 139; `widgets/goal_preset_grid.dart`: 159; `widgets/goal_card.dart`: 207
+  - `goals_screen.dart`: 202; `goal_detail_screen.dart`: 295; `auto_debit_runner.dart`: 176
+  - `health_screen.dart`: 215; `widgets/health_hero.dart`: 121; `widgets/health_findings.dart`: 182; `widgets/health_recommendations.dart`: 161
+  - `core/allocation_recommendation.dart`: 232
+  - One borderline file: `widgets/investasi_list.dart` 404 — pre-existing, not Phase 4 scope, will be split in Phase 5 cleanup.
+- Manual route check: `/health` and `/goals/new` both resolve via the GoRouter table; home health card opens `HealthScreen`.
 
 ---
 

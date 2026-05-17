@@ -13,8 +13,10 @@ import 'features/categories/category_manage_screen.dart';
 import 'features/expenses/expense_log_screen.dart';
 import 'features/expenses/record_expense_screen.dart';
 import 'features/export/export_screen.dart';
+import 'features/goals/add_goal_screen.dart';
 import 'features/goals/goal_detail_screen.dart';
 import 'features/goals/goals_screen.dart';
+import 'features/health/health_screen.dart';
 import 'features/home/home_screen.dart';
 import 'features/household/household_providers.dart';
 import 'features/incomes/income_log_screen.dart';
@@ -94,7 +96,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       _fadeRoute('/cards/:cardId', (state) =>
           CardDetailScreen(cardId: state.pathParameters['cardId']!)),
       _fadeRoute('/insights', (_) => const InsightsScreen()),
+      _fadeRoute('/health', (_) => const HealthScreen()),
       _fadeRoute('/goals', (_) => const GoalsScreen()),
+      _fadeRoute('/goals/new', (_) => const AddGoalScreen()),
       _fadeRoute('/goals/:goalId', (state) =>
           GoalDetailScreen(goalId: state.pathParameters['goalId']!)),
       _fadeRoute('/investments', (_) => const InvestmentsScreen()),

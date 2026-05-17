@@ -41,6 +41,10 @@ class GoalRepository {
     String color = '#10B981',
     required GoalScope scope,
     String? ownerId,
+    bool autoDebit = false,
+    int autoDebitDay = 1,
+    String? sourceAccountId,
+    String? presetId,
     DateTime? now,
   }) async {
     final ref = _col(hid).doc();
@@ -56,6 +60,10 @@ class GoalRepository {
       scope: scope,
       ownerId: scope == GoalScope.personal ? ownerId : null,
       createdAt: now ?? DateTime.now(),
+      autoDebit: autoDebit && sourceAccountId != null && monthlyContrib > 0,
+      autoDebitDay: autoDebitDay.clamp(1, 28),
+      sourceAccountId: sourceAccountId,
+      presetId: presetId,
     );
     await ref.set(goal.toMap());
     return ref.id;
@@ -85,6 +93,9 @@ class GoalRepository {
     int? monthlyContrib,
     String? icon,
     String? color,
+    bool? autoDebit,
+    int? autoDebitDay,
+    String? sourceAccountId,
   }) async {
     await _col(hid).doc(goalId).update({
       'label': ?label,
@@ -93,7 +104,20 @@ class GoalRepository {
       'monthlyContrib': ?monthlyContrib,
       'icon': ?icon,
       'color': ?color,
+      'autoDebit': ?autoDebit,
+      'autoDebitDay': ?autoDebitDay,
+      'sourceAccountId': ?sourceAccountId,
     });
+  }
+
+  /// Marks an auto-debit run done for [yyyymm] (format `YYYY-MM`). Used by
+  /// [AutoDebitRunner] in a transaction together with the contribution.
+  Future<void> markAutoDebitDone({
+    required String hid,
+    required String goalId,
+    required String yyyymm,
+  }) async {
+    await _col(hid).doc(goalId).update({'lastAutoDebitMonth': yyyymm});
   }
 
   Future<void> delete({required String hid, required String goalId}) async {

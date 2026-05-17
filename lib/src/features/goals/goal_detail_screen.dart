@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/formatters.dart';
 import '../../theme.dart';
+import '../../ui/ft_ring.dart';
 import '../../ui/ft_ui.dart';
 import '../goals/goal.dart';
 import '../goals/goal_repository.dart';
@@ -102,30 +103,32 @@ class _Body extends ConsumerWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    SizedBox(
-                      width: 140,
-                      height: 140,
-                      child: Stack(
-                        alignment: Alignment.center,
+                    FtRing(
+                      value: goal.progress,
+                      max: 1,
+                      size: 140,
+                      thickness: 10,
+                      color: color,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          CircularProgressIndicator(
-                            value: goal.progress,
-                            strokeWidth: 10,
-                            color: color,
-                            backgroundColor: FtColors.line,
+                          const Eyebrow('Tercapai'),
+                          const SizedBox(height: 2),
+                          Text(
+                            '$pct%',
+                            style: Theme.of(context)
+                                .textTheme
+                                .displaySmall
+                                ?.copyWith(fontSize: 32, height: 1),
                           ),
-                          Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Eyebrow('Tercapai'),
-                              Text(
-                                '$pct%',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .displaySmall
-                                    ?.copyWith(fontSize: 32, height: 1),
-                              ),
-                            ],
+                          const SizedBox(height: 4),
+                          Text(
+                            '${compactMoney(goal.current)} / ${compactMoney(goal.target)}',
+                            style: TextStyle(
+                              color: FtColors.ink3,
+                              fontSize: 11,
+                              fontFeatures: const [FontFeature.tabularFigures()],
+                            ),
                           ),
                         ],
                       ),
