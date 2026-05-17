@@ -6,8 +6,8 @@ Tracking implementation of [REFACTOR_PLAN.md](REFACTOR_PLAN.md). Each phase logs
 
 | Phase | Scope | Status |
 |---|---|---|
-| 1 | Design tokens & shared widgets | in_progress |
-| 2 | Home / Beranda | pending |
+| 1 | Design tokens & shared widgets | completed |
+| 2 | Home / Beranda | in_progress |
 | 3 | Core ledger screens | pending |
 | 4 | Assets / Allocation, Goals, Health | pending |
 | 5 | Profile, Members, Notifications, Settings, Access Control | pending |

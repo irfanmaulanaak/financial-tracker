@@ -37,6 +37,16 @@ class FtColors {
   static Color get healthOk => _dark ? const Color(0xFF8aab92) : const Color(0xFF5E7A64);
   static Color get healthWarn => _dark ? const Color(0xFFd4ab55) : const Color(0xFFB89030);
   static Color get healthBad => _dark ? const Color(0xFFd56a6a) : const Color(0xFF9A2F2F);
+
+  // Category palette (used by donut + category chips). Light/dark pairs taken
+  // from `claude-design/design/theme.jsx`.
+  static Color get catFood => _dark ? const Color(0xFFe08a4a) : const Color(0xFFC4612A);
+  static Color get catTransport => _dark ? const Color(0xFF8aab92) : const Color(0xFF5E7A64);
+  static Color get catBills => _dark ? const Color(0xFFd4ab55) : const Color(0xFFB89030);
+  static Color get catShopping => _dark ? const Color(0xFFb56f80) : const Color(0xFF7A3F4E);
+  static Color get catEntertainment => _dark ? const Color(0xFF7aa3bd) : const Color(0xFF3A6075);
+  static Color get catHealth => _dark ? const Color(0xFF6ea088) : const Color(0xFF2D5040);
+  static Color get catOther => _dark ? const Color(0xFF807668) : const Color(0xFFA89880);
 }
 
 ThemeData buildTheme(Brightness brightness) {
@@ -69,7 +79,9 @@ ThemeData buildTheme(Brightness brightness) {
     outlineVariant: FtColors.line,
   );
 
-  final sans = GoogleFonts.interTextTheme();
+  // Geist (sans) + Newsreader (serif) match the new design tokens.
+  // Both ship through google_fonts; Geist replaces the previous Inter family.
+  final sans = GoogleFonts.geistTextTheme();
   final serif = GoogleFonts.newsreaderTextTheme();
 
   final textTheme = sans.copyWith(
