@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/formatters.dart';
 import '../../../theme.dart';
-import '../../../ui/ft_motion.dart';
 import '../../../ui/ft_ui.dart';
 import 'home_formatters.dart';
 

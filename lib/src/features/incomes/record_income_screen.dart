@@ -6,7 +6,6 @@ import '../../core/providers.dart';
 import '../../theme.dart';
 import '../../ui/ft_haptics.dart';
 import '../../ui/ft_input.dart';
-import '../../ui/ft_motion.dart';
 import '../../ui/ft_submit_dot.dart';
 import '../../ui/ft_ui.dart';
 import '../household/household_providers.dart';

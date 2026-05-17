@@ -95,7 +95,7 @@ class FtSectionHeader extends StatelessWidget {
 }
 
 class FtProgressBar extends StatelessWidget {
-  FtProgressBar({
+  const FtProgressBar({
     super.key,
     required this.value,
     required this.max,
@@ -188,7 +188,7 @@ class FtStatGrid extends StatelessWidget {
 }
 
 class FtStatItem extends StatelessWidget {
-  FtStatItem({
+  const FtStatItem({
     super.key,
     required this.label,
     required this.value,

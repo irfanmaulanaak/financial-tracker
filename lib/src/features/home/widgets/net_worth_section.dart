@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../../core/net_worth.dart';
 import '../../../theme.dart';
 import '../../../ui/ft_donut.dart';
-import '../../../ui/ft_motion.dart';
 import '../../../ui/ft_sparkline.dart';
 import '../../../ui/ft_ui.dart';
 import 'home_formatters.dart';

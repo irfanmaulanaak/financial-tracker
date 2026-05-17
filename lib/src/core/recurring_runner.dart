@@ -119,6 +119,9 @@ class RecurringRunner {
     return created;
   }
 
+  // Kept deliberately: income materialisation is disabled (see line 50), but
+  // we keep the implementation around so we can flip it back on later.
+  // ignore: unused_element
   Future<int> _runIncomes({
     required String householdId,
     required DateTime now,

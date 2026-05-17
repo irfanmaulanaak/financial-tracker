@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/formatters.dart';
 import '../../../theme.dart';
-import '../../../ui/ft_motion.dart';
 import '../../../ui/ft_ui.dart';
 import '../credit_card.dart';
 import '../pay_card_sheet.dart';
