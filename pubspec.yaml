@@ -61,13 +61,36 @@ dev_dependencies:
   # Run `dart run flutter_native_splash:create` after changing the config below.
   flutter_native_splash: ^2.4.7
 
-# Native splash config — cream brand background matching FtColors.bg, no
-# image so the native splash hands off seamlessly to the in-app SplashScreen
-# (which paints the wordmark + spinner on the same cream).
+  # Generates iOS/Android/web launcher icons from the brand mark. Run
+  # `dart run flutter_launcher_icons` after changing the config below.
+  flutter_launcher_icons: ^0.14.4
+
+# Native splash — cream brand background matching FtColors.bg + brand mark
+# centered. Hands off seamlessly to the in-app SplashScreen (same logo on
+# the same cream).
 flutter_native_splash:
   color: "#F1EDE4"
+  image: assets/splash/logo.png
   android_12:
     color: "#F1EDE4"
+    image: assets/splash/logo.png
+
+# App launcher icons across all platforms. Cream background for adaptive
+# Android + web; iOS uses an opaque tinted backdrop (clay) per HIG since
+# transparent app icons render black on iOS.
+flutter_launcher_icons:
+  android: true
+  ios: true
+  remove_alpha_ios: true
+  background_color_ios: "#F1EDE4"
+  image_path: "assets/splash/logo.png"
+  adaptive_icon_background: "#F1EDE4"
+  adaptive_icon_foreground: "assets/splash/logo.png"
+  web:
+    generate: true
+    image_path: "assets/splash/logo.png"
+    background_color: "#F1EDE4"
+    theme_color: "#F1EDE4"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -80,10 +103,8 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
-  # To add assets to your application, add an assets section, like this:
-  # assets:
-  #   - images/a_dot_burr.jpeg
-  #   - images/a_dot_ham.jpeg
+  assets:
+    - assets/splash/logo.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
