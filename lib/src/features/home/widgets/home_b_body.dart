@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/health_score.dart';
 import '../../../core/net_worth.dart';
 import '../../../theme.dart';
-import '../../../ui/ft_motion.dart';
+import '../../../ui/ft_sparkline.dart';
 import '../../../ui/ft_ui.dart';
 import '../../cards/credit_card.dart';
 import '../../expenses/expense_providers.dart';
@@ -17,7 +17,6 @@ import 'home_formatters.dart';
 import 'home_header.dart';
 import 'mini_donut.dart';
 import 'recent_list.dart';
-import 'sparkline.dart';
 
 /// Compact "Padat" home variant from `claude-design/screens-home.jsx` `HomeB`.
 /// Denser hero with sparkline + small donut + 3-col breakdown; side-by-side
@@ -42,6 +41,7 @@ class HomeBBody extends ConsumerWidget {
     required this.onCards,
     required this.onGoals,
     required this.onInsights,
+    this.trend = const [],
   });
 
   final Household household;
@@ -54,6 +54,7 @@ class HomeBBody extends ConsumerWidget {
   final List<Goal> goals;
   final List<Category> categories;
   final Map<String, int> totalsByCat;
+  final List<double> trend;
   final VoidCallback onMembers;
   final ValueChanged<String> onMenuSelect;
   final VoidCallback onAssets;
@@ -92,6 +93,7 @@ class HomeBBody extends ConsumerWidget {
             nw: nw,
             categories: categories,
             totalsByCat: totalsByCat,
+            trend: trend,
             onTap: onAssets,
           ),
           index: 1,
@@ -141,11 +143,13 @@ class _DenseHero extends StatelessWidget {
     required this.categories,
     required this.totalsByCat,
     required this.onTap,
+    this.trend = const [],
   });
   final NetWorth nw;
   final List<Category> categories;
   final Map<String, int> totalsByCat;
   final VoidCallback onTap;
+  final List<double> trend;
 
   @override
   Widget build(BuildContext context) {
@@ -156,12 +160,6 @@ class _DenseHero extends StatelessWidget {
         DonutSegment(value: nw.savings.toDouble(), color: FtColors.moss),
       if (nw.investments > 0)
         DonutSegment(value: nw.investments.toDouble(), color: FtColors.clay),
-    ];
-    // Generate a soft upward sparkline based on current total (purely visual —
-    // no historical net-worth snapshots stored yet).
-    final spark = <double>[
-      for (var i = 0; i < 16; i++)
-        i.toDouble() + (i.isEven ? 0.4 : -0.2) + (i / 3),
     ];
     return FtCard(
       margin: const EdgeInsets.fromLTRB(22, 0, 22, 16),
@@ -185,8 +183,14 @@ class _DenseHero extends StatelessWidget {
                           .headlineLarge
                           ?.copyWith(fontSize: 30, height: 1),
                     ),
-                    const SizedBox(height: 10),
-                    Sparkline(data: spark, color: FtColors.moss, height: 32),
+                    if (trend.length >= 2) ...[
+                      const SizedBox(height: 10),
+                      FtSparkline(
+                        data: trend,
+                        color: FtColors.moss,
+                        height: 32,
+                      ),
+                    ],
                   ],
                 ),
               ),

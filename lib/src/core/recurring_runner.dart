@@ -79,32 +79,38 @@ class RecurringRunner {
 
     var created = 0;
     for (final entry in templates.entries) {
+      final key = entry.key;
       final template = entry.value;
       final dates = datesToMaterialise(lastSeen: template.date, now: now);
       for (final d in dates) {
+        // Deterministic doc ID across devices. Two members opening the app
+        // on the same day generate the same ID; the second `set` is a
+        // no-op (skipped inside the repo's transaction). Prevents double
+        // expenses + double balance debits / double card charges.
+        final docId = recurringDocId(key, d);
         if (template.cardId != null) {
-          // Recurring CC charges keep the same card; bumps card.used as well.
           await _expenses.addCardExpense(
             householdId: householdId,
             amount: template.amount,
             categoryId: template.categoryId,
-            paymentMethodId: template.paymentMethodId,
             spentBy: template.spentBy,
             date: d,
             cardId: template.cardId!,
             note: template.note,
             recurring: true,
+            docId: docId,
           );
         } else {
           await _expenses.add(
             householdId: householdId,
             amount: template.amount,
             categoryId: template.categoryId,
-            paymentMethodId: template.paymentMethodId,
+            sourceAccountId: template.sourceAccountId,
             spentBy: template.spentBy,
             date: d,
             note: template.note,
             recurring: true,
+            docId: docId,
           );
         }
         created++;
@@ -139,6 +145,7 @@ class RecurringRunner {
 
     var created = 0;
     for (final entry in templates.entries) {
+      final key = entry.key;
       final t = entry.value;
       final dates = datesToMaterialise(lastSeen: t.date, now: now);
       for (final d in dates) {
@@ -151,6 +158,7 @@ class RecurringRunner {
           date: d,
           note: t.note,
           recurring: true,
+          docId: recurringDocId(key, d),
         );
         created++;
       }
@@ -159,9 +167,29 @@ class RecurringRunner {
   }
 
   static String _expenseKey(Expense e) =>
-      '${e.categoryId}|${e.paymentMethodId}|${e.amount}|${e.note ?? ''}|${e.cardId ?? ''}';
+      '${e.categoryId}|${e.sourceAccountId ?? ''}|${e.amount}|${e.note ?? ''}|${e.cardId ?? ''}';
   static String _incomeKey(Income i) =>
       '${i.source.name}|${i.destinationAccountId}|${i.amount}|${i.note ?? ''}';
+}
+
+/// Stable per-(template, date) doc ID for recurring materialisation.
+///
+/// Format: `recur_<fnv1a-hex>_<yyyymmdd>`. FNV-1a is good enough for the
+/// hundreds-of-recurring-rows scale of this app — collision probability
+/// ~2^-32 per pair, way below any practical concern.
+String recurringDocId(String templateKey, DateTime d) {
+  // FNV-1a 32-bit.
+  const fnvOffset = 0x811C9DC5;
+  const fnvPrime = 0x01000193;
+  var h = fnvOffset;
+  for (final code in templateKey.codeUnits) {
+    h ^= code;
+    h = (h * fnvPrime) & 0xFFFFFFFF;
+  }
+  final ymd = '${d.year.toString().padLeft(4, '0')}'
+      '${d.month.toString().padLeft(2, '0')}'
+      '${d.day.toString().padLeft(2, '0')}';
+  return 'recur_${h.toRadixString(16).padLeft(8, '0')}_$ymd';
 }
 
 final recurringRunnerProvider = Provider<RecurringRunner>((ref) {

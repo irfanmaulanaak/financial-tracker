@@ -35,12 +35,22 @@ class IncomeRepository {
     String? note,
     bool recurring = false,
     DateTime? now,
+    String? docId,
   }) async {
     final ts = now ?? DateTime.now();
-    final incomeRef = _incomes(householdId).doc();
+    final incomeRef = docId != null
+        ? _incomes(householdId).doc(docId)
+        : _incomes(householdId).doc();
     final householdRef = _householdDoc(householdId);
 
     await _db.runTransaction((tx) async {
+      // Idempotency: deterministic [docId] (recurring runner) skips when
+      // the row already exists so concurrent devices don't double-credit
+      // the destination account.
+      if (docId != null) {
+        final iSnap = await tx.get(incomeRef);
+        if (iSnap.exists) return;
+      }
       final hSnap = await tx.get(householdRef);
       if (!hSnap.exists) throw StateError('household_missing');
       final household = Household.fromSnapshot(hSnap);

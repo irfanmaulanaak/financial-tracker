@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -34,6 +35,46 @@ final currentHouseholdProvider = StreamProvider<Household?>((ref) {
   final hid = ref.watch(currentHouseholdIdProvider);
   if (hid == null) return Stream.value(null);
   return ref.watch(householdRepositoryProvider).watch(hid);
+});
+
+/// Detects the "I was removed from the household" case (creator called
+/// `removeMember`). When the household is loaded but the current user is no
+/// longer in `members[]`, clear `users/{uid}.householdId` so the router can
+/// bounce the user back to onboarding.
+///
+/// Keep this as a side-effect provider; mount it from `HomeScreen` once.
+final orphanedMembershipCleanupProvider = Provider<void>((ref) {
+  final user = ref.watch(authStateProvider).value;
+  final household = ref.watch(currentHouseholdProvider).value;
+  if (user == null || household == null) return;
+  if (household.memberOf(user.uid) != null) return;
+  // ignore: discarded_futures
+  ref.watch(firestoreProvider).collection('users').doc(user.uid).set(
+        {'householdId': FieldValue.delete()},
+        SetOptions(merge: true),
+      );
+});
+
+/// The signed-in user's current access level inside their household.
+/// Defaults to `full` when the household isn't loaded yet (UI usually
+/// guards on `currentHouseholdProvider` first; this just avoids null
+/// checks in chip rendering).
+final myAccessLevelProvider = Provider<AccessLevel>((ref) {
+  final user = ref.watch(authStateProvider).value;
+  final household = ref.watch(currentHouseholdProvider).value;
+  if (user == null || household == null) return AccessLevel.full;
+  return household.memberOf(user.uid)?.accessLevel ?? AccessLevel.full;
+});
+
+/// True when the current user can record transactions (full + limited).
+final canRecordTxnProvider = Provider<bool>((ref) {
+  final lvl = ref.watch(myAccessLevelProvider);
+  return lvl == AccessLevel.full || lvl == AccessLevel.limited;
+});
+
+/// True when the current user can write everything (settings, cards, goals).
+final canWriteAllProvider = Provider<bool>((ref) {
+  return ref.watch(myAccessLevelProvider) == AccessLevel.full;
 });
 
 /// Convenience: the current Firebase user (throws if absent — use in screens

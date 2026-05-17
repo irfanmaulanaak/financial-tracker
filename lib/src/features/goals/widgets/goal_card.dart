@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
-import '../../../core/formatters.dart';
+import '../../../theme.dart';
+import '../../../ui/ft_ui.dart';
+import '../../home/widgets/home_formatters.dart';
 import '../goal.dart';
 
+/// Tap-friendly goal row used by `GoalsScreen`. Mirrors the goal cells in
+/// `claude-design/screens-rest.jsx` — icon badge + label + percent + tone
+/// progress bar + amounts/due/monthly + an "off-track" warning when the
+/// remaining-per-month implies it won't make the deadline.
 class GoalCard extends StatelessWidget {
   const GoalCard({
     super.key,
@@ -11,6 +18,7 @@ class GoalCard extends StatelessWidget {
     required this.onContribute,
     required this.onDelete,
   });
+
   final Goal goal;
   final String ownerLabel;
   final VoidCallback onContribute;
@@ -18,113 +26,182 @@ class GoalCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = _parseColor(goal.color);
+    final color = parseColor(goal.color);
     final months = monthsToGoal(
       target: goal.target,
       current: goal.current,
       monthlyContrib: goal.monthlyContrib,
     );
-    return Card(
+    final pct = (goal.progress * 100).round();
+    final remaining = goal.remaining;
+    final onTrack = pct >= 50 || (months ?? 9999) <= 6;
+    final urgentMonthly = remaining > 0
+        ? (remaining / 6).ceil()
+        : 0;
+
+    return FtCard(
       margin: const EdgeInsets.fromLTRB(22, 0, 22, 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  backgroundColor: color.withValues(alpha: 0.15),
-                  child: Icon(_iconFor(goal.icon), color: color),
+      onTap: () => context.push('/goals/${goal.id}'),
+      onLongPress: onDelete,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                      color: color.withValues(alpha: 0.32), width: 0.5),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        goal.label,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      Text(
-                        '$ownerLabel • ${goalScopeLabel(goal.scope)}',
-                        style: TextStyle(
-                          color: Colors.grey.shade600,
-                          fontSize: 12,
+                child: Icon(goalIconFor(goal.icon), color: color, size: 22),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            goal.label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleLarge
+                                ?.copyWith(fontSize: 16),
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-                PopupMenuButton<String>(
-                  onSelected: (v) {
-                    if (v == 'delete') onDelete();
-                  },
-                  itemBuilder: (_) => const [
-                    PopupMenuItem(value: 'delete', child: Text('Hapus')),
+                        Text(
+                          '$pct%',
+                          style: TextStyle(
+                            color: FtColors.ink,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    FtProgressBar(
+                      value: goal.current,
+                      max: goal.target == 0 ? 1 : goal.target,
+                      color: color,
+                      height: 4,
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '${compactMoney(goal.current)} / ${compactMoney(goal.target)}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: FtColors.ink2,
+                              fontSize: 11,
+                              fontFeatures: const [
+                                FontFeature.tabularFigures()
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          _trailingLabel(goal),
+                          style: TextStyle(
+                              color: FtColors.ink3, fontSize: 11),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    '${Money.format(goal.current)} / ${Money.format(goal.target)}',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          if (!onTrack && remaining > 0) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: FtColors.ochre.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                    color: FtColors.ochre.withValues(alpha: 0.28),
+                    width: 0.5),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline,
+                      size: 12, color: FtColors.ochre),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Naikkan setoran ke ${compactMoney(urgentMonthly)}/bln agar tercapai tepat waktu.',
+                      style: TextStyle(
+                        color: FtColors.ink2,
+                        fontSize: 11,
+                      ),
+                    ),
                   ),
-                ),
-                if (goal.isComplete)
-                  const Chip(
-                    label: Text('Tercapai'),
-                    visualDensity: VisualDensity.compact,
-                  )
-                else if (months != null)
-                  Text(
-                    '±$months bln lagi',
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-                  )
-                else
-                  Text(
-                    'Sisa ${Money.format(goal.remaining)}',
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: LinearProgressIndicator(
-                value: goal.progress,
-                minHeight: 8,
-                backgroundColor: color.withValues(alpha: 0.15),
-                valueColor: AlwaysStoppedAnimation(color),
+                ],
               ),
             ),
-            const SizedBox(height: 12),
-            FilledButton.tonal(
-              onPressed: goal.isComplete ? null : onContribute,
-              child: const Text('Tambah dana'),
-            ),
           ],
-        ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: FtTapScale(
+                  scale: 0.97,
+                  onTap: goal.isComplete ? null : onContribute,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      color: goal.isComplete
+                          ? FtColors.line
+                          : FtColors.surfaceAlt,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                          color: FtColors.line, width: 0.5),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      goal.isComplete ? 'Tercapai' : '+ Setor',
+                      style: TextStyle(
+                        color: goal.isComplete ? FtColors.ink3 : FtColors.ink,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
-}
 
-Color _parseColor(String hex) {
-  final h = hex.replaceFirst('#', '');
-  return Color(int.parse('FF$h', radix: 16));
+  String _trailingLabel(Goal g) {
+    if (g.isComplete) return 'Tercapai';
+    final months = monthsToGoal(
+      target: g.target,
+      current: g.current,
+      monthlyContrib: g.monthlyContrib,
+    );
+    if (g.monthlyContrib > 0) {
+      return '${compactMoney(g.monthlyContrib)}/bln · ${months ?? '?'} bln';
+    }
+    return 'Sisa ${compactMoney(g.remaining)}';
+  }
 }
-
-IconData _iconFor(String name) => switch (name) {
-      'savings' => Icons.savings,
-      'flight' => Icons.flight_takeoff,
-      'home' => Icons.home,
-      'school' => Icons.school,
-      'directions_car' => Icons.directions_car,
-      'celebration' => Icons.celebration,
-      _ => Icons.flag,
-    };

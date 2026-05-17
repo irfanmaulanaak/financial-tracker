@@ -168,6 +168,16 @@ class AuthRepository {
     }
     await _auth.signOut();
   }
+
+  /// Deletes the current Firebase Auth user. The caller is responsible for
+  /// any household-side cleanup (leaving the household first, etc). Throws
+  /// `FirebaseAuthException(code: 'requires-recent-login')` if the user
+  /// hasn't reauthenticated recently — UI should prompt to sign in again.
+  Future<void> deleteCurrentUser() async {
+    final user = _auth.currentUser;
+    if (user == null) throw StateError('no_signed_in_user');
+    await user.delete();
+  }
 }
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {

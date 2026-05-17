@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/formatters.dart';
 import '../../core/providers.dart';
@@ -11,7 +12,6 @@ import '../household/name_format.dart';
 import 'goal.dart';
 import 'goal_repository.dart';
 import 'widgets/goal_card.dart';
-import 'widgets/goal_edit_sheet.dart';
 
 final goalsProvider = StreamProvider.family<List<Goal>, String>((ref, hid) {
   return ref.watch(goalRepositoryProvider).watchAll(hid);
@@ -42,7 +42,13 @@ class GoalsScreen extends ConsumerWidget {
             child: ListView(
               padding: const EdgeInsets.only(bottom: 120),
               children: [
-                const FtSubHeader(title: 'Tujuan'),
+                FtSubHeader(
+                  title: 'Tujuan',
+                  trailing: FtAddButton(
+                    tooltip: 'Tujuan baru',
+                    onTap: () => context.push('/goals/new'),
+                  ),
+                ),
                 FtCard(
                   margin: const EdgeInsets.fromLTRB(22, 4, 22, 18),
                   child: Column(
@@ -74,7 +80,7 @@ class GoalsScreen extends ConsumerWidget {
                 ),
                 if (goals.isEmpty)
                   Padding(
-                    padding: EdgeInsets.symmetric(vertical: 48),
+                    padding: const EdgeInsets.symmetric(vertical: 36),
                     child: Center(
                       child: Text(
                         'Belum ada tujuan.\nMis. dana darurat, liburan, beli rumah.',
@@ -101,8 +107,7 @@ class GoalsScreen extends ConsumerWidget {
                 FtDashedAdd(
                   margin: const EdgeInsets.fromLTRB(22, 8, 22, 4),
                   label: 'Tambah tujuan',
-                  onTap: () =>
-                      _openSheet(context, ref, household.id, user.uid),
+                  onTap: () => context.push('/goals/new'),
                 ),
               ],
             ),
@@ -110,33 +115,6 @@ class GoalsScreen extends ConsumerWidget {
         },
       ),
     );
-  }
-
-  Future<void> _openSheet(
-    BuildContext context,
-    WidgetRef ref,
-    String hid,
-    String currentUid,
-  ) async {
-    final result = await showModalBottomSheet<GoalDraft>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => GoalEditSheet(currentUid: currentUid),
-    );
-    if (result == null) return;
-    await ref
-        .read(goalRepositoryProvider)
-        .add(
-          hid: hid,
-          label: result.label,
-          target: result.target,
-          dueDate: result.dueDate,
-          monthlyContrib: result.monthlyContrib,
-          color: result.color,
-          icon: result.icon,
-          scope: result.scope,
-          ownerId: result.ownerId,
-        );
   }
 
   Future<void> _openContributeSheet(
@@ -187,10 +165,17 @@ class GoalsScreen extends ConsumerWidget {
       ),
     );
     if (amount != null) {
+      final uid = ref.read(authStateProvider).value?.uid ?? '';
       await ref
           .read(goalRepositoryProvider)
-          .contribute(hid: hid, goalId: goal.id, amount: amount);
+          .contribute(
+            hid: hid,
+            goalId: goal.id,
+            amount: amount,
+            byUid: uid,
+          );
     }
+    ctrl.dispose();
   }
 
   Future<void> _confirmDelete(

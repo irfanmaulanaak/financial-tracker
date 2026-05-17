@@ -8,6 +8,7 @@ import '../../core/payday.dart';
 import '../../theme.dart';
 import '../../ui/ft_ui.dart';
 import '../expenses/expense.dart';
+import '../expenses/expense_detail_sheet.dart';
 import '../expenses/expense_repository.dart';
 import '../home/widgets/home_formatters.dart';
 import '../household/household.dart';
@@ -95,6 +96,10 @@ class CategoryDetailScreen extends ConsumerWidget {
                         margin: const EdgeInsets.fromLTRB(22, 0, 22, 8),
                         padding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 12),
+                        onTap: () => ExpenseDetailSheet.show(
+                          context: context,
+                          expense: e,
+                        ),
                         child: Row(
                           children: [
                             Expanded(
@@ -180,16 +185,21 @@ class _HeaderCard extends StatelessWidget {
         : prevTotals.fold<int>(0, (a, b) => a + b) ~/ prevTotals.length;
     final delta = avgPrev > 0 ? ((spent - avgPrev) / avgPrev * 100) : 0.0;
 
-    // Daily bars (mock distribution)
+    // Real daily bars: last 14 days ending today, summing this category's
+    // expenses per day. Missing days → 0.
+    final today = Dates.dayKey(DateTime.now());
+    final cycleExpenses = expensesAsync.value ?? const <Expense>[];
+    final perDay = <DateTime, int>{};
+    for (final e in cycleExpenses) {
+      final k = Dates.dayKey(e.date);
+      perDay[k] = (perDay[k] ?? 0) + e.amount.toInt();
+    }
+    final dailyBars = List.generate(14, (i) {
+      final day = today.subtract(Duration(days: 13 - i));
+      return perDay[day] ?? 0;
+    });
     final daysPassed = DateTime.now().difference(cycle.start).inDays + 1;
     final dailyAvg = daysPassed > 0 ? spent ~/ daysPassed : 0;
-    final dailyBars = List.generate(
-      14,
-      (i) => max(
-        0,
-        (dailyAvg * (0.4 + (i / 14) * 1.2)).round(),
-      ),
-    );
 
     return FtCard(
       margin: const EdgeInsets.fromLTRB(22, 4, 22, 18),

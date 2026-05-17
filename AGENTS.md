@@ -1,4 +1,4 @@
-# OpenUsage
+# FinSist
 
 ## Instructions
 - CRITICAL: Use simple, concise language. Avoid overtechnical jargon.
@@ -39,7 +39,7 @@ Update this section as the project evolves.
 ### Stack
 - Flutter 3.41.9 stable (Dart) — `flutter doctor` green except Xcode simulator runtimes (install via Xcode → Settings → Platforms)
 - Firebase: Auth + Firestore (cloud-first; household sync from day 1) — project `financial-tracker-4791d`
-- Targets: iOS + Android primary; web also wired (optional)
+- Targets: iOS + Android + Web (all first-class)
 - Locale: id-ID; IDR only
 - State: flutter_riverpod 3.x
 - Routing: go_router
@@ -55,7 +55,20 @@ Update this section as the project evolves.
 - Goals: shared OR personal (both)
 - Assets: pooled (no per-member breakdown)
 - Health score: household level
-- Roles (Istri/Suami/Anak): labels only, no permission gating
+- Roles (Suami/Istri/Anak/Orang Tua/Lainnya): display label only, no gating
+- Access tiers (full / limited / view): real permission gating, persisted on
+  `households/{hid}.members[].accessLevel` and mirrored to a fast-lookup map
+  `members.memberAccess: {<uid>: 'full'|'limited'|'view'}`. Enforced in
+  Firestore rules: `full` writes everywhere, `limited` writes
+  expenses+incomes only, `view` writes nothing. Access is set at invite time
+  and editable by the household creator.
+
+### Build commands
+- Standard run/build: `flutter run` / `flutter build {ios|apk|appbundle|web}`.
+- The Settings → Tentang card surfaces the app version via the `APP_VERSION`
+  build define. Pass it through on official builds:
+  `flutter run --dart-define=APP_VERSION=$(grep '^version:' pubspec.yaml | awk '{print $2}')`
+  Without the flag the card shows `vdev`.
 
 ### References
 - `claude-design/` → visual/UX reference only (JSX prototype; not portable code)

@@ -10,6 +10,7 @@ import '../../investments/investments_repository.dart';
 
 class InvestasiList extends ConsumerWidget {
   const InvestasiList({
+    super.key,
     required this.householdId,
     required this.items,
     required this.isLoading,
@@ -163,7 +164,7 @@ class InvestasiList extends ConsumerWidget {
 }
 
 class InvestasiSummary extends StatelessWidget {
-  const InvestasiSummary({required this.summary});
+  const InvestasiSummary({super.key, required this.summary});
   final PortfolioSummary summary;
 
   @override
@@ -210,6 +211,7 @@ class InvestasiSummary extends StatelessWidget {
 
 class InvestmentTile extends StatelessWidget {
   const InvestmentTile({
+    super.key,
     required this.inv,
     required this.onUpdate,
     required this.onDelete,

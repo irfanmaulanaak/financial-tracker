@@ -1,4 +1,4 @@
-# Financial Tracker — Plan
+# FinSist — Plan
 
 Household financial tracker for Indonesian families. Flutter + Firebase. iOS + Android.
 

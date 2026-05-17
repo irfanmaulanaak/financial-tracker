@@ -1,5 +1,13 @@
-/// Default categories + payment methods seeded into every new household.
-/// Editable by users post-creation.
+/// Default categories seeded into every new household. Editable by users
+/// post-creation.
+///
+/// Note: payment methods are NO LONGER seeded. The "where did the money
+/// come from" question is now answered by:
+/// - cash flow → `Expense.sourceAccountId` → `Household.cashAccounts/savingsAccounts[].id`
+/// - credit flow → `Expense.cardId` → `households/{hid}/cards/{cid}`
+///
+/// The user models their own real accounts (BCA, GoPay, etc.) on the Aset
+/// screen instead of picking from a fixed seeded list.
 library;
 
 class SeededCategory {
@@ -16,18 +24,6 @@ class SeededCategory {
   });
 }
 
-class SeededPaymentMethod {
-  final String id;
-  final String label;
-  final String type;
-
-  const SeededPaymentMethod({
-    required this.id,
-    required this.label,
-    required this.type,
-  });
-}
-
 const seededCategories = <SeededCategory>[
   SeededCategory(id: 'food', label: 'Makanan & Minuman', icon: 'restaurant', color: '#F59E0B'),
   SeededCategory(id: 'bills', label: 'Tagihan & Utilitas', icon: 'receipt_long', color: '#3B82F6'),
@@ -36,14 +32,4 @@ const seededCategories = <SeededCategory>[
   SeededCategory(id: 'entertainment', label: 'Hiburan', icon: 'movie', color: '#8B5CF6'),
   SeededCategory(id: 'health', label: 'Kesehatan', icon: 'favorite', color: '#EF4444'),
   SeededCategory(id: 'other', label: 'Lainnya', icon: 'category', color: '#64748B'),
-];
-
-const seededPaymentMethods = <SeededPaymentMethod>[
-  SeededPaymentMethod(id: 'cash', label: 'Tunai', type: 'cash'),
-  SeededPaymentMethod(id: 'bca_debit', label: 'BCA Debit', type: 'debit'),
-  SeededPaymentMethod(id: 'mandiri_debit', label: 'Mandiri Debit', type: 'debit'),
-  SeededPaymentMethod(id: 'gopay', label: 'GoPay', type: 'ewallet'),
-  SeededPaymentMethod(id: 'ovo', label: 'OVO', type: 'ewallet'),
-  SeededPaymentMethod(id: 'dana', label: 'DANA', type: 'ewallet'),
-  SeededPaymentMethod(id: 'cc', label: 'Kartu Kredit', type: 'credit'),
 ];

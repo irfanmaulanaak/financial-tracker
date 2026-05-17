@@ -2,40 +2,89 @@ import 'package:flutter/material.dart';
 
 import '../../../core/health_score.dart';
 import '../../../theme.dart';
+import '../../../ui/ft_ring.dart';
+import '../../../ui/ft_traffic_light.dart';
 import '../../../ui/ft_ui.dart';
-import 'home_formatters.dart';
 
 class HealthSnapshot extends StatelessWidget {
-  const HealthSnapshot({super.key, required this.score, required this.onTap});
+  const HealthSnapshot({
+    super.key,
+    required this.score,
+    required this.onTap,
+    this.compact = false,
+  });
 
   final HealthScore score;
   final VoidCallback onTap;
 
+  /// When true, renders the tighter side-by-side variant suitable for the
+  /// home page's spend/health row.
+  final bool compact;
+
   @override
   Widget build(BuildContext context) {
-    final color = healthColor(score.score);
+    final state = _stateFor(score.score);
+    final color = _colorFor(state);
+    final label = score.verdict;
+
+    if (compact) {
+      return FtCard(
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+        onTap: onTap,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Expanded(child: Eyebrow('Kesehatan')),
+                FtTrafficLight(state: state, vertical: true, size: 7),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              '${score.score}',
+              style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                    fontSize: 32,
+                    height: 1,
+                    color: color,
+                    fontWeight: FontWeight.w500,
+                  ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: FtColors.ink2,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '/ 100 · siklus ini',
+              style: TextStyle(color: FtColors.ink3, fontSize: 10.5),
+            ),
+          ],
+        ),
+      );
+    }
+
     return FtCard(
       margin: const EdgeInsets.fromLTRB(22, 0, 22, 16),
       onTap: onTap,
       child: Row(
         children: [
-          SizedBox(
-            width: 64,
-            height: 64,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                CircularProgressIndicator(
-                  value: score.score / 100,
-                  strokeWidth: 6,
-                  color: color,
-                  backgroundColor: FtColors.line,
-                ),
-                Text(
-                  '${score.score}',
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
-              ],
+          FtRing(
+            value: score.score.toDouble(),
+            max: 100,
+            size: 64,
+            thickness: 6,
+            color: color,
+            child: Text(
+              '${score.score}',
+              style: const TextStyle(fontWeight: FontWeight.w700),
             ),
           ),
           const SizedBox(width: 16),
@@ -45,14 +94,13 @@ class HealthSnapshot extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const Eyebrow('Kesehatan Finansial'),
-                    const SizedBox(width: 8),
-                    _TrafficLight(score: score.score),
+                    const Expanded(child: Eyebrow('Kesehatan Finansial')),
+                    FtTrafficLight(state: state, size: 8),
                   ],
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  score.verdict,
+                  label,
                   style: Theme.of(context)
                       .textTheme
                       .titleLarge
@@ -72,32 +120,23 @@ class HealthSnapshot extends StatelessWidget {
     );
   }
 
+  static FtHealthState _stateFor(int score) {
+    if (score >= 80) return FtHealthState.good;
+    if (score >= 50) return FtHealthState.caution;
+    return FtHealthState.risk;
+  }
+
+  static Color _colorFor(FtHealthState s) => switch (s) {
+        FtHealthState.good => FtColors.healthOk,
+        FtHealthState.caution => FtColors.healthWarn,
+        FtHealthState.risk => FtColors.healthBad,
+      };
+
   static String _summary(HealthScore score) {
-    final available = score.factors.where((f) => f.contribution != null).toList()
-      ..sort((a, b) => (a.contribution ?? 0).compareTo(b.contribution ?? 0));
+    final available =
+        score.factors.where((f) => f.contribution != null).toList()
+          ..sort((a, b) => (a.contribution ?? 0).compareTo(b.contribution ?? 0));
     if (available.isEmpty) return 'Data belum cukup untuk membaca pola.';
     return '${available.first.label} paling perlu perhatian.';
-  }
-}
-
-class _TrafficLight extends StatelessWidget {
-  const _TrafficLight({required this.score});
-  final int score;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = score >= 80
-        ? FtColors.healthOk
-        : score >= 50
-            ? FtColors.healthWarn
-            : FtColors.healthBad;
-    return Container(
-      width: 8,
-      height: 8,
-      decoration: BoxDecoration(
-        color: color,
-        shape: BoxShape.circle,
-      ),
-    );
   }
 }

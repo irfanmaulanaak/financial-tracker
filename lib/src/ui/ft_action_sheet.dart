@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../features/household/household_providers.dart';
 import '../theme.dart';
 import 'ft_haptics.dart';
 import 'ft_motion.dart';
@@ -72,7 +74,13 @@ class _Grabber extends StatelessWidget {
 
 /// "Catat aktivitas" chooser — Pengeluaran / Pemasukan / Sesuaikan Aset.
 /// Mirrors `ActionChooserSheet` from `claude-design/screens-actions.jsx`.
-class ActionChooserSheet extends StatelessWidget {
+///
+/// Filters its options against the signed-in member's access tier:
+/// - `view` accounts see no write options (sheet is blocked at the FAB
+///   wrapper; this widget renders a hint just in case).
+/// - `limited` accounts see expense + income only (no asset adjust).
+/// - `full` accounts see everything.
+class ActionChooserSheet extends ConsumerWidget {
   const ActionChooserSheet({super.key});
 
   static Future<void> show(BuildContext context) async {
@@ -83,29 +91,35 @@ class ActionChooserSheet extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final canTxn = ref.watch(canRecordTxnProvider);
+    final canFull = ref.watch(canWriteAllProvider);
+
     final actions = <_Action>[
-      _Action(
-        label: 'Catat Pengeluaran',
-        detail: 'Tunai · Debit · Kartu Kredit · Cicilan',
-        icon: Icons.south_west_rounded,
-        color: FtColors.clay,
-        route: '/expenses/new',
-      ),
-      _Action(
-        label: 'Catat Pemasukan',
-        detail: 'Gaji · Freelance · Lainnya',
-        icon: Icons.north_east_rounded,
-        color: FtColors.moss,
-        route: '/incomes/new',
-      ),
-      _Action(
-        label: 'Sesuaikan Aset',
-        detail: 'Update saldo rekening atau tabungan',
-        icon: Icons.tune_rounded,
-        color: FtColors.sky,
-        route: '/accounts',
-      ),
+      if (canTxn)
+        _Action(
+          label: 'Catat Pengeluaran',
+          detail: 'Tunai · Debit · Kartu Kredit · Cicilan',
+          icon: Icons.south_west_rounded,
+          color: FtColors.clay,
+          route: '/expenses/new',
+        ),
+      if (canTxn)
+        _Action(
+          label: 'Catat Pemasukan',
+          detail: 'Gaji · Freelance · Lainnya',
+          icon: Icons.north_east_rounded,
+          color: FtColors.moss,
+          route: '/incomes/new',
+        ),
+      if (canFull)
+        _Action(
+          label: 'Sesuaikan Aset',
+          detail: 'Update saldo rekening atau tabungan',
+          icon: Icons.tune_rounded,
+          color: FtColors.sky,
+          route: '/accounts',
+        ),
     ];
 
     return Padding(
@@ -118,6 +132,18 @@ class ActionChooserSheet extends StatelessWidget {
             padding: EdgeInsets.fromLTRB(6, 4, 6, 12),
             child: Eyebrow('Catat Aktivitas'),
           ),
+          if (actions.isEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(6, 0, 6, 16),
+              child: Text(
+                'Akun ini hanya bisa melihat ringkasan. Hubungi pengelola rumah tangga untuk mengubah akses.',
+                style: TextStyle(
+                  color: FtColors.ink3,
+                  fontSize: 12,
+                  height: 1.4,
+                ),
+              ),
+            ),
           for (final a in actions) ...[
             _ActionTile(action: a),
             const SizedBox(height: 8),

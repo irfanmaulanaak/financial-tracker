@@ -2,14 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/formatters.dart';
 import '../../core/providers.dart';
 import '../../theme.dart';
 import '../../ui/ft_haptics.dart';
 import '../../ui/ft_input.dart';
 import '../../ui/ft_motion.dart';
+import '../../ui/ft_submit_dot.dart';
 import '../../ui/ft_ui.dart';
 import '../household/household_providers.dart';
+import '../record_common/account_picker.dart';
+import '../record_common/amount_display.dart';
+import '../record_common/keypad.dart';
+import '../record_common/meta_row.dart';
 import 'income.dart';
 import 'income_repository.dart';
 
@@ -39,15 +43,7 @@ class _RecordIncomeScreenState extends ConsumerState<RecordIncomeScreen> {
 
   void _tapKey(String k) {
     FtHaptics.tap();
-    setState(() {
-      if (k == '←') {
-        _amount = _amount ~/ 10;
-      } else if (k == '000') {
-        _amount = (_amount * 1000).clamp(0, 999999999);
-      } else {
-        _amount = (_amount * 10 + int.parse(k)).clamp(0, 999999999);
-      }
-    });
+    setState(() => _amount = applyRecordKey(_amount, k));
   }
 
   Future<void> _pickDate() async {
@@ -114,14 +110,14 @@ class _RecordIncomeScreenState extends ConsumerState<RecordIncomeScreen> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     _receivedBy ??= user.uid;
-    final accounts = [
-      for (final a in household.cashAccounts)
-        (id: a.id, label: a.label, hint: 'Tunai · ${Money.format(a.value)}'),
-      for (final a in household.savingsAccounts)
-        (id: a.id, label: a.label, hint: 'Tabungan · ${Money.format(a.value)}'),
-    ];
-    final canSubmit =
-        _amount > 0 && _destinationAccountId != null && !_busy;
+    final accounts = recordAccountChoices(
+      cashAccounts: household.cashAccounts,
+      savingsAccounts: household.savingsAccounts,
+    );
+    final canSubmit = _amount > 0 &&
+        _destinationAccountId != null &&
+        !_busy &&
+        ref.watch(canRecordTxnProvider);
 
     return Scaffold(
       backgroundColor: FtColors.bg,
@@ -132,10 +128,11 @@ class _RecordIncomeScreenState extends ConsumerState<RecordIncomeScreen> {
           children: [
             FtSubHeader(
               title: 'Catat pemasukan',
-              trailing: _SubmitDot(
+              trailing: FtSubmitDot(
                 busy: _busy,
                 enabled: canSubmit,
                 onTap: _submit,
+                activeColor: FtColors.moss,
               ),
             ),
             Expanded(
@@ -144,7 +141,13 @@ class _RecordIncomeScreenState extends ConsumerState<RecordIncomeScreen> {
                   physics: const BouncingScrollPhysics(),
                   padding: const EdgeInsets.fromLTRB(22, 8, 22, 24),
                   children: [
-                    _AmountDisplay(amount: _amount),
+                    RecordAmountDisplay(
+                      amount: _amount,
+                      eyebrow: 'Jumlah pendapatan',
+                      prefix: '+Rp',
+                      cursorColor: FtColors.moss,
+                      activeColor: FtColors.moss,
+                    ),
                     const SizedBox(height: 24),
                     const Eyebrow('Sumber'),
                     const SizedBox(height: 10),
@@ -158,31 +161,17 @@ class _RecordIncomeScreenState extends ConsumerState<RecordIncomeScreen> {
                     const SizedBox(height: 22),
                     const Eyebrow('Masuk ke'),
                     const SizedBox(height: 10),
-                    if (accounts.isEmpty)
-                      Padding(
-                        padding: EdgeInsets.symmetric(vertical: 6),
-                        child: Text(
+                    RecordAccountPicker(
+                      accounts: accounts,
+                      selectedId: _destinationAccountId,
+                      accent: FtColors.moss,
+                      onSelect: (id) {
+                        FtHaptics.select();
+                        setState(() => _destinationAccountId = id);
+                      },
+                      emptyNote:
                           'Belum ada akun. Tambah dari menu Akun.',
-                          style: TextStyle(color: FtColors.danger, fontSize: 12),
-                        ),
-                      )
-                    else
-                      Column(
-                        children: [
-                          for (final a in accounts) ...[
-                            _AccountRow(
-                              label: a.label,
-                              hint: a.hint,
-                              selected: _destinationAccountId == a.id,
-                              onTap: () {
-                                FtHaptics.select();
-                                setState(() => _destinationAccountId = a.id);
-                              },
-                            ),
-                            const SizedBox(height: 6),
-                          ],
-                        ],
-                      ),
+                    ),
                     const SizedBox(height: 14),
                     FtInput(
                       label: 'Catatan (opsional)',
@@ -190,7 +179,7 @@ class _RecordIncomeScreenState extends ConsumerState<RecordIncomeScreen> {
                       hintText: 'Misal: Bonus akhir tahun',
                     ),
                     const SizedBox(height: 14),
-                    _MetaRow(
+                    RecordMetaRow(
                       date: _date,
                       recurring: _recurring,
                       onPickDate: _pickDate,
@@ -209,133 +198,10 @@ class _RecordIncomeScreenState extends ConsumerState<RecordIncomeScreen> {
                 ),
               ),
             ),
-            _Keypad(onTap: _tapKey),
+            RecordKeypad(onTap: _tapKey),
           ],
         ),
       ),
-    );
-  }
-}
-
-class _SubmitDot extends StatelessWidget {
-  const _SubmitDot({
-    required this.busy,
-    required this.enabled,
-    required this.onTap,
-  });
-  final bool busy;
-  final bool enabled;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return FtTapScale(
-      scale: 0.9,
-      onTap: enabled ? onTap : null,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        width: 38,
-        height: 38,
-        decoration: BoxDecoration(
-          color: enabled ? FtColors.moss : FtColors.line,
-          shape: BoxShape.circle,
-        ),
-        alignment: Alignment.center,
-        child: busy
-            ? const SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
-              )
-            : Icon(
-                Icons.check,
-                size: 18,
-                color: enabled ? Colors.white : FtColors.ink3,
-              ),
-      ),
-    );
-  }
-}
-
-class _AmountDisplay extends StatelessWidget {
-  const _AmountDisplay({required this.amount});
-  final int amount;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        const Eyebrow('Jumlah pendapatan'),
-        const SizedBox(height: 10),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Text(
-              '+Rp',
-              style: TextStyle(
-                color: FtColors.ink3,
-                fontSize: 20,
-                fontWeight: FontWeight.w400,
-              ),
-            ),
-            const SizedBox(width: 6),
-            Flexible(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  Money.format(amount).replaceFirst(RegExp(r'^Rp\s*'), ''),
-                  maxLines: 1,
-                  style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                        fontSize: 48,
-                        height: 1,
-                        letterSpacing: -1.5,
-                        color: amount > 0 ? FtColors.moss : FtColors.ink,
-                      ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 4),
-            const _BlinkCursor(),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _BlinkCursor extends StatefulWidget {
-  const _BlinkCursor();
-  @override
-  State<_BlinkCursor> createState() => _BlinkCursorState();
-}
-
-class _BlinkCursorState extends State<_BlinkCursor>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: Tween(begin: 0.2, end: 1.0).animate(_ctrl),
-      child: Container(width: 2, height: 38, color: FtColors.moss),
     );
   }
 }
@@ -411,244 +277,3 @@ class _SourceChips extends StatelessWidget {
   }
 }
 
-class _AccountRow extends StatelessWidget {
-  const _AccountRow({
-    required this.label,
-    required this.hint,
-    required this.selected,
-    required this.onTap,
-  });
-  final String label;
-  final String hint;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return FtTapScale(
-      scale: 0.985,
-      haptic: false,
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: selected
-              ? FtColors.moss.withValues(alpha: 0.08)
-              : FtColors.surface,
-          border: Border.all(
-            color: selected ? FtColors.moss : FtColors.line,
-            width: 0.5,
-          ),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                color: selected ? FtColors.moss : FtColors.surfaceAlt,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: selected ? FtColors.moss : FtColors.line,
-                  width: 0.5,
-                ),
-              ),
-              alignment: Alignment.center,
-              child: Icon(
-                Icons.account_balance_outlined,
-                size: 14,
-                color: selected ? Colors.white : FtColors.ink2,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: FtColors.ink,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    hint,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: FtColors.ink3,
-                      fontSize: 11,
-                      fontFeatures: [FontFeature.tabularFigures()],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (selected)
-              Icon(Icons.check, size: 16, color: FtColors.moss),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _MetaRow extends StatelessWidget {
-  const _MetaRow({
-    required this.date,
-    required this.recurring,
-    required this.onPickDate,
-    required this.onToggleRecurring,
-  });
-  final DateTime date;
-  final bool recurring;
-  final VoidCallback onPickDate;
-  final ValueChanged<bool> onToggleRecurring;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: FtTapScale(
-            scale: 0.97,
-            onTap: onPickDate,
-            child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(
-                color: FtColors.surface,
-                border: Border.all(color: FtColors.line, width: 0.5),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.calendar_today_outlined,
-                    size: 14,
-                    color: FtColors.ink3,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      Dates.short(date),
-                      style: TextStyle(
-                        color: FtColors.ink,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        FtTapScale(
-          scale: 0.97,
-          onTap: () => onToggleRecurring(!recurring),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            padding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: recurring ? FtColors.moss : FtColors.surface,
-              border: Border.all(
-                color: recurring ? FtColors.moss : FtColors.line,
-                width: 0.5,
-              ),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.event_repeat_outlined,
-                  size: 14,
-                  color: recurring ? Colors.white : FtColors.ink3,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Rutin',
-                  style: TextStyle(
-                    color: recurring ? Colors.white : FtColors.ink2,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _Keypad extends StatelessWidget {
-  const _Keypad({required this.onTap});
-  final ValueChanged<String> onTap;
-
-  static const _keys = [
-    '1', '2', '3',
-    '4', '5', '6',
-    '7', '8', '9',
-    '000', '0', '←',
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
-    if (bottomInset > 0) return const SizedBox.shrink();
-    return Container(
-      padding: const EdgeInsets.fromLTRB(22, 12, 22, 24),
-      decoration: BoxDecoration(
-        color: FtColors.surfaceAlt,
-        border: Border(top: BorderSide(color: FtColors.line, width: 0.5)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: 3,
-          mainAxisSpacing: 10,
-          crossAxisSpacing: 10,
-          childAspectRatio: 2.0,
-          children: [
-            for (final k in _keys)
-              FtTapScale(
-                scale: 0.94,
-                haptic: false,
-                onTap: () => onTap(k),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: FtColors.surface,
-                    border: Border.all(color: FtColors.line, width: 0.5),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    k,
-                    style: TextStyle(
-                      fontFamily: 'Newsreader',
-                      fontSize: 22,
-                      fontWeight: FontWeight.w400,
-                      color: FtColors.ink,
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}

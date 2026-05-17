@@ -1,8 +1,10 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../features/household/household_providers.dart';
 import '../theme.dart';
 import 'ft_action_sheet.dart';
 import 'ft_haptics.dart';
@@ -280,11 +282,15 @@ class FtAppChrome extends StatelessWidget {
   }
 }
 
-class _CatatAktivitasFab extends StatelessWidget {
+class _CatatAktivitasFab extends ConsumerWidget {
   const _CatatAktivitasFab();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Hide the FAB for view-only members — nothing to record from here.
+    if (!ref.watch(canRecordTxnProvider) && !ref.watch(canWriteAllProvider)) {
+      return const SizedBox.shrink();
+    }
     return FtTapScale(
       scale: 0.88,
       onTap: () => ActionChooserSheet.show(context),

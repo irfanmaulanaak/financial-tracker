@@ -4,8 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/formatters.dart';
+import '../../core/providers.dart';
 import '../../theme.dart';
+import '../../ui/ft_ring.dart';
 import '../../ui/ft_ui.dart';
+import '../goals/contribution.dart';
 import '../goals/goal.dart';
 import '../goals/goal_repository.dart';
 import '../home/widgets/home_formatters.dart';
@@ -71,17 +74,18 @@ class _Body extends ConsumerWidget {
         : 0;
     final color = parseColor(goal.color);
 
-    // Mock monthly contributions for the bar chart
-    final contribs = <double>[
-      goal.monthlyContrib * 0.8,
-      goal.monthlyContrib * 1.1,
-      goal.monthlyContrib * 0.9,
-      goal.monthlyContrib * 1.2,
-      goal.monthlyContrib * 0.7,
-      goal.monthlyContrib * 1.0,
-      goal.monthlyContrib * 1.3,
-      goal.monthlyContrib * 0.95,
-    ];
+    // Real contribution history bucketed into the last 8 months.
+    final contribsAsync = ref.watch(
+      goalContributionsProvider((hid: householdId, goalId: goal.id)),
+    );
+    const monthsBack = 8;
+    final all = contribsAsync.value ?? const <GoalContribution>[];
+    final monthly = contributionsByMonth(
+      contribs: all,
+      monthsBack: monthsBack,
+    );
+    final monthLabels = monthLabelsForBars(monthsBack: monthsBack);
+    final monthlyTotal = monthly.fold<int>(0, (a, b) => a + b);
 
     return FtAppChrome(
       current: FtTab.goals,
@@ -102,30 +106,32 @@ class _Body extends ConsumerWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    SizedBox(
-                      width: 140,
-                      height: 140,
-                      child: Stack(
-                        alignment: Alignment.center,
+                    FtRing(
+                      value: goal.progress,
+                      max: 1,
+                      size: 140,
+                      thickness: 10,
+                      color: color,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          CircularProgressIndicator(
-                            value: goal.progress,
-                            strokeWidth: 10,
-                            color: color,
-                            backgroundColor: FtColors.line,
+                          const Eyebrow('Tercapai'),
+                          const SizedBox(height: 2),
+                          Text(
+                            '$pct%',
+                            style: Theme.of(context)
+                                .textTheme
+                                .displaySmall
+                                ?.copyWith(fontSize: 32, height: 1),
                           ),
-                          Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Eyebrow('Tercapai'),
-                              Text(
-                                '$pct%',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .displaySmall
-                                    ?.copyWith(fontSize: 32, height: 1),
-                              ),
-                            ],
+                          const SizedBox(height: 4),
+                          Text(
+                            '${compactMoney(goal.current)} / ${compactMoney(goal.target)}',
+                            style: TextStyle(
+                              color: FtColors.ink3,
+                              fontSize: 11,
+                              fontFeatures: const [FontFeature.tabularFigures()],
+                            ),
                           ),
                         ],
                       ),
@@ -162,45 +168,58 @@ class _Body extends ConsumerWidget {
           ),
           FtCard(
             margin: const EdgeInsets.fromLTRB(22, 0, 22, 18),
-            child: SizedBox(
-              height: 100,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  for (var i = 0; i < contribs.length; i++) ...[
-                    Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          Container(
-                            height: max(
-                              6,
-                              (contribs[i] /
-                                      contribs.reduce(max) *
-                                      70),
-                            ),
-                            decoration: BoxDecoration(
-                              color: i == contribs.length - 1
-                                  ? color
-                                  : color.withValues(alpha: 0.45),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            ['Okt', 'Nov', 'Des', 'Jan', 'Feb', 'Mar',
-                              'Apr', 'Mei'][i],
-                            style: TextStyle(
-                                fontSize: 9, color: FtColors.ink3),
-                          ),
-                        ],
+            child: monthlyTotal == 0
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 28),
+                    child: Center(
+                      child: Text(
+                        'Belum ada riwayat setoran.',
+                        style: TextStyle(
+                          color: FtColors.ink3,
+                          fontSize: 12,
+                        ),
                       ),
                     ),
-                    if (i != contribs.length - 1) const SizedBox(width: 6),
-                  ],
-                ],
-              ),
-            ),
+                  )
+                : SizedBox(
+                    height: 100,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        for (var i = 0; i < monthly.length; i++) ...[
+                          Expanded(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                Container(
+                                  height: max(
+                                    monthly[i] == 0 ? 0 : 6,
+                                    (monthly[i] /
+                                            max(1, monthly.reduce(max)) *
+                                            70),
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: i == monthly.length - 1
+                                        ? color
+                                        : color.withValues(alpha: 0.45),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  monthLabels[i],
+                                  style: TextStyle(
+                                      fontSize: 9, color: FtColors.ink3),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (i != monthly.length - 1)
+                            const SizedBox(width: 6),
+                        ],
+                      ],
+                    ),
+                  ),
           ),
           FtCard(
             margin: const EdgeInsets.fromLTRB(22, 0, 22, 18),
@@ -283,9 +302,15 @@ class _Body extends ConsumerWidget {
       ),
     );
     if (amount != null) {
+      final uid = ref.read(authStateProvider).value?.uid ?? '';
       await ref
           .read(goalRepositoryProvider)
-          .contribute(hid: householdId, goalId: goal.id, amount: amount);
+          .contribute(
+            hid: householdId,
+            goalId: goal.id,
+            amount: amount,
+            byUid: uid,
+          );
     }
     ctrl.dispose();
   }

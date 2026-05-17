@@ -11,7 +11,6 @@ import '../../core/payday.dart';
 import '../../core/providers.dart';
 import '../../core/recurring_runner.dart';
 import '../../theme.dart';
-import '../../ui/ft_motion.dart';
 import '../../ui/ft_ui.dart';
 import '../auth/auth_repository.dart';
 import '../cards/credit_card.dart';
@@ -19,12 +18,15 @@ import '../cards/cards_screen.dart';
 import '../household/name_format.dart';
 import '../expenses/expense.dart';
 import '../expenses/expense_providers.dart';
+import '../goals/auto_debit_runner.dart';
 import '../goals/goal.dart';
 import '../goals/goals_screen.dart';
 import '../household/household_providers.dart';
 import '../insights/insights_providers.dart';
 import '../investments/investment.dart';
 import '../investments/investments_screen.dart';
+import 'net_worth_snapshot.dart';
+import 'net_worth_snapshot_repository.dart';
 import 'widgets/banners.dart';
 import 'widgets/cards_preview.dart';
 import 'widgets/category_grid.dart';
@@ -49,12 +51,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final householdAsync = ref.watch(currentHouseholdProvider);
+    // Self-heal stale `users/{uid}.householdId` after a creator removed us
+    // from the household.
+    ref.watch(orphanedMembershipCleanupProvider);
     final loadedHid = householdAsync.value?.id;
     if (loadedHid != null && loadedHid != _lastRecurringHid) {
       _lastRecurringHid = loadedHid;
       // Fire-and-forget; failures are non-fatal (next session retries).
       // ignore: discarded_futures
       ref.read(recurringRunnerProvider).run(householdId: loadedHid);
+      // ignore: discarded_futures
+      ref.read(autoDebitRunnerProvider).run(householdId: loadedHid);
     }
     final cycleAsync = ref.watch(cycleExpensesProvider);
     final recentAsync = ref.watch(recentExpensesProvider(5));
@@ -147,6 +154,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             household,
             cards.map((c) => (limit: c.limit, used: c.used)),
           );
+          // Record today's net-worth snapshot once everything's loaded.
+          // Idempotent per day (see [NetWorthSnapshotRepository.recordToday]).
+          if (user != null &&
+              cardsAsync?.hasValue == true &&
+              investmentsAsync?.hasValue == true) {
+            // ignore: discarded_futures
+            ref
+                .read(netWorthSnapshotRepositoryProvider)
+                .recordToday(
+                  householdId: household.id,
+                  nw: nw,
+                  capturedBy: user.uid,
+                );
+          }
+          final history =
+              ref.watch(netWorthHistoryProvider(14)).value ?? const <NetWorthSnapshot>[];
+          final trend = [for (final s in history) s.total.toDouble()];
           final health = computeHealthScore(
             HealthScoreInputs(
               spendThisCycle: totalSpentValue,
@@ -189,6 +213,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 household: household,
                 displayName: displayName,
                 nw: nw,
+                trend: trend,
                 totalSpent: totalSpentValue,
                 income: income,
                 health: health,
@@ -202,7 +227,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 onExpenses: () => context.push('/expenses'),
                 onCards: () => context.push('/cards'),
                 onGoals: () => context.push('/goals'),
-                onInsights: () => context.push('/insights'),
+                onInsights: () => context.push('/health'),
               ),
             );
           }
@@ -225,35 +250,62 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   index: 0,
                 ),
                 section(
-                  AssetHero(
+                  AssetHeroCard(
                     nw: nw,
                     cycleNet: income - totalSpentValue,
+                    trend: trend,
                     onTap: () => context.push('/accounts'),
                   ),
                   index: 1,
                 ),
-                section(
-                  AssetBreakdown(
-                      nw: nw, onTap: () => context.push('/accounts')),
-                  index: 2,
-                ),
                 if (status != BudgetStatus.ok)
-                  section(BudgetBanner(status: status), index: 3),
+                  section(BudgetBanner(status: status), index: 2),
                 for (var i = 0; i < dueBanners.length; i++)
-                  section(dueBanners[i], index: 4 + i),
+                  section(dueBanners[i], index: 3 + i),
                 section(
-                  MonthStrip(
-                    totalSpent: totalSpentValue,
-                    income: income,
-                    daily: daily,
-                    todaySpend: expenses
-                        .where((e) =>
-                            e.date.year == now.year &&
-                            e.date.month == now.month &&
-                            e.date.day == now.day)
-                        .fold<int>(0, (a, e) => a + e.amount),
-                    cycleStart: cycle.start,
-                    cycleEndExclusive: cycle.endExclusive,
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(22, 0, 22, 16),
+                    child: IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(
+                            flex: 13,
+                            child: MonthStrip(
+                              totalSpent: totalSpentValue,
+                              income: income,
+                              daily: daily,
+                              todaySpend: expenses
+                                  .where((e) =>
+                                      e.date.year == now.year &&
+                                      e.date.month == now.month &&
+                                      e.date.day == now.day)
+                                  .fold<int>(0, (a, e) => a + e.amount),
+                              cycleStart: cycle.start,
+                              cycleEndExclusive: cycle.endExclusive,
+                              compact: true,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            flex: 10,
+                            child: HealthSnapshot(
+                              score: health,
+                              onTap: () => context.push('/health'),
+                              compact: true,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  index: 4,
+                ),
+                section(
+                  CategoryGrid(
+                    categories: categories.take(4).toList(),
+                    totals: byCat,
+                    onTap: () => context.push('/spend'),
                   ),
                   index: 5,
                 ),
@@ -265,26 +317,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   index: 6,
                 ),
                 section(
-                  HealthSnapshot(
-                    score: health,
-                    onTap: () => context.push('/insights'),
-                  ),
-                  index: 7,
-                ),
-                section(
-                  CategoryGrid(
-                    categories: categories.take(4).toList(),
-                    totals: byCat,
-                    onTap: () => context.push('/spend'),
-                  ),
-                  index: 8,
-                ),
-                section(
                   GoalsPreview(
                     goals: goals,
                     onTap: () => context.push('/goals'),
                   ),
-                  index: 9,
+                  index: 7,
                 ),
                 section(
                   RecentList(
@@ -292,7 +329,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     household: household,
                     onTap: () => context.push('/expenses'),
                   ),
-                  index: 10,
+                  index: 8,
                 ),
               ],
             ),
@@ -305,7 +342,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   void _handleMenu(String v) {
     switch (v) {
       case 'insights':
-        context.push('/insights');
+        context.push('/health');
       case 'categories':
         context.push('/categories');
       case 'members':

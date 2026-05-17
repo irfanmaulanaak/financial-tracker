@@ -24,25 +24,30 @@ String _escape(Object? v) {
 }
 
 /// Expense rows → CSV with header.
+///
+/// `source` resolves to the account / card label the money came from:
+///   - cash flow → cash- or savings-account label (e.g. "BCA Tunai")
+///   - credit flow → card label (e.g. "BCA Visa")
+///   - legacy rows w/ neither → empty string
 String expensesToCsv(
   Iterable<({
     DateTime date,
     int amount,
     String category,
-    String paymentMethod,
+    String source,
     String spentBy,
     String? note,
   })> rows,
 ) {
   final out = <List<dynamic>>[
-    ['date', 'amount', 'category', 'paymentMethod', 'spentBy', 'note']
+    ['date', 'amount', 'category', 'source', 'spentBy', 'note']
   ];
   for (final r in rows) {
     out.add([
       _isoDate(r.date),
       r.amount,
       r.category,
-      r.paymentMethod,
+      r.source,
       r.spentBy,
       r.note ?? '',
     ]);

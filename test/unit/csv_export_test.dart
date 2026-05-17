@@ -58,7 +58,7 @@ void main() {
           date: DateTime(2025, 1, 5),
           amount: 50000,
           category: 'Makanan',
-          paymentMethod: 'Tunai',
+          source: 'BCA Tunai',
           spentBy: 'Andi',
           note: null,
         ),
@@ -66,21 +66,21 @@ void main() {
           date: DateTime(2025, 11, 30),
           amount: 100000,
           category: 'Belanja, harian',
-          paymentMethod: 'Debit',
+          source: 'GoPay',
           spentBy: 'Siti',
           note: 'beli "sayur"',
         ),
       ]);
       expect(s, '''
-date,amount,category,paymentMethod,spentBy,note
-2025-01-05,50000,Makanan,Tunai,Andi,
-2025-11-30,100000,"Belanja, harian",Debit,Siti,"beli ""sayur"""
+date,amount,category,source,spentBy,note
+2025-01-05,50000,Makanan,BCA Tunai,Andi,
+2025-11-30,100000,"Belanja, harian",GoPay,Siti,"beli ""sayur"""
 ''');
     });
 
     test('empty list → header only', () {
       final s = expensesToCsv([]);
-      expect(s, 'date,amount,category,paymentMethod,spentBy,note\n');
+      expect(s, 'date,amount,category,source,spentBy,note\n');
     });
   });
 }

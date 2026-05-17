@@ -1,14 +1,16 @@
-import 'dart:io';
+import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/csv_export.dart';
 import '../../core/payday.dart';
 import '../../theme.dart';
 import '../../ui/ft_ui.dart';
+import '../cards/credit_card.dart';
+import '../cards/cards_screen.dart';
 import '../expenses/expense.dart';
 import '../expenses/expense_repository.dart';
 import '../household/household.dart';
@@ -39,16 +41,20 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
             endExclusive: now.add(const Duration(days: 1)),
           )
           .first;
+      // Resolve card labels for credit-flow rows.
+      final cards =
+          await ref.read(cardsProvider(household.id).future);
+      final cardById = {for (final CreditCard c in cards) c.id: c};
 
       final rows = list.map((Expense e) {
         final cat = household.categoryOf(e.categoryId);
-        final pm = household.paymentMethodOf(e.paymentMethodId);
         final member = household.memberOf(e.spentBy);
+        final source = _expenseSourceLabel(e, household, cardById);
         return (
           date: e.date,
           amount: e.amount,
           category: cat?.label ?? e.categoryId,
-          paymentMethod: pm?.label ?? e.paymentMethodId,
+          source: source,
           spentBy: prettyName(member?.displayName ?? e.spentBy),
           note: e.note,
         );
@@ -75,7 +81,7 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
           date: i.date,
           amount: i.amount,
           category: i.source.name,
-          paymentMethod: dest?.label ?? i.destinationAccountId,
+          source: dest?.label ?? i.destinationAccountId,
           spentBy: prettyName(member?.displayName ?? i.receivedBy),
           note: i.note,
         );
@@ -88,11 +94,17 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
   }
 
   Future<void> _shareCsv(String csv, String filename) async {
-    final dir = await getTemporaryDirectory();
-    final file = File('${dir.path}/$filename');
-    await file.writeAsString(csv);
+    // In-memory XFile keeps this cross-platform: share_plus writes a temp
+    // file on Android/iOS internally, and uses a blob/download on web.
+    final bytes = Uint8List.fromList(utf8.encode(csv));
     await SharePlus.instance.share(
-      ShareParams(files: [XFile(file.path)], text: filename),
+      ShareParams(
+        files: [
+          XFile.fromData(bytes, name: filename, mimeType: 'text/csv'),
+        ],
+        fileNameOverrides: [filename],
+        text: filename,
+      ),
     );
   }
 
@@ -152,3 +164,25 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
 
   String _short(DateTime d) => '${d.day}/${d.month}/${d.year}';
 }
+
+/// Resolves an expense's "where the money came from" label for the CSV
+/// export. Order: cash account → savings account → credit card → empty
+/// (legacy rows recorded before sourceAccountId existed).
+String _expenseSourceLabel(
+  Expense e,
+  Household household,
+  Map<String, CreditCard> cardById,
+) {
+  if (e.sourceAccountId != null) {
+    final acc = household.accountOf(e.sourceAccountId!);
+    if (acc != null) return acc.label;
+    return e.sourceAccountId!;
+  }
+  if (e.cardId != null) {
+    final c = cardById[e.cardId];
+    if (c != null) return c.label;
+    return e.cardId!;
+  }
+  return '';
+}
+

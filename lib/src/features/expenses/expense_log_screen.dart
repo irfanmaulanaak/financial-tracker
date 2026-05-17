@@ -6,12 +6,13 @@ import '../../core/formatters.dart';
 import '../../core/payday.dart';
 import '../../theme.dart';
 import '../../ui/ft_ui.dart';
+import '../home/widgets/home_formatters.dart';
 import '../household/household.dart';
 import '../household/household_providers.dart';
-import '../home/widgets/home_formatters.dart';
 import '../household/name_format.dart';
 import '../members/member_chip.dart';
 import 'expense.dart';
+import 'expense_detail_sheet.dart';
 import 'expense_repository.dart';
 
 class ExpenseLogScreen extends ConsumerStatefulWidget {
@@ -41,6 +42,14 @@ class _ExpenseLogScreenState extends ConsumerState<ExpenseLogScreen> {
         child: Column(
           children: [
               const FtSubHeader(title: 'Pengeluaran'),
+              expensesStream.when(
+                data: (all) => _TodayCard(
+                  expenses: all,
+                  onAdd: () => context.push('/expenses/new'),
+                ),
+                loading: () => const SizedBox.shrink(),
+                error: (_, _) => const SizedBox.shrink(),
+              ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 0, 10),
                 child: SingleChildScrollView(
@@ -170,6 +179,10 @@ class _ExpenseLogScreenState extends ConsumerState<ExpenseLogScreen> {
                                 expense: e,
                                 category: household.categoryOf(e.categoryId),
                                 spender: household.memberOf(e.spentBy),
+                                onTap: () => ExpenseDetailSheet.show(
+                                  context: context,
+                                  expense: e,
+                                ),
                                 onDelete: () => _confirmDelete(household, e),
                               ),
                             ),
@@ -217,11 +230,13 @@ class _ExpenseTile extends ConsumerWidget {
     required this.expense,
     required this.category,
     required this.spender,
+    required this.onTap,
     required this.onDelete,
   });
   final Expense expense;
   final Category? category;
   final Member? spender;
+  final VoidCallback onTap;
   final VoidCallback onDelete;
 
   @override
@@ -230,6 +245,7 @@ class _ExpenseTile extends ConsumerWidget {
     return FtCard(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
       padding: const EdgeInsets.all(14),
+      onTap: onTap,
       onLongPress: onDelete,
       child: Row(
         children: [
@@ -320,6 +336,46 @@ IconData _iconFor(String name) => switch (name) {
   'sports_esports' => Icons.sports_esports,
   _ => Icons.category,
 };
+
+class _TodayCard extends StatelessWidget {
+  const _TodayCard({required this.expenses, required this.onAdd});
+
+  final List<Expense> expenses;
+  final VoidCallback onAdd;
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final todayKey = DateTime(now.year, now.month, now.day);
+    final today = expenses
+        .where((e) => Dates.dayKey(e.date) == todayKey)
+        .fold<int>(0, (a, e) => a + e.amount.toInt());
+    return FtCard(
+      margin: const EdgeInsets.fromLTRB(22, 10, 22, 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Eyebrow('Hari ini'),
+                const SizedBox(height: 4),
+                Text(
+                  Money.format(today),
+                  style: Theme.of(context)
+                      .textTheme
+                      .headlineLarge
+                      ?.copyWith(fontSize: 26, letterSpacing: -0.3),
+                ),
+              ],
+            ),
+          ),
+          FtAddButton(onTap: onAdd, tooltip: 'Catat pengeluaran'),
+        ],
+      ),
+    );
+  }
+}
 
 class _FilterPill extends StatelessWidget {
   const _FilterPill({

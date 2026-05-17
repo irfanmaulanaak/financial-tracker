@@ -63,7 +63,7 @@ jobs:
       - name: Upload APKs
         uses: actions/upload-artifact@v4
         with:
-          name: financial-tracker-apks-${{ github.sha }}
+          name: finsist-apks-${{ github.sha }}
           path: build/app/outputs/flutter-apk/*.apk
           if-no-files-found: error
           retention-days: 30
@@ -75,3 +75,43 @@ jobs:
         with:
           files: build/app/outputs/flutter-apk/*.apk
           generate_release_notes: true
+
+  web:
+    name: Web build + Cloudflare Pages deploy
+    needs: test
+    runs-on: ubuntu-latest
+    # Push to main → production. PR from same repo → preview URL (skip forks,
+    # since secrets aren't exposed to them).
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      contents: read
+      deployments: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.41.9
+          cache: true
+
+      - name: Resolve app version
+        id: ver
+        run: echo "v=$(grep '^version:' pubspec.yaml | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+
+      - name: flutter pub get
+        run: flutter pub get
+
+      - name: flutter build web
+        run: |
+          flutter build web --release \
+            --dart-define=APP_VERSION=${{ steps.ver.outputs.v }}
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy build/web --project-name=finsist --branch=${{ github.head_ref || github.ref_name }}
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
