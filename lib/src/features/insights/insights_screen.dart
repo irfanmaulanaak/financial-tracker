@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/category_analysis.dart';
 import '../../core/expense_aggregations.dart';
 import '../../core/formatters.dart';
 import '../../core/health_score.dart';
 import '../../theme.dart';
+import '../../ui/ft_motion.dart';
 import '../../ui/ft_ui.dart';
 import '../cards/cards_screen.dart';
 import '../expenses/expense.dart';
 import '../expenses/expense_providers.dart';
+import '../household/household.dart';
 import '../household/household_providers.dart';
 import '../investments/investments_screen.dart';
 import 'insights_providers.dart';
@@ -120,6 +123,20 @@ class InsightsScreen extends ConsumerWidget {
                 ],
               ),
             ),
+            ..._buildFindings(
+              context: context,
+              categories: household.categories,
+              current: cycleExpenses,
+              previousWindows: prevCycles,
+            ),
+            ..._buildRecommendations(
+              context: context,
+              score: score,
+              cardDebt: assets.cardDebt,
+              savingsBalance: assets.savingsBalance,
+              investmentCount:
+                  investments.where((i) => i.currentValue > 0).length,
+            ),
             const Padding(
               padding: EdgeInsets.fromLTRB(22, 0, 22, 8),
               child: Eyebrow('Analisis Per Kategori'),
@@ -129,6 +146,133 @@ class InsightsScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  List<Widget> _buildFindings({
+    required BuildContext context,
+    required List<Category> categories,
+    required List<Expense> current,
+    required List<List<Expense>> previousWindows,
+  }) {
+    if (categories.isEmpty) return const [];
+    final byCatCurrent = <String, int>{};
+    for (final e in current) {
+      byCatCurrent.update(
+        e.categoryId,
+        (v) => v + e.amount,
+        ifAbsent: () => e.amount,
+      );
+    }
+    final history = <String, List<int>>{};
+    for (final w in previousWindows) {
+      final totals = <String, int>{};
+      for (final e in w) {
+        totals.update(e.categoryId, (v) => v + e.amount,
+            ifAbsent: () => e.amount);
+      }
+      for (final c in categories) {
+        history.putIfAbsent(c.id, () => []).add(totals[c.id] ?? 0);
+      }
+    }
+    final findings = <_Finding>[];
+    for (final c in categories) {
+      final cur = byCatCurrent[c.id] ?? 0;
+      final a = analyseCategory(
+        categoryId: c.id,
+        currentSpend: cur,
+        previousSpends: history[c.id] ?? const [],
+      );
+      if (a.historicalAverage == 0 && cur == 0) continue;
+      // Only show findings where there's a meaningful delta either direction.
+      if (a.deltaPct.abs() < 0.10) continue;
+      findings.add(_Finding(category: c, analysis: a));
+    }
+    findings.sort((a, b) => b.analysis.deltaPct.abs()
+        .compareTo(a.analysis.deltaPct.abs()));
+    if (findings.isEmpty) return const [];
+    return [
+      const Padding(
+        padding: EdgeInsets.fromLTRB(22, 0, 22, 8),
+        child: Eyebrow('Temuan Pengeluaran'),
+      ),
+      FtCard(
+        margin: const EdgeInsets.fromLTRB(22, 0, 22, 18),
+        padding: EdgeInsets.zero,
+        child: Column(
+          children: [
+            for (var i = 0; i < findings.take(5).length; i++) ...[
+              if (i > 0) const Divider(height: 1),
+              _FindingRow(
+                finding: findings[i],
+                onTap: () =>
+                    context.push('/categories/${findings[i].category.id}'),
+              ),
+            ],
+          ],
+        ),
+      ),
+    ];
+  }
+
+  List<Widget> _buildRecommendations({
+    required BuildContext context,
+    required HealthScore score,
+    required int cardDebt,
+    required int savingsBalance,
+    required int investmentCount,
+  }) {
+    final recs = <_Recommendation>[];
+    if (cardDebt > 0 && cardDebt > savingsBalance * 0.5) {
+      recs.add(_Recommendation(
+        icon: Icons.credit_card_rounded,
+        label: 'Prioritaskan pelunasan kartu kredit',
+        detail: 'Utang kartu sudah > 50% dari saldo tabungan',
+        route: '/cards',
+      ));
+    }
+    if (savingsBalance < 5000000) {
+      recs.add(_Recommendation(
+        icon: Icons.savings_rounded,
+        label: 'Bangun dana darurat',
+        detail: 'Target awal Rp 5 jt sebelum investasi besar',
+        route: '/accounts',
+      ));
+    }
+    if (investmentCount == 0 && savingsBalance > 10000000) {
+      recs.add(_Recommendation(
+        icon: Icons.show_chart_rounded,
+        label: 'Mulai diversifikasi ke investasi',
+        detail: 'Tabungan cukup — sisipkan ke reksadana atau emas',
+        route: '/investments',
+      ));
+    }
+    if (score.score < 50) {
+      recs.add(_Recommendation(
+        icon: Icons.flag_rounded,
+        label: 'Tinjau ulang anggaran',
+        detail: 'Skor kesehatan di bawah 50 — atur pos pengeluaran lewat goal',
+        route: '/goals',
+      ));
+    }
+    if (recs.isEmpty) return const [];
+    return [
+      const Padding(
+        padding: EdgeInsets.fromLTRB(22, 0, 22, 8),
+        child: Eyebrow('Rekomendasi'),
+      ),
+      FtCard(
+        margin: const EdgeInsets.fromLTRB(22, 0, 22, 18),
+        padding: EdgeInsets.zero,
+        child: Column(
+          children: [
+            for (var i = 0; i < recs.length; i++) ...[
+              if (i > 0) const Divider(height: 1),
+              _RecRow(rec: recs[i], onTap: () => context.push(recs[i].route)),
+            ],
+          ],
+        ),
+      ),
+    ];
   }
 
   List<Widget> _buildAnalyses(
@@ -474,4 +618,175 @@ class _AnalysisTile extends StatelessWidget {
 Color _parseColor(String hex) {
   final h = hex.replaceFirst('#', '');
   return Color(int.parse('FF$h', radix: 16));
+}
+
+class _Finding {
+  const _Finding({required this.category, required this.analysis});
+  final Category category;
+  final CategoryAnalysis analysis;
+}
+
+class _FindingRow extends StatelessWidget {
+  const _FindingRow({required this.finding, required this.onTap});
+  final _Finding finding;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final delta = finding.analysis.deltaPct;
+    final positive = delta > 0;
+    final color = positive
+        ? (delta > 0.20 ? FtColors.danger : FtColors.ochre)
+        : FtColors.healthOk;
+    final catColor = _parseColor(finding.category.color);
+    return FtTapScale(
+      scale: 0.98,
+      haptic: false,
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                    color: color.withValues(alpha: 0.28), width: 0.5),
+              ),
+              child: Icon(
+                positive
+                    ? Icons.arrow_upward_rounded
+                    : Icons.arrow_downward_rounded,
+                size: 16,
+                color: color,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          finding.category.label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: FtColors.ink,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '${positive ? '+' : ''}${(delta * 100).round()}%',
+                        style: TextStyle(
+                          color: color,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Sekarang ${Money.format(finding.analysis.currentSpend)} · rata-rata ${Money.format(finding.analysis.historicalAverage)}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: FtColors.ink3,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 6),
+            Icon(Icons.chevron_right_rounded,
+                size: 14, color: catColor),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Recommendation {
+  const _Recommendation({
+    required this.icon,
+    required this.label,
+    required this.detail,
+    required this.route,
+  });
+  final IconData icon;
+  final String label;
+  final String detail;
+  final String route;
+}
+
+class _RecRow extends StatelessWidget {
+  const _RecRow({required this.rec, required this.onTap});
+  final _Recommendation rec;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return FtTapScale(
+      scale: 0.98,
+      haptic: false,
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: FtColors.surfaceAlt,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: FtColors.line, width: 0.5),
+              ),
+              child: Icon(rec.icon, size: 16, color: FtColors.ink2),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    rec.label,
+                    style: TextStyle(
+                      color: FtColors.ink,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    rec.detail,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: FtColors.ink3,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 6),
+            Icon(Icons.chevron_right_rounded,
+                size: 14, color: FtColors.ink4),
+          ],
+        ),
+      ),
+    );
+  }
 }

@@ -19,8 +19,9 @@ class AccountDraft {
 }
 
 class AccountEditSheet extends StatefulWidget {
-  const AccountEditSheet({super.key, this.initial});
+  const AccountEditSheet({super.key, this.initial, this.initialKind});
   final Account? initial;
+  final AccountKind? initialKind;
 
   @override
   State<AccountEditSheet> createState() => _AccountEditSheetState();
@@ -39,7 +40,7 @@ class _AccountEditSheetState extends State<AccountEditSheet> {
   @override
   void initState() {
     super.initState();
-    _kind = widget.initial?.kind ?? AccountKind.cash;
+    _kind = widget.initial?.kind ?? widget.initialKind ?? AccountKind.cash;
   }
 
   @override

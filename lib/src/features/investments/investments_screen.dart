@@ -249,9 +249,22 @@ class _InvestmentTile extends StatelessWidget {
             width: 42,
             height: 42,
             decoration: BoxDecoration(
-              color: FtColors.surfaceAlt,
+              color: FtColors.clay.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: FtColors.line, width: 0.5),
+              border: Border.all(
+                  color: FtColors.clay.withValues(alpha: 0.24), width: 0.5),
+            ),
+            child: Icon(
+              switch (inv.type) {
+                InvestmentType.saham => Icons.trending_up_rounded,
+                InvestmentType.reksadana => Icons.bar_chart_rounded,
+                InvestmentType.deposito => Icons.lock_clock_rounded,
+                InvestmentType.emas => Icons.workspace_premium_rounded,
+                InvestmentType.crypto => Icons.currency_bitcoin_rounded,
+                InvestmentType.lainnya => Icons.account_balance_rounded,
+              },
+              color: FtColors.clay,
+              size: 20,
             ),
           ),
           const SizedBox(width: 12),

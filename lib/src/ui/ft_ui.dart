@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../theme.dart';
+import 'ft_action_sheet.dart';
 import 'ft_haptics.dart';
 import 'ft_motion.dart';
 
@@ -228,19 +229,24 @@ class FtStatItem extends StatelessWidget {
   }
 }
 
-/// App chrome: keeps the floating bottom nav above the screen body.
-/// Pads bottom of [child] (use `bottomPadding` to override).
+/// App chrome: keeps the floating bottom nav above the screen body, plus a
+/// separate "Catat Aktivitas" FAB hovering above the right side of the nav.
 class FtAppChrome extends StatelessWidget {
   const FtAppChrome({
     super.key,
     required this.current,
     required this.child,
     this.showNav = true,
+    this.showActionFab = true,
   });
 
   final FtTab current;
   final Widget child;
   final bool showNav;
+
+  /// Hide the floating "+" on screens that already have a contextual entry
+  /// (e.g. the dedicated record-expense/record-income screens).
+  final bool showActionFab;
 
   @override
   Widget build(BuildContext context) {
@@ -261,7 +267,49 @@ class FtAppChrome extends StatelessWidget {
               ),
             ),
           ),
+        if (showNav && showActionFab)
+          Positioned(
+            right: 16,
+            // Lift the FAB so it sits clearly above the nav pill while still
+            // overlapping its top edge — matches the floating-button feel.
+            bottom: MediaQuery.paddingOf(context).bottom + 78,
+            child: const _CatatAktivitasFab(),
+          ),
       ],
+    );
+  }
+}
+
+class _CatatAktivitasFab extends StatelessWidget {
+  const _CatatAktivitasFab();
+
+  @override
+  Widget build(BuildContext context) {
+    return FtTapScale(
+      scale: 0.88,
+      onTap: () => ActionChooserSheet.show(context),
+      child: Container(
+        width: 56,
+        height: 56,
+        decoration: BoxDecoration(
+          color: FtColors.ink,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.25),
+              blurRadius: 18,
+              offset: const Offset(0, 6),
+            ),
+            BoxShadow(
+              color: FtColors.ink.withValues(alpha: 0.2),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        alignment: Alignment.center,
+        child: Icon(Icons.add_rounded, size: 26, color: FtColors.bg),
+      ),
     );
   }
 }
@@ -286,7 +334,7 @@ class FtBottomNav extends StatelessWidget {
       _FtNavItem(FtTab.home, Icons.home_rounded, Icons.home_outlined,
           'Beranda', '/home'),
       _FtNavItem(FtTab.spend, Icons.donut_large_rounded,
-          Icons.donut_large_outlined, 'Pengeluaran', '/expenses'),
+          Icons.donut_large_outlined, 'Pengeluaran', '/spend'),
       _FtNavItem(FtTab.assets, Icons.pie_chart_rounded,
           Icons.pie_chart_outline_rounded, 'Aset', '/accounts'),
       _FtNavItem(FtTab.goals, Icons.flag_rounded, Icons.flag_outlined,

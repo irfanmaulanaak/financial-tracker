@@ -6,7 +6,7 @@ import '../../../theme.dart';
 import '../../../ui/ft_ui.dart';
 import '../../expenses/expense.dart';
 import '../../household/household.dart';
-import '../../household/name_format.dart';
+import '../../members/member_chip.dart';
 import 'home_formatters.dart';
 
 class RecentList extends StatelessWidget {
@@ -135,16 +135,29 @@ class _RecentExpenseRow extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 3),
-                Text(
-                  [
-                    Dates.short(expense.date),
-                    if (expense.note != null && expense.note!.isNotEmpty)
-                      expense.note!,
-                    if (spender != null) prettyName(spender!.displayName),
-                  ].join(' · '),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        [
+                          Dates.short(expense.date),
+                          if (expense.note != null && expense.note!.isNotEmpty)
+                            expense.note!,
+                        ].join(' · '),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: FtColors.ink3,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ),
+                    if (spender != null) ...[
+                      const SizedBox(width: 6),
+                      MemberChip(member: spender!),
+                    ],
+                  ],
                 ),
               ],
             ),

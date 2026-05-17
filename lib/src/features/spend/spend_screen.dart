@@ -1,0 +1,422 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../core/expense_aggregations.dart';
+import '../../core/formatters.dart';
+import '../../theme.dart';
+import '../../ui/ft_motion.dart';
+import '../../ui/ft_ui.dart';
+import '../expenses/expense.dart';
+import '../expenses/expense_providers.dart';
+import '../home/widgets/home_formatters.dart';
+import '../home/widgets/mini_donut.dart';
+import '../household/household.dart';
+import '../household/household_providers.dart';
+import '../insights/insights_providers.dart';
+
+/// "Pengeluaran Bulanan" — donut + category breakdown drilldown.
+/// Mirrors `claude-design/screens-deep.jsx` `SpendScreen`. Tapping a category
+/// row navigates to that category's detail page.
+class SpendScreen extends ConsumerStatefulWidget {
+  const SpendScreen({super.key});
+
+  @override
+  ConsumerState<SpendScreen> createState() => _SpendScreenState();
+}
+
+class _SpendScreenState extends ConsumerState<SpendScreen> {
+  /// `null` = current cycle, otherwise index into the previous-cycles list.
+  int? _prevIndex;
+  String? _focusedCategoryId;
+
+  @override
+  Widget build(BuildContext context) {
+    final household = ref.watch(currentHouseholdProvider).value;
+    if (household == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    final cycleAsync = ref.watch(cycleExpensesProvider);
+    final prevAsync = ref.watch(previousCyclesExpensesProvider(3));
+    final cycleExpenses = cycleAsync.value ?? const <Expense>[];
+    final prevCycles = prevAsync.value ?? const <List<Expense>>[];
+
+    final List<Expense> active = _prevIndex == null
+        ? cycleExpenses
+        : (prevCycles.length > _prevIndex! ? prevCycles[_prevIndex!] : const []);
+
+    final records = [
+      for (final e in active)
+        ExpenseRecord(
+          amount: e.amount,
+          categoryId: e.categoryId,
+          spentBy: e.spentBy,
+          date: e.date,
+        ),
+    ];
+    final total = totalSpent(records);
+    final byCat = spentByCategory(records);
+    final categories = household.categories
+        .where((c) => !c.archived)
+        .toList()
+      ..sort((a, b) {
+        final sa = byCat[a.id] ?? 0;
+        final sb = byCat[b.id] ?? 0;
+        if (sa != sb) return sb.compareTo(sa);
+        return a.sortOrder.compareTo(b.sortOrder);
+      });
+
+    final focused = _focusedCategoryId == null
+        ? null
+        : categories.firstWhere(
+            (c) => c.id == _focusedCategoryId,
+            orElse: () => categories.first,
+          );
+    final focusedAmount =
+        focused == null ? null : (byCat[focused.id] ?? 0);
+
+    return Scaffold(
+      backgroundColor: FtColors.bg,
+      body: FtAppChrome(
+        current: FtTab.spend,
+        child: ListView(
+          padding: const EdgeInsets.only(bottom: 120),
+          children: [
+            const FtSubHeader(title: 'Pengeluaran Bulanan'),
+            _Hero(
+              total: total,
+              displayAmount: focusedAmount ?? total,
+              caption: focused != null
+                  ? focused.label
+                  : 'Total ${categories.length} kategori aktif',
+              segments: [
+                for (final c in categories.where((c) => (byCat[c.id] ?? 0) > 0))
+                  DonutSegment(
+                    value: (byCat[c.id] ?? 0).toDouble(),
+                    color: parseColor(c.color),
+                  ),
+              ],
+              prevIndex: _prevIndex,
+              prevCount: prevCycles.length,
+              onPick: (i) {
+                setState(() {
+                  _prevIndex = i;
+                  _focusedCategoryId = null;
+                });
+              },
+            ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(22, 14, 22, 8),
+              child: Eyebrow('Rincian Kategori'),
+            ),
+            FtCard(
+              margin: const EdgeInsets.fromLTRB(22, 0, 22, 16),
+              padding: EdgeInsets.zero,
+              child: Column(
+                children: [
+                  if (categories.where((c) => (byCat[c.id] ?? 0) > 0).isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.all(22),
+                      child: Text(
+                        'Belum ada pengeluaran pada periode ini.',
+                        style: TextStyle(color: FtColors.ink3, fontSize: 12),
+                      ),
+                    )
+                  else
+                    for (var i = 0;
+                        i < categories.length;
+                        i++) ...[
+                      if ((byCat[categories[i].id] ?? 0) <= 0)
+                        const SizedBox.shrink()
+                      else ...[
+                        if (i > 0) const Divider(height: 1),
+                        _CategoryRow(
+                          category: categories[i],
+                          spent: byCat[categories[i].id] ?? 0,
+                          total: total,
+                          focused:
+                              _focusedCategoryId == categories[i].id,
+                          onTap: () =>
+                              context.push('/categories/${categories[i].id}'),
+                          onHover: (entered) => setState(() {
+                            _focusedCategoryId =
+                                entered ? categories[i].id : null;
+                          }),
+                        ),
+                      ],
+                    ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Hero extends StatelessWidget {
+  const _Hero({
+    required this.total,
+    required this.displayAmount,
+    required this.caption,
+    required this.segments,
+    required this.prevIndex,
+    required this.prevCount,
+    required this.onPick,
+  });
+  final int total;
+  final int displayAmount;
+  final String caption;
+  final List<DonutSegment> segments;
+  final int? prevIndex;
+  final int prevCount;
+  final ValueChanged<int?> onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    return FtCard(
+      margin: const EdgeInsets.fromLTRB(22, 4, 22, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Eyebrow(_periodLabel(prevIndex)),
+                    const SizedBox(height: 4),
+                    FtFadeUp(
+                      duration: const Duration(milliseconds: 360),
+                      distance: 6,
+                      child: Text(
+                        compactMoney(displayAmount),
+                        style: Theme.of(context)
+                            .textTheme
+                            .headlineLarge
+                            ?.copyWith(fontSize: 30, letterSpacing: -0.5),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      caption,
+                      style:
+                          TextStyle(color: FtColors.ink3, fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+              MiniDonut(segments: segments, size: 116, thickness: 14),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Divider(color: FtColors.line, height: 1),
+          const SizedBox(height: 12),
+          _PeriodPicker(
+            prevIndex: prevIndex,
+            prevCount: prevCount,
+            onPick: onPick,
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _periodLabel(int? idx) {
+    if (idx == null) return 'Siklus berjalan · Total';
+    return '${idx + 1} siklus lalu · Total';
+  }
+}
+
+class _PeriodPicker extends StatelessWidget {
+  const _PeriodPicker({
+    required this.prevIndex,
+    required this.prevCount,
+    required this.onPick,
+  });
+  final int? prevIndex;
+  final int prevCount;
+  final ValueChanged<int?> onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    // Render newest-first: prev2, prev1, prev0, current.
+    final options = <(int?, String)>[
+      for (var i = prevCount - 1; i >= 0; i--) (i, '−${i + 1}'),
+      (null, 'Sekarang'),
+    ];
+    return Row(
+      children: [
+        for (var i = 0; i < options.length; i++) ...[
+          Expanded(
+            child: _PeriodChip(
+              label: options[i].$2,
+              active: options[i].$1 == prevIndex,
+              onTap: () => onPick(options[i].$1),
+            ),
+          ),
+          if (i != options.length - 1) const SizedBox(width: 4),
+        ],
+      ],
+    );
+  }
+}
+
+class _PeriodChip extends StatelessWidget {
+  const _PeriodChip({
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return FtTapScale(
+      scale: 0.97,
+      onTap: active ? null : onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        decoration: BoxDecoration(
+          color: active ? FtColors.ink : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          label,
+          style: TextStyle(
+            color: active ? FtColors.bg : FtColors.ink2,
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CategoryRow extends StatelessWidget {
+  const _CategoryRow({
+    required this.category,
+    required this.spent,
+    required this.total,
+    required this.focused,
+    required this.onTap,
+    required this.onHover,
+  });
+  final Category category;
+  final int spent;
+  final int total;
+  final bool focused;
+  final VoidCallback onTap;
+  final ValueChanged<bool> onHover;
+
+  @override
+  Widget build(BuildContext context) {
+    final pct = total <= 0 ? 0.0 : (spent / total) * 100;
+    final budget = category.monthlyBudget;
+    final overBudget = budget > 0 && spent > budget;
+    final color = parseColor(category.color);
+    return MouseRegion(
+      onEnter: (_) => onHover(true),
+      onExit: (_) => onHover(false),
+      child: FtTapScale(
+        scale: 0.99,
+        haptic: false,
+        onTap: onTap,
+        child: Container(
+          color: focused ? FtColors.surfaceAlt : Colors.transparent,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            category.label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: FtColors.ink,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          compactMoney(spent),
+                          style: TextStyle(
+                            color: FtColors.ink,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            fontFeatures: const [
+                              FontFeature.tabularFigures()
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Text(
+                          '${pct.toStringAsFixed(1)}%',
+                          style: TextStyle(
+                            color: FtColors.ink3,
+                            fontSize: 10,
+                            fontFeatures: const [
+                              FontFeature.tabularFigures()
+                            ],
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          overBudget
+                              ? '+${(((spent / budget) - 1) * 100).round()}% vs anggaran'
+                              : budget > 0
+                                  ? 'dari ${Money.format(budget)}'
+                                  : 'tanpa budget',
+                          style: TextStyle(
+                            color:
+                                overBudget ? FtColors.danger : FtColors.ink3,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                size: 16,
+                color: FtColors.ink4,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

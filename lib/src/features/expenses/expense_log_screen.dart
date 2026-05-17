@@ -10,6 +10,7 @@ import '../household/household.dart';
 import '../household/household_providers.dart';
 import '../home/widgets/home_formatters.dart';
 import '../household/name_format.dart';
+import '../members/member_chip.dart';
 import 'expense.dart';
 import 'expense_repository.dart';
 
@@ -259,16 +260,22 @@ class _ExpenseTile extends ConsumerWidget {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  [
-                    if (spender != null) prettyName(spender!.displayName),
-                    if (expense.note != null && expense.note!.isNotEmpty)
-                      expense.note!,
-                  ].join(' • '),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                if (expense.note != null && expense.note!.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    expense.note!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: FtColors.ink3,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+                if (spender != null) ...[
+                  const SizedBox(height: 4),
+                  MemberChip(member: spender!),
+                ],
               ],
             ),
           ),

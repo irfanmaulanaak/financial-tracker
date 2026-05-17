@@ -5,9 +5,13 @@ import 'package:go_router/go_router.dart';
 import '../../core/cicilan.dart';
 import '../../core/formatters.dart';
 import '../../theme.dart';
+import '../../ui/ft_haptics.dart';
+import '../../ui/ft_motion.dart';
 import '../../ui/ft_ui.dart';
+import '../home/widgets/home_formatters.dart';
 import '../household/household_providers.dart';
 import '../household/name_format.dart';
+import '../incomes/income_providers.dart';
 import 'card_repository.dart';
 import 'credit_card.dart';
 import 'edit_card_sheet.dart';
@@ -76,6 +80,14 @@ class CardsScreen extends ConsumerWidget {
                 a +
                 minimumPayment(balance: b.used, minPaymentPct: b.minPaymentPct),
           );
+          final income = ref.watch(currentCycleIncomeTotalProvider);
+          // Beban utang ratio — if monthly cards debt > 40% of income, warn.
+          final debtRatio = income > 0 ? totalUsed / income : 0.0;
+          final debtState = debtRatio > 0.4
+              ? FtColors.danger
+              : debtRatio > 0.25
+                  ? FtColors.ochre
+                  : FtColors.healthOk;
           return FtAppChrome(
             current: FtTab.cards,
             child: ListView(
@@ -112,20 +124,45 @@ class CardsScreen extends ConsumerWidget {
                         height: 6,
                       ),
                       const SizedBox(height: 14),
-                      FtStatGrid(
-                        items: [
-                          FtStatItem(
-                            label: 'Limit total',
-                            value: Money.format(totalLimit),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: _LabeledStat(
+                              label: 'Min. bayar',
+                              value: compactMoney(totalMin),
+                              color: FtColors.plum,
+                            ),
                           ),
-                          FtStatItem(
-                            label: 'Min. bayar',
-                            value: Money.format(totalMin),
-                            color: FtColors.plum,
+                          Expanded(
+                            child: _CicilanTotalStat(
+                              hid: household.id,
+                              cards: items,
+                            ),
                           ),
-                          FtStatItem(
-                            label: 'Kartu aktif',
-                            value: '${items.length}',
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Beban utang',
+                                  style: TextStyle(
+                                    color: FtColors.ink3,
+                                    fontSize: 10,
+                                    letterSpacing: 0.3,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: debtState,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
@@ -158,6 +195,12 @@ class CardsScreen extends ConsumerWidget {
                         onTap: () => context.push('/cards/${c.id}'),
                       ),
                     ),
+                if (items.isNotEmpty)
+                  _SaranTip(
+                    hid: household.id,
+                    cards: items,
+                    income: income,
+                  ),
               ],
             ),
           );
@@ -298,9 +341,122 @@ class _CardTile extends StatelessWidget {
             hid: hid,
             cardId: card.id,
           ),
+          _CardActions(hid: hid, card: card),
         ],
       ),
     );
+  }
+}
+
+class _CardActions extends ConsumerWidget {
+  const _CardActions({required this.hid, required this.card});
+  final String hid;
+  final CreditCard card;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (card.used <= 0) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      child: Row(
+        children: [
+          Expanded(
+            child: FtTapScale(
+              scale: 0.97,
+              onTap: () => _confirm(
+                context,
+                ref,
+                full: false,
+                amount: minimumPayment(
+                  balance: card.used,
+                  minPaymentPct: card.minPaymentPct,
+                ),
+              ),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  color: FtColors.surfaceAlt,
+                  border: Border.all(color: FtColors.line, width: 0.5),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  'Bayar minimum',
+                  style: TextStyle(
+                    color: FtColors.ink,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: FtTapScale(
+              scale: 0.97,
+              onTap: () => _confirm(
+                context,
+                ref,
+                full: true,
+                amount: card.used,
+              ),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  color: FtColors.ink,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  'Bayar penuh',
+                  style: TextStyle(
+                    color: FtColors.bg,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _confirm(
+    BuildContext context,
+    WidgetRef ref, {
+    required bool full,
+    required int amount,
+  }) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(full ? 'Bayar penuh?' : 'Bayar minimum?'),
+        content: Text(
+          'Catat pembayaran ${Money.format(amount)} untuk ${card.label}? Saldo kartu akan berkurang.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Bayar'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    FtHaptics.success();
+    final repo = ref.read(cardRepositoryProvider);
+    if (full) {
+      await repo.payFull(hid: hid, cardId: card.id);
+    } else {
+      await repo.payMinimum(hid: hid, cardId: card.id);
+    }
   }
 }
 
@@ -394,4 +550,129 @@ class _CardInstallmentsInline extends ConsumerWidget {
 Color _parseColor(String hex) {
   final h = hex.replaceFirst('#', '');
   return Color(int.parse('FF$h', radix: 16));
+}
+
+class _LabeledStat extends StatelessWidget {
+  const _LabeledStat({
+    required this.label,
+    required this.value,
+    this.color,
+  });
+  final String label;
+  final String value;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: FtColors.ink3,
+            fontSize: 10,
+            letterSpacing: 0.3,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: TextStyle(
+            color: color ?? FtColors.ink,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Sums monthly cicilan across every card by watching each card's installments
+/// stream. Renders `—` while no data has loaded yet.
+class _CicilanTotalStat extends ConsumerWidget {
+  const _CicilanTotalStat({required this.hid, required this.cards});
+  final String hid;
+  final List<CreditCard> cards;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    var total = 0;
+    for (final c in cards) {
+      final list = ref
+              .watch(_cardInstallmentsProvider((hid: hid, cardId: c.id)))
+              .value ??
+          const [];
+      for (final i in list) {
+        if (!i.isComplete) total += i.monthly;
+      }
+    }
+    return _LabeledStat(
+      label: 'Cicilan/bln',
+      value: total > 0 ? compactMoney(total) : '—',
+    );
+  }
+}
+
+/// "Saran" tip card at the bottom of the cards list — calls out high
+/// debt-service ratios and suggests action.
+class _SaranTip extends ConsumerWidget {
+  const _SaranTip({
+    required this.hid,
+    required this.cards,
+    required this.income,
+  });
+  final String hid;
+  final List<CreditCard> cards;
+  final int income;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    var monthlyInstallments = 0;
+    for (final c in cards) {
+      final list = ref
+              .watch(_cardInstallmentsProvider((hid: hid, cardId: c.id)))
+              .value ??
+          const [];
+      for (final i in list) {
+        if (!i.isComplete) monthlyInstallments += i.monthly;
+      }
+    }
+    if (income <= 0) return const SizedBox.shrink();
+    final ratio = monthlyInstallments / income;
+    final overweight = ratio > 0.3;
+    final pct = (ratio * 100).round();
+    return FtCard(
+      margin: const EdgeInsets.fromLTRB(22, 4, 22, 18),
+      backgroundColor: FtColors.surfaceAlt,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.auto_awesome_rounded, size: 14, color: FtColors.clay),
+              const SizedBox(width: 6),
+              const Eyebrow('Saran'),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            overweight
+                ? 'Total cicilan ${compactMoney(monthlyInstallments)} ($pct% dari pendapatan). Idealnya di bawah 30% — pertimbangkan menyelesaikan cicilan lebih awal.'
+                : monthlyInstallments == 0
+                    ? 'Saat ini belum ada cicilan aktif. Pastikan rasio pembayaran tetap di bawah 30% dari pendapatan.'
+                    : 'Cicilan ${compactMoney(monthlyInstallments)} ($pct% dari pendapatan) — masih dalam batas sehat.',
+            style: TextStyle(
+              fontFamily: 'Newsreader',
+              color: FtColors.ink,
+              fontSize: 14,
+              height: 1.45,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

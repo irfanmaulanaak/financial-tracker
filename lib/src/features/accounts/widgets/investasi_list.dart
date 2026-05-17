@@ -232,6 +232,11 @@ class InvestmentTile extends StatelessWidget {
               border: Border.all(
                   color: FtColors.clay.withValues(alpha: 0.24), width: 0.5),
             ),
+            child: Icon(
+              _investmentIcon(inv.type),
+              color: FtColors.clay,
+              size: 20,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -380,3 +385,12 @@ class _InvestmentEditSheetState extends State<InvestmentEditSheet> {
     );
   }
 }
+
+IconData _investmentIcon(InvestmentType t) => switch (t) {
+      InvestmentType.saham => Icons.trending_up_rounded,
+      InvestmentType.reksadana => Icons.bar_chart_rounded,
+      InvestmentType.deposito => Icons.lock_clock_rounded,
+      InvestmentType.emas => Icons.workspace_premium_rounded,
+      InvestmentType.crypto => Icons.currency_bitcoin_rounded,
+      InvestmentType.lainnya => Icons.account_balance_rounded,
+    };

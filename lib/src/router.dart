@@ -26,6 +26,7 @@ import 'features/onboarding/creator_wizard.dart';
 import 'features/onboarding/join_household_screen.dart';
 import 'features/onboarding/landing_screen.dart';
 import 'features/settings/settings_screen.dart';
+import 'features/spend/spend_screen.dart';
 import 'ui/ft_motion.dart';
 import 'core/providers.dart';
 
@@ -79,6 +80,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, _) => const JoinHouseholdScreen(),
       ),
       _fadeRoute('/home', (_) => const HomeScreen()),
+      _fadeRoute('/spend', (_) => const SpendScreen()),
       _fadeRoute('/expenses', (_) => const ExpenseLogScreen()),
       _fadeRoute('/expenses/new', (_) => const RecordExpenseScreen()),
       _fadeRoute('/categories', (_) => const CategoryManageScreen()),

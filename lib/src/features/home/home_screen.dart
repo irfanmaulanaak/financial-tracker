@@ -275,7 +275,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   CategoryGrid(
                     categories: categories.take(4).toList(),
                     totals: byCat,
-                    onTap: () => context.push('/expenses'),
+                    onTap: () => context.push('/spend'),
                   ),
                   index: 8,
                 ),

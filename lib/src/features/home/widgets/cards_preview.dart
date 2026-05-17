@@ -18,7 +18,6 @@ class CardsPreview extends StatelessWidget {
     if (cards.isEmpty) return const SizedBox.shrink();
     final now = DateTime.now();
     final used = cards.fold<int>(0, (a, b) => a + b.used);
-    final limit = cards.fold<int>(0, (a, b) => a + b.limit);
     final minPay = cards.fold<int>(
       0,
       (a, b) =>

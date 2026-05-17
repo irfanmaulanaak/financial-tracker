@@ -14,6 +14,7 @@ import '../home/widgets/home_formatters.dart';
 import '../household/household.dart';
 import '../household/household_providers.dart';
 import '../household/name_format.dart';
+import '../members/invite_sheet.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -87,7 +88,15 @@ class SettingsScreen extends ConsumerWidget {
                 ],
               ),
             ),
-            _MembersSection(household: household),
+            _MembersSection(
+              household: household,
+              onInvite: () => InviteMemberSheet.show(
+                context,
+                householdId: household.id,
+                householdName: household.name,
+                creatorUid: user.uid,
+              ),
+            ),
             const Padding(
               padding: EdgeInsets.fromLTRB(22, 18, 22, 8),
               child: Eyebrow('Tampilan'),
@@ -379,8 +388,9 @@ class SettingsScreen extends ConsumerWidget {
 }
 
 class _MembersSection extends StatelessWidget {
-  const _MembersSection({required this.household});
+  const _MembersSection({required this.household, required this.onInvite});
   final Household household;
+  final VoidCallback onInvite;
 
   @override
   Widget build(BuildContext context) {
@@ -439,10 +449,70 @@ class _MembersSection extends StatelessWidget {
                       ],
                     ),
                   ),
+                  if (household.members[i].isCreator)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: FtColors.clay.withValues(alpha: 0.12),
+                        border: Border.all(
+                            color: FtColors.clay.withValues(alpha: 0.25),
+                            width: 0.5),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        'CREATOR',
+                        style: TextStyle(
+                          color: FtColors.clay,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.4,
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
           ],
+          const Divider(),
+          InkWell(
+            onTap: onInvite,
+            child: Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: FtColors.clay.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: FtColors.clay,
+                        width: 0.5,
+                        style: BorderStyle.solid,
+                      ),
+                    ),
+                    alignment: Alignment.center,
+                    child:
+                        Icon(Icons.add_rounded, size: 18, color: FtColors.clay),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Undang Anggota Keluarga',
+                      style: TextStyle(
+                        color: FtColors.clay,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );

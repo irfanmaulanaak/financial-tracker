@@ -7,7 +7,6 @@ import '../../../theme.dart';
 import '../../../ui/ft_motion.dart';
 import '../../../ui/ft_ui.dart';
 import '../../cards/credit_card.dart';
-import '../../expenses/expense.dart';
 import '../../expenses/expense_providers.dart';
 import '../../goals/goal.dart';
 import '../../household/household.dart';
