@@ -10,7 +10,8 @@ function AssetsScreen({ theme, data, go, onEditAsset }) {
 
   return (
     <div style={{ background: theme.bg, minHeight: '100%', paddingBottom: 110 }}>
-      <SubHeader theme={theme} title="Aset" onBack={() => go('home')}/>
+      <SubHeader theme={theme} title="Aset" onBack={() => go('home')}
+        action={<button onClick={() => go('addIncome')} style={{ width: 34, height: 34, borderRadius: '50%', background: theme.moss, color: '#fff', display:'flex', alignItems:'center', justifyContent:'center' }}><Icon name="plus" size={16} color="#fff" stroke={2}/></button>}/>
 
       {/* Hero */}
       <div style={{ padding: '14px 22px 0' }}>

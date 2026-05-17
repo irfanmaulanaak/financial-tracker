@@ -47,9 +47,8 @@ function TabBar({ theme, route, go }) {
 }
 
 // ───── App router ─────
-function FinancialApp({ initialRoute = 'home', initialTheme = 'light', initialLayout = 'A', interactive = true, frameOnly = false }) {
+function FinancialApp({ initialRoute = 'home', initialTheme = 'light', interactive = true, frameOnly = false }) {
   const [themeName, setThemeName] = React.useState(initialTheme);
-  const [layout, setLayout] = React.useState(initialLayout);
   const [route, setRoute] = React.useState(initialRoute);
   const [routeParam, setRouteParam] = React.useState(null);
   const [extraExpenses, setExtraExpenses] = React.useState([]);
@@ -107,7 +106,7 @@ function FinancialApp({ initialRoute = 'home', initialTheme = 'light', initialLa
   }, [extraExpenses, cardDebt, extraInstallments]);
 
   let screen;
-  if (route === 'home')    screen = layout === 'B' ? <HomeB theme={theme} data={data} go={go}/> : <HomeA theme={theme} data={data} go={go}/>;
+  if (route === 'home')    screen = <Home theme={theme} data={data} go={go}/>;
   else if (route === 'add')        screen = <AddExpenseScreen theme={theme} data={data} go={go} onCommit={commitExpense}/>;
   else if (route === 'expenses')   screen = <ExpensesScreen theme={theme} data={data} go={go} extraExpenses={extraExpenses}/>;
   else if (route === 'spend')      screen = <SpendScreen theme={theme} data={data} go={go}/>;
@@ -118,9 +117,8 @@ function FinancialApp({ initialRoute = 'home', initialTheme = 'light', initialLa
   else if (route === 'invest' || route === 'assets') screen = <AssetsScreen theme={theme} data={data} go={go}/>;
   else if (route === 'cards')      screen = <CardsScreen theme={theme} data={data} go={go}/>;
   else if (route === 'settings')   screen = <SettingsScreen theme={theme} data={data} go={go}
-                                       themeName={themeName} onSetTheme={setThemeName}
-                                       layout={layout} onSetLayout={setLayout}/>;
-  else screen = <HomeA theme={theme} data={data} go={go}/>;
+                                       themeName={themeName} onSetTheme={setThemeName}/>;
+  else screen = <Home theme={theme} data={data} go={go}/>;
 
   const body = (
     <div className="ft" style={{
@@ -144,8 +142,7 @@ function FinancialApp({ initialRoute = 'home', initialTheme = 'light', initialLa
 // ───── Tweaks panel (live prototype) ─────
 function FinancialAppWithTweaks() {
   const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
-    "themeName": "light",
-    "layout": "A"
+    "themeName": "light"
   }/*EDITMODE-END*/;
 
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
@@ -153,7 +150,9 @@ function FinancialAppWithTweaks() {
   const [routeParam, setRouteParam] = React.useState(null);
   const [extraExpenses, setExtraExpenses] = React.useState([]);
   const [extraIncomes, setExtraIncomes] = React.useState([]);
+  const [extraGoals, setExtraGoals] = React.useState([]);
   const [cardDebt, setCardDebt] = React.useState({});
+  const [cardPaid, setCardPaid] = React.useState({});
   const [extraInstallments, setExtraInstallments] = React.useState({});
   const [assetOverrides, setAssetOverrides] = React.useState({}); // { [kind:id]: newValue }
   const [chooserOpen, setChooserOpen] = React.useState(false);
@@ -161,12 +160,16 @@ function FinancialAppWithTweaks() {
   const [inviteOpen, setInviteOpen] = React.useState(false);
   const [extraMembers, setExtraMembers] = React.useState([]);
   const [sharedWallet, setSharedWallet] = React.useState(true);
+  const [payCard, setPayCard] = React.useState(null);
+  const [removedMembers, setRemovedMembers] = React.useState([]);
+  const [userOverride, setUserOverride] = React.useState(null);
 
   const theme = FT_THEMES[t.themeName];
 
-  // Intercept 'add' → open chooser; everything else routes normally.
+  // Intercept 'add' → open chooser; addCredit → expense w/ credit preset; everything else routes normally.
   function go(r, param) {
     if (r === 'add') { setChooserOpen(true); return; }
+    if (r === 'addCredit') { setChooserOpen(false); setRoute('addExpense'); setRouteParam('credit'); return; }
     setChooserOpen(false);
     setRoute(r);
     setRouteParam(param);
@@ -216,6 +219,22 @@ function FinancialAppWithTweaks() {
     setAssetOverrides(prev => ({ ...prev, [`${kind}:${id}`]: newValue }));
   }
 
+  function commitGoal(g) {
+    setExtraGoals(prev => [...prev, { id: 'g-' + Date.now(), ...g }]);
+  }
+
+  function handlePayCard(cardId, amount) {
+    setCardPaid(prev => ({ ...prev, [cardId]: (prev[cardId] || 0) + amount }));
+  }
+
+  function handleKickOrCancel(memberId) {
+    setRemovedMembers(prev => [...prev, memberId]);
+  }
+
+  function handleSaveUser(u) {
+    setUserOverride(u);
+  }
+
   function handleInvite({ name, contact, role }) {
     const initials = name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
     const colors = ['moss', 'plum', 'sky', 'clay', 'ochre'];
@@ -245,10 +264,10 @@ function FinancialAppWithTweaks() {
       txnCount: FT_DATA.today.txnCount + extraExpenses.length,
     };
 
-    if (Object.keys(cardDebt).length || Object.keys(extraInstallments).length) {
+    if (Object.keys(cardDebt).length || Object.keys(cardPaid).length || Object.keys(extraInstallments).length) {
       merged.cards = FT_DATA.cards.map(c => ({
         ...c,
-        used: c.used + (cardDebt[c.id] || 0),
+        used: Math.max(0, c.used + (cardDebt[c.id] || 0) - (cardPaid[c.id] || 0)),
         installments: [...(extraInstallments[c.id] || []), ...c.installments],
       }));
     }
@@ -279,43 +298,57 @@ function FinancialAppWithTweaks() {
       ],
     };
 
-    return merged;
-  }, [extraExpenses, extraIncomes, cardDebt, extraInstallments, assetOverrides]);
+    merged.goals = [...extraGoals, ...FT_DATA.goals];
 
-  // merge in invited members
+    return merged;
+  }, [extraExpenses, extraIncomes, extraGoals, cardDebt, cardPaid, extraInstallments, assetOverrides]);
+
+  // merge in invited members + drop kicked/cancelled + apply user override
   const dataWithMembers = React.useMemo(() => {
-    if (!extraMembers.length && data.household.sharedWallet === sharedWallet) return data;
+    const baseUser = userOverride ? { ...data.user, ...userOverride } : data.user;
+    const baseMembers = [...data.household.members, ...extraMembers]
+      .filter(m => !removedMembers.includes(m.id))
+      .map(m => m.isMe && userOverride ? { ...m, name: userOverride.name, initials: userOverride.initials, color: userOverride.color, email: userOverride.email, phone: userOverride.phone } : m);
     return {
       ...data,
+      user: baseUser,
       household: {
         ...data.household,
         sharedWallet,
-        members: [...data.household.members, ...extraMembers],
+        members: baseMembers,
       },
     };
-  }, [data, extraMembers, sharedWallet]);
+  }, [data, extraMembers, sharedWallet, removedMembers, userOverride]);
 
   let screen;
-  if (route === 'home')    screen = t.layout === 'B' ? <HomeB theme={theme} data={dataWithMembers} go={go}/> : <HomeA theme={theme} data={dataWithMembers} go={go}/>;
-  else if (route === 'addExpense') screen = <AddExpenseScreen theme={theme} data={dataWithMembers} go={goDirect} onCommit={commitExpense}/>;
+  if (route === 'home')    screen = <Home theme={theme} data={dataWithMembers} go={go}/>;
+  else if (route === 'addExpense') screen = <AddExpenseScreen theme={theme} data={dataWithMembers} go={goDirect} onCommit={commitExpense} initialPayType={routeParam === 'credit' ? 'credit' : 'cash'}/>;
   else if (route === 'addIncome')  screen = <AddIncomeScreen  theme={theme} data={dataWithMembers} go={goDirect} onCommit={commitIncome}/>;
+  else if (route === 'addGoal')    screen = <AddGoalScreen    theme={theme} data={dataWithMembers} go={goDirect} onCommit={commitGoal}/>;
   else if (route === 'expenses')   screen = <ExpensesScreen theme={theme} data={dataWithMembers} go={go} extraExpenses={extraExpenses}/>;
   else if (route === 'spend')      screen = <SpendScreen theme={theme} data={dataWithMembers} go={go}/>;
   else if (route === 'category')   screen = <CategoryScreen theme={theme} data={dataWithMembers} catId={routeParam} go={go}/>;
   else if (route === 'goals')      screen = <GoalsScreen theme={theme} data={dataWithMembers} go={go}/>;
   else if (route === 'goalDetail') screen = <GoalDetailScreen theme={theme} data={dataWithMembers} goalId={routeParam} go={go}/>;
   else if (route === 'health')     screen = <HealthScreen theme={theme} data={dataWithMembers} go={go}/>;
+  else if (route === 'notifications') screen = <NotificationsScreen theme={theme} data={dataWithMembers} go={go}/>;
+  else if (route === 'editProfile') screen = <EditProfileScreen theme={theme} data={dataWithMembers} go={goDirect} onSave={handleSaveUser}/>;
+  else if (route === 'memberDetail') screen = <MemberDetailScreen theme={theme} data={dataWithMembers} memberId={routeParam} go={goDirect}
+                                       onKick={handleKickOrCancel}
+                                       onCancelInvite={handleKickOrCancel}
+                                       onResend={() => {}}/>;
   else if (route === 'invest' || route === 'assets') screen = <AssetsScreen theme={theme} data={dataWithMembers} go={go} onEditAsset={(item, kind) => setEditAsset({ item, kind })}/>;
-  else if (route === 'cards')      screen = <CardsScreen theme={theme} data={dataWithMembers} go={go}/>;
+  else if (route === 'cards')      screen = <CardsScreen theme={theme} data={dataWithMembers} go={go} onPay={(c) => setPayCard({ card: c })}/>;
   else if (route === 'settings')   screen = <SettingsScreen theme={theme} data={dataWithMembers} go={go}
                                        themeName={t.themeName} onSetTheme={v => setTweak('themeName', v)}
-                                       layout={t.layout} onSetLayout={v => setTweak('layout', v)}
                                        onInviteMember={() => setInviteOpen(true)}
                                        sharedWallet={sharedWallet}
-                                       onToggleShared={setSharedWallet}/>;
-  else screen = <HomeA theme={theme} data={dataWithMembers} go={go}/>;
+                                       onToggleShared={setSharedWallet}
+                                       onMember={(m) => goDirect('memberDetail', m.id)}
+                                       onEdit={() => goDirect('editProfile')}/>;
+  else screen = <Home theme={theme} data={dataWithMembers} go={go}/>;
 
-  const isEntryScreen = route === 'addExpense' || route === 'addIncome';
+  const isEntryScreen = route === 'addExpense' || route === 'addIncome' || route === 'addGoal' || route === 'editProfile';
 
   const body = (
     <div className="ft" style={{ background: theme.bg, color: theme.ink, height: '100%', position: 'relative', overflow: 'hidden' }}>
@@ -337,6 +370,12 @@ function FinancialAppWithTweaks() {
       <InviteMemberSheet theme={theme} open={inviteOpen}
         onClose={() => setInviteOpen(false)}
         onInvite={handleInvite}/>
+
+      {/* pay card overlay */}
+      <PayCardSheet theme={theme} open={!!payCard}
+        onClose={() => setPayCard(null)}
+        card={payCard?.card}
+        onPay={handlePayCard}/>
     </div>
   );
 
@@ -349,15 +388,12 @@ function FinancialAppWithTweaks() {
             { value: 'light', label: 'Terang' },
             { value: 'dark', label: 'Gelap' },
           ]} onChange={v => setTweak('themeName', v)}/>
-          <TweakRadio label="Layout Beranda" value={t.layout} options={[
-            { value: 'A', label: 'Editorial' },
-            { value: 'B', label: 'Padat' },
-          ]} onChange={v => setTweak('layout', v)}/>
         </TweakSection>
         <TweakSection label="Navigasi cepat">
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
             {[
-              ['home','Beranda'],['add','Catat (chooser)'],['addExpense','Pengeluaran'],['addIncome','Pendapatan'],
+              ['home','Beranda'],['add','Catat (chooser)'],['addExpense','+ Pengeluaran'],['addIncome','+ Pendapatan'],
+              ['addGoal','+ Tujuan'],['notifications','Notifikasi'],
               ['expenses','Log'],['spend','Pengeluaran'],['category','Kategori'],['assets','Aset'],
               ['goals','Tujuan'],['cards','Utang/CC'],['health','Kesehatan'],['settings','Profil'],
             ].map(([r, l]) => (

@@ -86,7 +86,9 @@
 <script type="text/babel" src="screens-cards.jsx"></script>
 <script type="text/babel" src="screens-assets.jsx"></script>
 <script type="text/babel" src="screens-actions.jsx"></script>
+<script type="text/babel" src="screens-extras.jsx"></script>
 <script type="text/babel" src="screens-household.jsx"></script>
+<script type="text/babel" src="screens-profile.jsx"></script>
 <script type="text/babel" src="screens-rest.jsx"></script>
 <script type="text/babel" src="app.jsx"></script>
 
@@ -103,18 +105,12 @@
     const W = 402, H = 874;
     return (
       <DesignCanvas>
-        <DCSection id="home" title="Beranda · Dua Pendekatan" subtitle="Layout editorial vs padat — terang dan gelap">
-          <DCArtboard id="ha-light" label="A · Editorial · Terang" width={W} height={H}>
-            <FinancialApp initialRoute="home" initialTheme="light" initialLayout="A" interactive={false}/>
+        <DCSection id="home" title="Beranda" subtitle="Layout padat — terang dan gelap">
+          <DCArtboard id="home-light" label="Beranda · Terang" width={W} height={H}>
+            <FinancialApp initialRoute="home" initialTheme="light" interactive={false}/>
           </DCArtboard>
-          <DCArtboard id="hb-light" label="B · Padat · Terang" width={W} height={H}>
-            <FinancialApp initialRoute="home" initialTheme="light" initialLayout="B" interactive={false}/>
-          </DCArtboard>
-          <DCArtboard id="ha-dark" label="A · Editorial · Gelap" width={W} height={H}>
-            <FinancialApp initialRoute="home" initialTheme="dark" initialLayout="A" interactive={false}/>
-          </DCArtboard>
-          <DCArtboard id="hb-dark" label="B · Padat · Gelap" width={W} height={H}>
-            <FinancialApp initialRoute="home" initialTheme="dark" initialLayout="B" interactive={false}/>
+          <DCArtboard id="home-dark" label="Beranda · Gelap" width={W} height={H}>
+            <FinancialApp initialRoute="home" initialTheme="dark" interactive={false}/>
           </DCArtboard>
         </DCSection>
 
@@ -196,7 +192,7 @@
     if (route === 'category') screen = <CategoryScreen theme={theme} data={data} catId={param} go={noop}/>;
     else if (route === 'goalDetail') screen = <GoalDetailScreen theme={theme} data={data} goalId={param} go={noop}/>;
     else if (route === 'add') screen = <AddExpenseScreen theme={theme} data={data} go={noop} onCommit={noop} {...extraProps}/>;
-    else screen = <HomeA theme={theme} data={data} go={noop}/>;
+    else screen = <Home theme={theme} data={data} go={noop}/>;
     return (
       <IOSDevice dark={themeName === 'dark'} width={402} height={874}>
         <div className="ft" style={{ background: theme.bg, color: theme.ink, height: '100%', position: 'relative', overflow: 'hidden' }}>

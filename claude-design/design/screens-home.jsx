@@ -2,7 +2,7 @@
 // Plus shared header/tab pieces used by other screens.
 
 // ───── Top header (cream paper feel, status-bar safe) ─────
-function FTHeader({ theme, user, asset, deltaPct, onProfile, household, onMembers }) {
+function FTHeader({ theme, user, asset, deltaPct, onProfile, household, onMembers, onNotifications }) {
   return (
     <div style={{ padding: '54px 22px 16px', position: 'relative' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 26 }}>
@@ -23,12 +23,19 @@ function FTHeader({ theme, user, asset, deltaPct, onProfile, household, onMember
         {household && (
           <MemberStack members={household.members} theme={theme} onTap={onMembers} size={26}/>
         )}
-        <button style={{
+        <button onClick={onNotifications} style={{
           width: 38, height: 38, borderRadius: '50%',
           border: `0.5px solid ${theme.line}`, color: theme.ink2,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: theme.surface,
-        }}><Icon name="bell" size={18} color={theme.ink2}/></button>
+          background: theme.surface, position: 'relative', cursor: 'pointer',
+        }}>
+          <Icon name="bell" size={18} color={theme.ink2}/>
+          <span style={{
+            position: 'absolute', top: 8, right: 9, width: 8, height: 8,
+            borderRadius: '50%', background: theme.danger,
+            border: `1.5px solid ${theme.surface}`,
+          }}/>
+        </button>
       </div>
     </div>
   );
@@ -281,33 +288,16 @@ function RecentList({ theme, expenses, max = 4, onTap, title = 'Aktivitas Terbar
   );
 }
 
-// ───── HOME LAYOUT A — Editorial / serif-led ─────
-function HomeA({ theme, data, go }) {
-  return (
-    <div style={{ paddingBottom: 110, background: theme.bg, minHeight: '100%' }}>
-      <FTHeader theme={theme} user={data.user} onProfile={() => go('settings')}
-        household={data.household} onMembers={() => go('settings')} />
-      <AssetHeroA theme={theme} asset={data.assets} onTap={() => go('assets')} />
-      <AssetBreakdown theme={theme} asset={data.assets} onTap={() => go('assets')} />
-      <MonthStrip theme={theme} month={data.month} today={data.today} onAdd={() => go('add')} />
-      <CardsPreview theme={theme} cards={data.cards} onTap={() => go('cards')} />
-      <HealthSnapshot theme={theme} health={data.health} onTap={() => go('health')} />
-      <CategoryStripA theme={theme} categories={data.categories} onTap={() => go('spend')} />
-      <GoalsPreview theme={theme} goals={data.goals} onTap={() => go('goals')} />
-      <RecentList theme={theme} expenses={data.expenses} onTap={() => go('expenses')} household={data.household} />
-    </div>
-  );
-}
-
-// ───── HOME LAYOUT B — Compact data-forward (private bank terminal vibe) ─────
-function HomeB({ theme, data, go }) {
+// ───── HOME — Compact data-forward (Padat) ─────
+function Home({ theme, data, go }) {
   const totalSpend = data.month.spend;
   const segments = data.categories.map(c => ({ id: c.id, value: c.value, color: c.color }));
 
   return (
     <div style={{ paddingBottom: 110, background: theme.bg, minHeight: '100%' }}>
       <FTHeader theme={theme} user={data.user} onProfile={() => go('settings')}
-        household={data.household} onMembers={() => go('settings')} />
+        household={data.household} onMembers={() => go('settings')}
+        onNotifications={() => go('notifications')} />
 
       {/* dense top: asset + small donut side by side */}
       <div style={{ padding: '0 22px 18px' }}>
@@ -355,9 +345,9 @@ function HomeB({ theme, data, go }) {
             dari {fmtRp(data.month.income, { compact: true })} pendapatan
           </div>
           <Bar value={data.month.spend} max={data.month.income} color={theme.clay} track={theme.line} height={3}/>
-          <button onClick={() => go('add')} style={{
+          <button onClick={() => go('addExpense')} style={{
             marginTop: 12, width: '100%', padding: '8px 0', borderRadius: 999,
-            background: theme.ink, color: theme.bg, fontSize: 12, fontWeight: 500,
+            background: theme.clay, color: '#fff', fontSize: 12, fontWeight: 500,
           }}>+ Catat pengeluaran</button>
         </Card>
 
@@ -382,4 +372,4 @@ function HomeB({ theme, data, go }) {
   );
 }
 
-Object.assign(window, { HomeA, HomeB, FTHeader, RecentList, Card, Bar });
+Object.assign(window, { Home, FTHeader, RecentList, Card, Bar });

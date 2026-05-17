@@ -5,7 +5,7 @@ function GoalsScreen({ theme, data, go }) {
   return (
     <div style={{ background: theme.bg, minHeight: '100%', paddingBottom: 110 }}>
       <SubHeader theme={theme} title="Tujuan Finansial" onBack={() => go('home')}
-        action={<button style={{ width: 34, height: 34, borderRadius: '50%', background: theme.ink, color: theme.bg, display:'flex', alignItems:'center', justifyContent:'center' }}><Icon name="plus" size={16} color={theme.bg} stroke={2}/></button>}/>
+        action={<button onClick={() => go('addGoal')} style={{ width: 34, height: 34, borderRadius: '50%', background: theme.ink, color: theme.bg, display:'flex', alignItems:'center', justifyContent:'center' }}><Icon name="plus" size={16} color={theme.bg} stroke={2}/></button>}/>
 
       <div style={{ padding: '14px 22px 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
         {data.goals.map(g => {
@@ -392,7 +392,7 @@ function InvestScreen({ theme, data, go }) {
 }
 
 // ───── SETTINGS / PROFILE SCREEN ─────
-function SettingsScreen({ theme, data, go, themeName, onSetTheme, layout, onSetLayout, onInviteMember, onToggleShared, sharedWallet }) {
+function SettingsScreen({ theme, data, go, themeName, onSetTheme, onInviteMember, onToggleShared, sharedWallet, onMember, onEdit }) {
   return (
     <div style={{ background: theme.bg, minHeight: '100%', paddingBottom: 110 }}>
       <SubHeader theme={theme} title="Profil" onBack={() => go('home')}/>
@@ -400,17 +400,23 @@ function SettingsScreen({ theme, data, go, themeName, onSetTheme, layout, onSetL
       <div style={{ padding: '14px 22px 0' }}>
         <Card theme={theme}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div style={{
+            <button onClick={onEdit} style={{
               width: 56, height: 56, borderRadius: '50%',
-              background: theme.surfaceAlt, border: `0.5px solid ${theme.lineStrong}`,
+              background: theme[data.user.color || 'clay'], color: '#fff',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontFamily: "'Newsreader', serif", fontSize: 22, color: theme.ink, letterSpacing: 0.5,
-            }}>{data.user.initials}</div>
+              fontFamily: "'Newsreader', serif", fontSize: 22, fontWeight: 500, letterSpacing: 0.5,
+              cursor: 'pointer',
+            }}>{data.user.initials}</button>
             <div style={{ flex: 1 }}>
               <div className="ft-serif" style={{ fontSize: 18, color: theme.ink, fontWeight: 500 }}>{data.user.name}</div>
               <div style={{ fontSize: 11, color: theme.ink3, marginTop: 2 }}>{data.user.memberSince}</div>
             </div>
-            <button style={{ fontSize: 12, color: theme.clay, fontWeight: 500 }}>Edit</button>
+            <button onClick={onEdit} style={{
+              padding: '7px 12px', borderRadius: 999,
+              background: theme.surfaceAlt, border: `0.5px solid ${theme.line}`,
+              color: theme.clay, fontSize: 12, fontWeight: 500,
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+            }}>Edit</button>
           </div>
         </Card>
       </div>
@@ -420,7 +426,7 @@ function SettingsScreen({ theme, data, go, themeName, onSetTheme, layout, onSetL
           theme={theme}
           household={{ ...data.household, sharedWallet }}
           onInvite={onInviteMember}
-          onMember={() => {}}
+          onMember={onMember}
           sharedWallet={sharedWallet}
           onToggleShared={onToggleShared}/>
       )}
@@ -428,7 +434,7 @@ function SettingsScreen({ theme, data, go, themeName, onSetTheme, layout, onSetL
       <div style={{ padding: '18px 22px 0' }}>
         <Eyebrow theme={theme} style={{ marginBottom: 8 }}>Tampilan</Eyebrow>
         <Card theme={theme} padded={false}>
-          <div style={{ padding: '14px 16px', borderBottom: `0.5px solid ${theme.line}` }}>
+          <div style={{ padding: '14px 16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
               <span style={{ fontSize: 13, color: theme.ink, fontWeight: 500 }}>Tema</span>
               <span style={{ fontSize: 11, color: theme.ink3 }}>{themeName === 'dark' ? 'Gelap' : 'Terang'}</span>
@@ -441,22 +447,6 @@ function SettingsScreen({ theme, data, go, themeName, onSetTheme, layout, onSetL
                   color: themeName === t ? theme.bg : theme.ink2,
                   border: `0.5px solid ${themeName === t ? theme.ink : theme.line}`,
                 }}>{t === 'dark' ? 'Gelap' : 'Terang'}</button>
-              ))}
-            </div>
-          </div>
-          <div style={{ padding: '14px 16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-              <span style={{ fontSize: 13, color: theme.ink, fontWeight: 500 }}>Tata Letak Beranda</span>
-              <span style={{ fontSize: 11, color: theme.ink3 }}>{layout === 'B' ? 'Padat' : 'Editorial'}</span>
-            </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              {[{id:'A',label:'Editorial'},{id:'B',label:'Padat'}].map(l => (
-                <button key={l.id} onClick={() => onSetLayout(l.id)} style={{
-                  flex: 1, padding: '10px 0', borderRadius: 10, fontSize: 12, fontWeight: 500,
-                  background: layout === l.id ? theme.ink : theme.surfaceAlt,
-                  color: layout === l.id ? theme.bg : theme.ink2,
-                  border: `0.5px solid ${layout === l.id ? theme.ink : theme.line}`,
-                }}>{l.label}</button>
               ))}
             </div>
           </div>

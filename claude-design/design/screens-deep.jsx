@@ -435,7 +435,8 @@ function SpendScreen({ theme, data, go }) {
 
   return (
     <div style={{ background: theme.bg, minHeight: '100%', paddingBottom: 110 }}>
-      <SubHeader theme={theme} title="Pengeluaran Bulanan" onBack={() => go('home')}/>
+      <SubHeader theme={theme} title="Pengeluaran Bulanan" onBack={() => go('home')}
+        action={<button onClick={() => go('addExpense')} style={{ width: 34, height: 34, borderRadius: '50%', background: theme.clay, color: '#fff', display:'flex', alignItems:'center', justifyContent:'center' }}><Icon name="plus" size={16} color="#fff" stroke={2}/></button>}/>
 
       <div style={{ padding: '14px 22px 0' }}>
         <Card theme={theme}>

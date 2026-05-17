@@ -6,6 +6,9 @@ const FT_DATA = {
     initials: 'CA',
     memberSince: 'Sejak Mar 2023',
     asOf: 'Hari ini, 14:08',
+    email: 'citra.andini@gmail.com',
+    phone: '+62 812-3456-1234',
+    color: 'clay',
   },
 
   // Shared household
@@ -13,9 +16,9 @@ const FT_DATA = {
     name: 'Keluarga Andini',
     sharedWallet: true,
     members: [
-      { id: 'me',      name: 'Citra Andini',    initials: 'CA', role: 'Istri',  status: 'active',  color: 'clay', isMe: true,  joinedAt: 'Mar 2023' },
-      { id: 'aditya',  name: 'Aditya Pratama',  initials: 'AP', role: 'Suami',  status: 'active',  color: 'sky',  joinedAt: 'Mar 2023' },
-      { id: 'naysila', name: 'Naysila Andini',  initials: 'NA', role: 'Anak',   status: 'pending', color: 'plum', joinedAt: '14 Mei 2026' },
+      { id: 'me',      name: 'Citra Andini',    initials: 'CA', role: 'Istri',  status: 'active',  color: 'clay', isMe: true,  joinedAt: 'Mar 2023',   email: 'citra.andini@gmail.com',  phone: '+62 812-3456-1234', access: 'full',    monthSpend:  3_650_000, txnCount: 24 },
+      { id: 'aditya',  name: 'Aditya Pratama',  initials: 'AP', role: 'Suami',  status: 'active',  color: 'sky',  joinedAt: 'Mar 2023',   email: 'aditya.pratama@gmail.com', phone: '+62 813-9087-5511', access: 'full',    monthSpend:  3_170_000, txnCount: 19 },
+      { id: 'naysila', name: 'Naysila Andini',  initials: 'NA', role: 'Anak',   status: 'pending', color: 'plum', joinedAt: '14 Mei 2026', email: 'naysila.a@yahoo.com',     phone: '+62 821-2345-7788', access: 'limited', monthSpend: 0,         txnCount: 0,  invitedVia: 'Email' },
     ],
   },
 

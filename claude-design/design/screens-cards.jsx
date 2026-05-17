@@ -56,7 +56,7 @@ function CardsPreview({ theme, cards, onTap }) {
 }
 
 // ───── CARDS SCREEN — all credit cards + installments ─────
-function CardsScreen({ theme, data, go }) {
+function CardsScreen({ theme, data, go, onPay }) {
   const cards = data.cards;
   const totalUsed = cards.reduce((s, c) => s + c.used, 0);
   const totalLimit = cards.reduce((s, c) => s + c.limit, 0);
@@ -66,7 +66,8 @@ function CardsScreen({ theme, data, go }) {
 
   return (
     <div style={{ background: theme.bg, minHeight: '100%', paddingBottom: 110 }}>
-      <SubHeader theme={theme} title="Utang & Kartu Kredit" onBack={() => go('home')}/>
+      <SubHeader theme={theme} title="Utang & Kartu Kredit" onBack={() => go('home')}
+        action={<button onClick={() => go('addCredit')} style={{ width: 34, height: 34, borderRadius: '50%', background: theme.plum, color: '#fff', display:'flex', alignItems:'center', justifyContent:'center' }}><Icon name="plus" size={16} color="#fff" stroke={2}/></button>}/>
 
       {/* hero */}
       <div style={{ padding: '14px 22px 0' }}>
@@ -208,8 +209,14 @@ function CardsScreen({ theme, data, go }) {
 
                 {/* actions */}
                 <div style={{ display: 'flex', gap: 8, padding: '12px 16px 16px', borderTop: `0.5px solid ${theme.line}` }}>
-                  <button style={{ flex: 1, padding: '10px 0', borderRadius: 10, background: theme.surfaceAlt, border: `0.5px solid ${theme.line}`, color: theme.ink, fontSize: 12, fontWeight: 500 }}>Bayar minimum</button>
-                  <button style={{ flex: 1, padding: '10px 0', borderRadius: 10, background: theme.ink, color: theme.bg, fontSize: 12, fontWeight: 500 }}>Bayar penuh</button>
+                  <button onClick={() => onPay && onPay(c, 'min')}
+                    style={{ flex: 1, padding: '10px 0', borderRadius: 10, background: theme.surfaceAlt, border: `0.5px solid ${theme.line}`, color: theme.ink, fontSize: 12, fontWeight: 500 }}>
+                    Bayar minimum
+                  </button>
+                  <button onClick={() => onPay && onPay(c, 'full')}
+                    style={{ flex: 1, padding: '10px 0', borderRadius: 10, background: theme.ink, color: theme.bg, fontSize: 12, fontWeight: 500 }}>
+                    Bayar penuh
+                  </button>
                 </div>
               </Card>
             );
