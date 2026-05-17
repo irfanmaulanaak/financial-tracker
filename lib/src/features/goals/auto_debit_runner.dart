@@ -122,6 +122,16 @@ class AutoDebitRunner {
           'current': next,
           'lastAutoDebitMonth': yyyymm,
         });
+        // Audit trail for the goal-detail bar chart. Same transaction
+        // so we can't end up with a balance debit + missing contribution
+        // (or vice versa).
+        final contribRef = goalRef.collection('contributions').doc();
+        tx.set(contribRef, {
+          'amount': goal.monthlyContrib,
+          'at': Timestamp.fromDate(_firstOfMonth(yyyymm)),
+          'byUid': '',
+          'source': 'autoDebit',
+        });
       });
       return true;
     } on StateError {
@@ -167,6 +177,13 @@ List<String> monthsToMaterialise({
 
 String _ym(DateTime d) =>
     '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}';
+
+DateTime _firstOfMonth(String yyyymm) {
+  final parts = yyyymm.split('-');
+  final y = int.tryParse(parts[0]) ?? DateTime.now().year;
+  final m = int.tryParse(parts[1]) ?? DateTime.now().month;
+  return DateTime(y, m, 1);
+}
 
 final autoDebitRunnerProvider = Provider<AutoDebitRunner>((ref) {
   return AutoDebitRunner(ref.watch(firestoreProvider));

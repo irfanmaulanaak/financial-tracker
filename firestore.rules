@@ -139,13 +139,33 @@ service cloud.firestore {
         allow read: if isMember();
         allow write: if isMember() && canFull();
       }
-      match /goals/{document=**} {
+      // Goals: full only for the goal doc itself.
+      // Contributions: any household member with txn rights can append
+      // (manual setoran or auto-debit run); immutable after create — the
+      // bar chart is an audit trail, not editable history.
+      match /goals/{goalId} {
         allow read: if isMember();
         allow write: if isMember() && canFull();
+
+        match /contributions/{cid} {
+          allow read: if isMember();
+          allow create: if isMember() && canTxn();
+          allow update, delete: if false;
+        }
       }
       match /investments/{document=**} {
         allow read: if isMember();
         allow write: if isMember() && canFull();
+      }
+
+      // Net-worth daily snapshots. Doc id pinned to YYYY-MM-DD; any
+      // signed-in member can record today's snapshot or read history.
+      // No update/delete from the client — recorder is fire-and-forget;
+      // tomorrow's run writes a new doc.
+      match /netWorthSnapshots/{date} {
+        allow read: if isMember();
+        allow create, update: if isMember();
+        allow delete: if false;
       }
     }
 

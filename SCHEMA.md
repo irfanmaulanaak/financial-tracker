@@ -154,9 +154,33 @@ scope: 'shared'|'personal'
 ownerId: uid?             // null if shared
 ```
 
+### `households/{hid}/goals/{gid}/contributions/{cid}` — sub-sub
+Append-only audit log for "Setoran 8 Bulan Terakhir". Immutable after
+create (rules deny update/delete). Written from both the manual setoran
+flow and the auto-debit runner — `source` distinguishes them.
+```
+amount: number
+at: timestamp
+byUid: uid                // empty string for autoDebit (system-written)
+source: 'manual'|'autoDebit'
+```
+
 ### `households/{hid}/investments/{invId}` — subcollection (Phase 5)
 ```
 label, hint, value, delta, color
+```
+
+### `households/{hid}/netWorthSnapshots/{YYYY-MM-DD}` — subcollection
+Daily roll-up for the home sparkline / Editorial trend. Doc id is the
+local-midnight calendar date so writes are idempotent per day.
+```
+date: timestamp           // local midnight
+cash: number
+savings: number
+investments: number
+debt: number
+total: number             // cash + savings + investments − debt
+capturedBy: uid
 ```
 
 ### `invites/{code}` — top-level, code as doc ID

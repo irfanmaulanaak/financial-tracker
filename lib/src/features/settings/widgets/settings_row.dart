@@ -3,45 +3,50 @@ import 'package:flutter/material.dart';
 import '../../../theme.dart';
 import '../../../ui/ft_ui.dart';
 
-/// Generic chevron-right list row used inside Settings cards.
+/// Generic list row used inside Settings cards.
+///
+/// When [onTap] is null the row renders as info-only (no press animation,
+/// no trailing chevron) — used for surfaced facts the user can't drill
+/// into (e.g. "Mata uang · IDR · Rupiah").
 class SettingsRow extends StatelessWidget {
   const SettingsRow({
     super.key,
     required this.label,
     required this.detail,
-    required this.onTap,
+    this.onTap,
   });
 
   final String label;
   final String detail;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return FtTapScale(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                label,
-                style: const TextStyle(
-                    fontWeight: FontWeight.w500, fontSize: 13),
-              ),
+    final body = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                  fontWeight: FontWeight.w500, fontSize: 13),
             ),
-            if (detail.isNotEmpty)
-              Text(
-                detail,
-                style: TextStyle(color: FtColors.ink3, fontSize: 12),
-              ),
+          ),
+          if (detail.isNotEmpty)
+            Text(
+              detail,
+              style: TextStyle(color: FtColors.ink3, fontSize: 12),
+            ),
+          if (onTap != null) ...[
             const SizedBox(width: 4),
             Icon(Icons.chevron_right, size: 16, color: FtColors.ink4),
           ],
-        ),
+        ],
       ),
     );
+    if (onTap == null) return body;
+    return FtTapScale(onTap: onTap, child: body);
   }
 }
 

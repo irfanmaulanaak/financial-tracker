@@ -25,6 +25,8 @@ import '../household/household_providers.dart';
 import '../insights/insights_providers.dart';
 import '../investments/investment.dart';
 import '../investments/investments_screen.dart';
+import 'net_worth_snapshot.dart';
+import 'net_worth_snapshot_repository.dart';
 import 'widgets/banners.dart';
 import 'widgets/cards_preview.dart';
 import 'widgets/category_grid.dart';
@@ -152,6 +154,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             household,
             cards.map((c) => (limit: c.limit, used: c.used)),
           );
+          // Record today's net-worth snapshot once everything's loaded.
+          // Idempotent per day (see [NetWorthSnapshotRepository.recordToday]).
+          if (user != null &&
+              cardsAsync?.hasValue == true &&
+              investmentsAsync?.hasValue == true) {
+            // ignore: discarded_futures
+            ref
+                .read(netWorthSnapshotRepositoryProvider)
+                .recordToday(
+                  householdId: household.id,
+                  nw: nw,
+                  capturedBy: user.uid,
+                );
+          }
+          final history =
+              ref.watch(netWorthHistoryProvider(14)).value ?? const <NetWorthSnapshot>[];
+          final trend = [for (final s in history) s.total.toDouble()];
           final health = computeHealthScore(
             HealthScoreInputs(
               spendThisCycle: totalSpentValue,
@@ -194,6 +213,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 household: household,
                 displayName: displayName,
                 nw: nw,
+                trend: trend,
                 totalSpent: totalSpentValue,
                 income: income,
                 health: health,
@@ -233,6 +253,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   AssetHeroCard(
                     nw: nw,
                     cycleNet: income - totalSpentValue,
+                    trend: trend,
                     onTap: () => context.push('/accounts'),
                   ),
                   index: 1,

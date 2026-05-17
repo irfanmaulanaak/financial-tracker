@@ -165,9 +165,15 @@ class GoalsScreen extends ConsumerWidget {
       ),
     );
     if (amount != null) {
+      final uid = ref.read(authStateProvider).value?.uid ?? '';
       await ref
           .read(goalRepositoryProvider)
-          .contribute(hid: hid, goalId: goal.id, amount: amount);
+          .contribute(
+            hid: hid,
+            goalId: goal.id,
+            amount: amount,
+            byUid: uid,
+          );
     }
     ctrl.dispose();
   }

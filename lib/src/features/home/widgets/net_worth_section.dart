@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/net_worth.dart';
 import '../../../theme.dart';
-                        import '../../../ui/ft_donut.dart';
+import '../../../ui/ft_donut.dart';
 import '../../../ui/ft_motion.dart';
 import '../../../ui/ft_sparkline.dart';
 import '../../../ui/ft_ui.dart';
@@ -234,37 +234,3 @@ class _DeltaPill extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Backwards-compatible shims so existing callers (HomeBBody, etc.) keep
-// compiling while we migrate. They forward into the new combined card.
-// ---------------------------------------------------------------------------
-
-class AssetHero extends StatelessWidget {
-  const AssetHero({
-    super.key,
-    required this.nw,
-    required this.onTap,
-    this.cycleNet,
-  });
-
-  final NetWorth nw;
-  final VoidCallback onTap;
-  final int? cycleNet;
-
-  @override
-  Widget build(BuildContext context) {
-    return AssetHeroCard(nw: nw, onTap: onTap, cycleNet: cycleNet);
-  }
-}
-
-class AssetBreakdown extends StatelessWidget {
-  const AssetBreakdown({super.key, required this.nw, required this.onTap});
-
-  final NetWorth nw;
-  final VoidCallback onTap;
-
-  /// The breakdown is now folded into [AssetHeroCard]; render an empty stub
-  /// so home_screen.dart can drop the separate section without a no-op edit.
-  @override
-  Widget build(BuildContext context) => const SizedBox.shrink();
-}

@@ -165,7 +165,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                     phone: user.phoneNumber ?? '-',
                     onNameChanged: (_) => setState(() => _dirty = true),
                   ),
-                  const SecurityCard(),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(22, 18, 22, 0),
                     child: OutlinedButton(

@@ -86,19 +86,6 @@ class SettingsScreen extends ConsumerWidget {
                   SettingsRow(
                     label: 'Mata uang',
                     detail: 'IDR · Rupiah',
-                    onTap: _noop,
-                  ),
-                  Divider(),
-                  SettingsRow(
-                    label: 'Privasi & data',
-                    detail: '',
-                    onTap: _noop,
-                  ),
-                  Divider(),
-                  SettingsRow(
-                    label: 'Bantuan & dukungan',
-                    detail: '',
-                    onTap: _noop,
                   ),
                 ],
               ),
@@ -120,8 +107,6 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 }
-
-void _noop() {}
 
 class _ProfileCard extends StatelessWidget {
   const _ProfileCard({
@@ -273,6 +258,10 @@ class _DisplaySection extends ConsumerWidget {
 class _AboutCard extends StatelessWidget {
   const _AboutCard();
 
+  // Set at build time via `--dart-define=APP_VERSION=$(grep '^version:' pubspec.yaml | awk '{print $2}')`.
+  static const _appVersion =
+      String.fromEnvironment('APP_VERSION', defaultValue: 'dev');
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -287,14 +276,14 @@ class _AboutCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
+              const Text(
                 'Financial Tracker',
                 style: TextStyle(
                     fontWeight: FontWeight.w600, fontSize: 14),
               ),
-              SizedBox(height: 4),
+              const SizedBox(height: 4),
               Text(
-                'v1.0.0 · Dibuat untuk keluarga Indonesia.\nData disimpan di perangkat & cloud (Firebase).',
+                'v$_appVersion · Dibuat untuk keluarga Indonesia.\nData disimpan di perangkat & cloud (Firebase).',
                 style: TextStyle(
                     color: FtColors.ink3, fontSize: 11, height: 1.4),
               ),

@@ -68,8 +68,6 @@ class _AlokasiTabState extends State<AlokasiTab> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(22, 4, 22, 120),
       children: [
-        const _ContextCard(),
-        const SizedBox(height: 14),
         _AllocationCard(
           showTarget: _showTarget,
           onToggle: (v) {
@@ -98,39 +96,6 @@ class _AlokasiTabState extends State<AlokasiTab> {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _ContextCard extends StatelessWidget {
-  const _ContextCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return FtCard(
-      backgroundColor: FtColors.surfaceAlt,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.auto_awesome_outlined, size: 14, color: FtColors.clay),
-              const SizedBox(width: 6),
-              const Eyebrow('Profil Investasi'),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Profil moderat: pertahankan ekuitas, tambah obligasi seiring stabilitas suku bunga.',
-            style: TextStyle(
-              color: FtColors.ink,
-              fontSize: 13,
-              fontFamily: 'Newsreader',
-              height: 1.45,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

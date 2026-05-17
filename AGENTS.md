@@ -63,6 +63,13 @@ Update this section as the project evolves.
   expenses+incomes only, `view` writes nothing. Access is set at invite time
   and editable by the household creator.
 
+### Build commands
+- Standard run/build: `flutter run` / `flutter build {ios|apk|appbundle|web}`.
+- The Settings → Tentang card surfaces the app version via the `APP_VERSION`
+  build define. Pass it through on official builds:
+  `flutter run --dart-define=APP_VERSION=$(grep '^version:' pubspec.yaml | awk '{print $2}')`
+  Without the flag the card shows `vdev`.
+
 ### References
 - `claude-design/` → visual/UX reference only (JSX prototype; not portable code)
 - `PLAN.md` → phased roadmap + open decisions
