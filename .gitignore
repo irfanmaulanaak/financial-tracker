@@ -49,3 +49,4 @@ app.*.map.json
 /emulator_tests/package-lock.json
 /firestore-debug.log
 /firebase-debug.log
+SECURITY_ISSUES.md

@@ -35,6 +35,8 @@ Use below list for durable project notes. Keep each item concise and remove stal
 
 ## Project Notes
 Update this section as the project evolves.
+- Issue tracker: ISSUES.md
+- Security issue tracker: SECURITY_ISSUES.md
 
 ### Stack
 - Flutter 3.41.9 stable (Dart) — `flutter doctor` green except Xcode simulator runtimes (install via Xcode → Settings → Platforms)
