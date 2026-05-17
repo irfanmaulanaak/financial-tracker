@@ -225,35 +225,61 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   index: 0,
                 ),
                 section(
-                  AssetHero(
+                  AssetHeroCard(
                     nw: nw,
                     cycleNet: income - totalSpentValue,
                     onTap: () => context.push('/accounts'),
                   ),
                   index: 1,
                 ),
-                section(
-                  AssetBreakdown(
-                      nw: nw, onTap: () => context.push('/accounts')),
-                  index: 2,
-                ),
                 if (status != BudgetStatus.ok)
-                  section(BudgetBanner(status: status), index: 3),
+                  section(BudgetBanner(status: status), index: 2),
                 for (var i = 0; i < dueBanners.length; i++)
-                  section(dueBanners[i], index: 4 + i),
+                  section(dueBanners[i], index: 3 + i),
                 section(
-                  MonthStrip(
-                    totalSpent: totalSpentValue,
-                    income: income,
-                    daily: daily,
-                    todaySpend: expenses
-                        .where((e) =>
-                            e.date.year == now.year &&
-                            e.date.month == now.month &&
-                            e.date.day == now.day)
-                        .fold<int>(0, (a, e) => a + e.amount),
-                    cycleStart: cycle.start,
-                    cycleEndExclusive: cycle.endExclusive,
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(22, 0, 22, 16),
+                    child: IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(
+                            flex: 13,
+                            child: MonthStrip(
+                              totalSpent: totalSpentValue,
+                              income: income,
+                              daily: daily,
+                              todaySpend: expenses
+                                  .where((e) =>
+                                      e.date.year == now.year &&
+                                      e.date.month == now.month &&
+                                      e.date.day == now.day)
+                                  .fold<int>(0, (a, e) => a + e.amount),
+                              cycleStart: cycle.start,
+                              cycleEndExclusive: cycle.endExclusive,
+                              compact: true,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            flex: 10,
+                            child: HealthSnapshot(
+                              score: health,
+                              onTap: () => context.push('/insights'),
+                              compact: true,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  index: 4,
+                ),
+                section(
+                  CategoryGrid(
+                    categories: categories.take(4).toList(),
+                    totals: byCat,
+                    onTap: () => context.push('/spend'),
                   ),
                   index: 5,
                 ),
@@ -265,26 +291,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   index: 6,
                 ),
                 section(
-                  HealthSnapshot(
-                    score: health,
-                    onTap: () => context.push('/insights'),
-                  ),
-                  index: 7,
-                ),
-                section(
-                  CategoryGrid(
-                    categories: categories.take(4).toList(),
-                    totals: byCat,
-                    onTap: () => context.push('/spend'),
-                  ),
-                  index: 8,
-                ),
-                section(
                   GoalsPreview(
                     goals: goals,
                     onTap: () => context.push('/goals'),
                   ),
-                  index: 9,
+                  index: 7,
                 ),
                 section(
                   RecentList(
@@ -292,7 +303,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     household: household,
                     onTap: () => context.push('/expenses'),
                   ),
-                  index: 10,
+                  index: 8,
                 ),
               ],
             ),

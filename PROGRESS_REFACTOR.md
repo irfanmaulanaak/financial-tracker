@@ -7,7 +7,7 @@ Tracking implementation of [REFACTOR_PLAN.md](REFACTOR_PLAN.md). Each phase logs
 | Phase | Scope | Status |
 |---|---|---|
 | 1 | Design tokens & shared widgets | completed |
-| 2 | Home / Beranda | in_progress |
+| 2 | Home / Beranda | completed |
 | 3 | Core ledger screens | pending |
 | 4 | Assets / Allocation, Goals, Health | pending |
 | 5 | Profile, Members, Notifications, Settings, Access Control | pending |
@@ -51,7 +51,36 @@ Tracking implementation of [REFACTOR_PLAN.md](REFACTOR_PLAN.md). Each phase logs
 
 ## Phase 2 — Home / Beranda
 
-_(not started)_
+**Started:** 2026-05-17
+**Completed:** 2026-05-17
+
+### Changes
+
+- `lib/src/features/home/widgets/net_worth_section.dart` — rewrote as a single combined `AssetHeroCard` that pairs the big total, optional cycle-delta pill, optional sparkline, mini donut (cash/savings/investments segments via `FtDonut`), and a 3- to 4-column inline breakdown row. The old `AssetHero` and `AssetBreakdown` classes remain as thin shims (forwarding / no-op) so the alternate `HomeBBody` layout keeps compiling without edits.
+- `lib/src/features/home/widgets/health_snapshot.dart` — added a `compact` mode for side-by-side use, swapped the small dot indicator for the new `FtTrafficLight` (horizontal in expanded mode, vertical in compact mode), and used `FtRing` for the score ring in the expanded variant.
+- `lib/src/features/home/widgets/month_strip.dart` — added a `compact` mode (smaller eyebrow, tighter padding, single-line context, smaller progress bar) so it can share a row with the compact health card.
+- `lib/src/features/home/home_screen.dart` — restructured the Layout A list to match `screens-home.jsx`:
+  1. HomeHeader → 2. `AssetHeroCard` → 3. Banners/Due → 4. `MonthStrip(compact)` + `HealthSnapshot(compact)` side-by-side in an `IntrinsicHeight` row → 5. CategoryGrid → 6. CardsPreview → 7. GoalsPreview → 8. RecentList.
+
+### Files left unchanged (already match the design)
+
+- `home_header.dart` — already has avatar + name + member stack + bell + menu in a single row matching the design's header. Bell still triggers a snackbar; the real `/notifications` route is delivered in Phase 5.
+- `category_grid.dart` — already a 2×2 grid with category icon + amount + progress bar + `% terpakai`/over-budget label per cell.
+- `cards_preview.dart` — already has the eyebrow, min-pay chip, large total, segmented proportional-bar across cards, and nearest-due row.
+- `goals_preview.dart` — already shows icon badge + progress bar + percentage + amounts per goal.
+- `recent_list.dart` — already uses the existing `MemberChip` per row when a spender exists.
+- `home_b_body.dart` (alternate Layout B) — does not reference `AssetHero`/`AssetBreakdown`, so it was unaffected by the merge.
+
+### Deviations from plan
+
+- `home_header.dart` was listed for edit but already matches the design closely; no changes were necessary.
+- The existing `members/member_chip.dart` (avatar + first-name pill) is left intact and used by `recent_list.dart`. The new `lib/src/ui/ft_member_chip.dart` (color-dot + first-name) created in Phase 1 will be used by new screens in later phases — not retrofitted across this phase to keep the diff scoped.
+- Bell wiring to `/notifications` deferred to Phase 5 along with the notifications screen itself.
+
+### Verification
+
+- `flutter analyze` → 23 issues, **none new from Phase 2** (3 pre-existing warnings + 20 pre-existing info-level lints; one Phase 1-introduced warning was already cleared). Compared to Phase 1's 24, the count dropped by one because the unused `ft_member_chip.dart` import is gone.
+- No file exceeded the 400 LOC guardrail after edits.
 
 ---
 
