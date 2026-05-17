@@ -9,6 +9,7 @@ import '../household/household_providers.dart';
 import 'credit_card.dart';
 import 'card_repository.dart';
 import 'edit_card_sheet.dart';
+import 'widgets/installment_list.dart';
 
 final _cardProvider =
     StreamProvider.family<CreditCard?, ({String hid, String cardId})>((ref, p) {
@@ -17,15 +18,9 @@ final _cardProvider =
           .watchOne(hid: p.hid, cardId: p.cardId);
     });
 
-final _installmentsProvider =
-    StreamProvider.family<List<Installment>, ({String hid, String cardId})>((
-      ref,
-      p,
-    ) {
-      return ref
-          .watch(cardRepositoryProvider)
-          .watchInstallments(hid: p.hid, cardId: p.cardId);
-    });
+// Per-card installments stream lives in `widgets/installment_list.dart` so
+// every consumer (cards screen, card detail, home preview) shares a single
+// Firestore subscription per (hid, cardId).
 
 class CardDetailScreen extends ConsumerWidget {
   const CardDetailScreen({super.key, required this.cardId});
@@ -41,7 +36,7 @@ class CardDetailScreen extends ConsumerWidget {
       _cardProvider((hid: household.id, cardId: cardId)),
     );
     final installmentsAsync = ref.watch(
-      _installmentsProvider((hid: household.id, cardId: cardId)),
+      cardInstallmentsProvider((hid: household.id, cardId: cardId)),
     );
 
     Future<void> editCard(CreditCard c) async {
