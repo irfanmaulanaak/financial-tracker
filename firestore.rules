@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// Financial Tracker — Firestore rules
+// FinSist — Firestore rules
 //
 // Model: 1 user ↔ 1 household. Household members[].userId is mirrored to
 // memberIds[] for `request.auth.uid in array` checks. Per-member access

@@ -277,7 +277,7 @@ class _AboutCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Financial Tracker',
+                'FinSist',
                 style: TextStyle(
                     fontWeight: FontWeight.w600, fontSize: 14),
               ),

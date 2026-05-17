@@ -1,4 +1,4 @@
-# OpenUsage
+# FinSist
 
 ## Instructions
 - CRITICAL: Use simple, concise language. Avoid overtechnical jargon.
@@ -39,7 +39,7 @@ Update this section as the project evolves.
 ### Stack
 - Flutter 3.41.9 stable (Dart) — `flutter doctor` green except Xcode simulator runtimes (install via Xcode → Settings → Platforms)
 - Firebase: Auth + Firestore (cloud-first; household sync from day 1) — project `financial-tracker-4791d`
-- Targets: iOS + Android primary; web also wired (optional)
+- Targets: iOS + Android + Web (all first-class)
 - Locale: id-ID; IDR only
 - State: flutter_riverpod 3.x
 - Routing: go_router

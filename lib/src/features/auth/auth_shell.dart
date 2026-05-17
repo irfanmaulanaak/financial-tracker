@@ -136,7 +136,7 @@ class _BrandMark extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              'Financial Tracker',
+              'FinSist',
               style: TextStyle(
                 color: FtColors.ink,
                 fontSize: 14,

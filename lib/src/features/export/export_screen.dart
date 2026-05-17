@@ -1,8 +1,8 @@
-import 'dart:io';
+import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/csv_export.dart';
@@ -94,11 +94,17 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
   }
 
   Future<void> _shareCsv(String csv, String filename) async {
-    final dir = await getTemporaryDirectory();
-    final file = File('${dir.path}/$filename');
-    await file.writeAsString(csv);
+    // In-memory XFile keeps this cross-platform: share_plus writes a temp
+    // file on Android/iOS internally, and uses a blob/download on web.
+    final bytes = Uint8List.fromList(utf8.encode(csv));
     await SharePlus.instance.share(
-      ShareParams(files: [XFile(file.path)], text: filename),
+      ShareParams(
+        files: [
+          XFile.fromData(bytes, name: filename, mimeType: 'text/csv'),
+        ],
+        fileNameOverrides: [filename],
+        text: filename,
+      ),
     );
   }
 

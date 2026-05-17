@@ -1,11 +1,11 @@
 {
-    "name": "financial_tracker",
-    "short_name": "financial_tracker",
+    "name": "FinSist",
+    "short_name": "FinSist",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "Household financial tracker for Indonesian families",
+    "background_color": "#F1EDE4",
+    "theme_color": "#F1EDE4",
+    "description": "Pelacak keuangan rumah tangga keluarga Indonesia.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
