@@ -55,7 +55,7 @@ Update this section as the project evolves.
 - Goals: shared OR personal (both)
 - Assets: pooled (no per-member breakdown)
 - Health score: household level
-- Roles (Istri/Suami/Anak): labels only, no permission gating
+- Roles (Istri/Suami/Anak): labels only for now, will add permissions gating later if possible
 
 ### References
 - `claude-design/` → visual/UX reference only (JSX prototype; not portable code)
