@@ -56,10 +56,6 @@ class HouseholdRepository {
           sortOrder: i,
         ),
     ];
-    final methods = [
-      for (final p in seededPaymentMethods)
-        PaymentMethod(id: p.id, label: p.label, type: p.type, builtIn: true),
-    ];
     final creator = Member(
       userId: creatorUid,
       displayName: creatorName,
@@ -78,7 +74,6 @@ class HouseholdRepository {
       memberIds: [creatorUid],
       members: [creator],
       categories: categories,
-      paymentMethods: methods,
     );
 
     // Transaction: create household + link user.householdId atomically.

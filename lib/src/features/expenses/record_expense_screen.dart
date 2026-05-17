@@ -12,6 +12,7 @@ import '../cards/credit_card.dart';
 import '../cards/cards_screen.dart';
 import '../household/household.dart';
 import '../household/household_providers.dart';
+import '../record_common/account_picker.dart';
 import '../record_common/amount_display.dart';
 import '../record_common/card_picker.dart';
 import '../record_common/category_chip_row.dart';
@@ -19,7 +20,6 @@ import '../record_common/installment_picker.dart';
 import '../record_common/keypad.dart';
 import '../record_common/meta_row.dart';
 import '../record_common/pay_type_toggle.dart';
-import '../record_common/payment_method_row.dart';
 import 'expense_repository.dart';
 
 class RecordExpenseScreen extends ConsumerStatefulWidget {
@@ -34,7 +34,7 @@ class _RecordExpenseScreenState extends ConsumerState<RecordExpenseScreen> {
   int _amount = 0;
   String? _categoryId;
   String _payType = 'cash'; // 'cash' | 'credit'
-  String? _cashMethodId;
+  String? _sourceAccountId;
   String? _cardId;
   String? _spentBy;
   DateTime _date = DateTime.now();
@@ -74,16 +74,16 @@ class _RecordExpenseScreenState extends ConsumerState<RecordExpenseScreen> {
       setState(() => _error = 'Lengkapi jumlah & kategori');
       return;
     }
-    final methodId =
-        _payType == 'credit' ? _creditMethodId(h) : _cashMethodId;
-    if (methodId == null) {
-      FtHaptics.warning();
-      setState(() => _error = 'Pilih metode bayar');
-      return;
-    }
     if (_payType == 'credit' && _cardId == null) {
       FtHaptics.warning();
       setState(() => _error = 'Pilih kartu kredit');
+      return;
+    }
+    final hasAccounts =
+        h.cashAccounts.isNotEmpty || h.savingsAccounts.isNotEmpty;
+    if (_payType == 'cash' && hasAccounts && _sourceAccountId == null) {
+      FtHaptics.warning();
+      setState(() => _error = 'Pilih sumber dana');
       return;
     }
     FtHaptics.tap();
@@ -102,7 +102,6 @@ class _RecordExpenseScreenState extends ConsumerState<RecordExpenseScreen> {
           householdId: h.id,
           principal: _amount,
           categoryId: _categoryId!,
-          paymentMethodId: methodId,
           spentBy: spentBy,
           date: _date,
           cardId: _cardId!,
@@ -115,7 +114,6 @@ class _RecordExpenseScreenState extends ConsumerState<RecordExpenseScreen> {
           householdId: h.id,
           amount: _amount,
           categoryId: _categoryId!,
-          paymentMethodId: methodId,
           spentBy: spentBy,
           date: _date,
           cardId: _cardId!,
@@ -127,9 +125,9 @@ class _RecordExpenseScreenState extends ConsumerState<RecordExpenseScreen> {
           householdId: h.id,
           amount: _amount,
           categoryId: _categoryId!,
-          paymentMethodId: methodId,
           spentBy: spentBy,
           date: _date,
+          sourceAccountId: _sourceAccountId,
           note: note,
           recurring: _recurring,
         );
@@ -138,6 +136,14 @@ class _RecordExpenseScreenState extends ConsumerState<RecordExpenseScreen> {
         FtHaptics.success();
         context.pop();
       }
+    } on StateError catch (e) {
+      FtHaptics.error();
+      final msg = switch (e.message) {
+        'insufficient' => 'Saldo rekening sumber tidak cukup',
+        'account_missing' => 'Rekening sumber tidak ditemukan',
+        _ => 'Gagal: ${e.message}',
+      };
+      setState(() => _error = msg);
     } catch (e) {
       FtHaptics.error();
       setState(() => _error = 'Gagal: $e');
@@ -145,11 +151,6 @@ class _RecordExpenseScreenState extends ConsumerState<RecordExpenseScreen> {
       if (mounted) setState(() => _busy = false);
     }
   }
-
-  String? _creditMethodId(Household h) =>
-      h.paymentMethods.where((p) => p.type == 'credit').isNotEmpty
-          ? h.paymentMethods.firstWhere((p) => p.type == 'credit').id
-          : null;
 
   @override
   Widget build(BuildContext context) {
@@ -166,19 +167,26 @@ class _RecordExpenseScreenState extends ConsumerState<RecordExpenseScreen> {
     if (_categoryId == null && categories.isNotEmpty) {
       _categoryId = categories.first.id;
     }
-    final cashMethods = household.paymentMethods
-        .where((p) => p.type != 'credit')
-        .toList();
     final cards = ref.watch(cardsProvider(household.id)).value ?? const [];
-    if (_payType == 'cash' &&
-        _cashMethodId == null &&
-        cashMethods.isNotEmpty) {
-      _cashMethodId = cashMethods.first.id;
-    }
     if (_payType == 'credit' && _cardId == null && cards.isNotEmpty) {
       _cardId = cards.first.id;
       _cicilanApr = cards.first.apr;
     }
+    final sourceAccounts = recordAccountChoices(
+      cashAccounts: household.cashAccounts,
+      savingsAccounts: household.savingsAccounts,
+    );
+    if (_payType == 'cash' &&
+        _sourceAccountId == null &&
+        sourceAccounts.isNotEmpty) {
+      _sourceAccountId = sourceAccounts.first.id;
+    }
+    final canSubmit = _amount > 0 &&
+        _categoryId != null &&
+        ref.watch(canRecordTxnProvider) &&
+        (_payType == 'credit' ||
+            sourceAccounts.isEmpty ||
+            _sourceAccountId != null);
 
     return Scaffold(
       backgroundColor: FtColors.bg,
@@ -191,9 +199,7 @@ class _RecordExpenseScreenState extends ConsumerState<RecordExpenseScreen> {
               title: 'Catat pengeluaran',
               trailing: FtSubmitDot(
                 busy: _busy,
-                enabled: _amount > 0 &&
-                    _categoryId != null &&
-                    ref.watch(canRecordTxnProvider),
+                enabled: canSubmit,
                 onTap: () => _submit(household, cards),
               ),
             ),
@@ -228,13 +234,16 @@ class _RecordExpenseScreenState extends ConsumerState<RecordExpenseScreen> {
                     ),
                     const SizedBox(height: 14),
                     if (_payType == 'cash')
-                      PaymentMethodRow(
-                        methods: cashMethods,
-                        selected: _cashMethodId,
+                      RecordAccountPicker(
+                        accounts: sourceAccounts,
+                        selectedId: _sourceAccountId,
+                        accent: FtColors.ink,
                         onSelect: (id) {
                           FtHaptics.select();
-                          setState(() => _cashMethodId = id);
+                          setState(() => _sourceAccountId = id);
                         },
+                        emptyNote:
+                            'Belum ada rekening. Pengeluaran tetap tercatat tapi saldo tidak terpotong. Tambah dari Aset → Tunai.',
                       )
                     else
                       CardPicker(

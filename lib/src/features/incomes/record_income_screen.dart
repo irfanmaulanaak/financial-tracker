@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/formatters.dart';
 import '../../core/providers.dart';
 import '../../theme.dart';
 import '../../ui/ft_haptics.dart';
@@ -11,6 +10,7 @@ import '../../ui/ft_motion.dart';
 import '../../ui/ft_submit_dot.dart';
 import '../../ui/ft_ui.dart';
 import '../household/household_providers.dart';
+import '../record_common/account_picker.dart';
 import '../record_common/amount_display.dart';
 import '../record_common/keypad.dart';
 import '../record_common/meta_row.dart';
@@ -110,12 +110,10 @@ class _RecordIncomeScreenState extends ConsumerState<RecordIncomeScreen> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     _receivedBy ??= user.uid;
-    final accounts = [
-      for (final a in household.cashAccounts)
-        (id: a.id, label: a.label, hint: 'Tunai · ${Money.format(a.value)}'),
-      for (final a in household.savingsAccounts)
-        (id: a.id, label: a.label, hint: 'Tabungan · ${Money.format(a.value)}'),
-    ];
+    final accounts = recordAccountChoices(
+      cashAccounts: household.cashAccounts,
+      savingsAccounts: household.savingsAccounts,
+    );
     final canSubmit = _amount > 0 &&
         _destinationAccountId != null &&
         !_busy &&
@@ -163,31 +161,17 @@ class _RecordIncomeScreenState extends ConsumerState<RecordIncomeScreen> {
                     const SizedBox(height: 22),
                     const Eyebrow('Masuk ke'),
                     const SizedBox(height: 10),
-                    if (accounts.isEmpty)
-                      Padding(
-                        padding: EdgeInsets.symmetric(vertical: 6),
-                        child: Text(
+                    RecordAccountPicker(
+                      accounts: accounts,
+                      selectedId: _destinationAccountId,
+                      accent: FtColors.moss,
+                      onSelect: (id) {
+                        FtHaptics.select();
+                        setState(() => _destinationAccountId = id);
+                      },
+                      emptyNote:
                           'Belum ada akun. Tambah dari menu Akun.',
-                          style: TextStyle(color: FtColors.danger, fontSize: 12),
-                        ),
-                      )
-                    else
-                      Column(
-                        children: [
-                          for (final a in accounts) ...[
-                            _AccountRow(
-                              label: a.label,
-                              hint: a.hint,
-                              selected: _destinationAccountId == a.id,
-                              onTap: () {
-                                FtHaptics.select();
-                                setState(() => _destinationAccountId = a.id);
-                              },
-                            ),
-                            const SizedBox(height: 6),
-                          ],
-                        ],
-                      ),
+                    ),
                     const SizedBox(height: 14),
                     FtInput(
                       label: 'Catatan (opsional)',
@@ -289,95 +273,6 @@ class _SourceChips extends StatelessWidget {
             ),
           ),
       ],
-    );
-  }
-}
-
-class _AccountRow extends StatelessWidget {
-  const _AccountRow({
-    required this.label,
-    required this.hint,
-    required this.selected,
-    required this.onTap,
-  });
-  final String label;
-  final String hint;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return FtTapScale(
-      scale: 0.985,
-      haptic: false,
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: selected
-              ? FtColors.moss.withValues(alpha: 0.08)
-              : FtColors.surface,
-          border: Border.all(
-            color: selected ? FtColors.moss : FtColors.line,
-            width: 0.5,
-          ),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                color: selected ? FtColors.moss : FtColors.surfaceAlt,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: selected ? FtColors.moss : FtColors.line,
-                  width: 0.5,
-                ),
-              ),
-              alignment: Alignment.center,
-              child: Icon(
-                Icons.account_balance_outlined,
-                size: 14,
-                color: selected ? Colors.white : FtColors.ink2,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: FtColors.ink,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    hint,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: FtColors.ink3,
-                      fontSize: 11,
-                      fontFeatures: [FontFeature.tabularFigures()],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (selected)
-              Icon(Icons.check, size: 16, color: FtColors.moss),
-          ],
-        ),
-      ),
     );
   }
 }

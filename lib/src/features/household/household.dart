@@ -152,34 +152,6 @@ class Category {
       );
 }
 
-class PaymentMethod {
-  final String id;
-  final String label;
-  final String type;
-  final bool builtIn;
-
-  const PaymentMethod({
-    required this.id,
-    required this.label,
-    required this.type,
-    this.builtIn = false,
-  });
-
-  Map<String, dynamic> toMap() => {
-        'id': id,
-        'label': label,
-        'type': type,
-        'builtIn': builtIn,
-      };
-
-  static PaymentMethod fromMap(Map<String, dynamic> m) => PaymentMethod(
-        id: m['id'] as String,
-        label: m['label'] as String? ?? '',
-        type: m['type'] as String? ?? 'cash',
-        builtIn: m['builtIn'] as bool? ?? false,
-      );
-}
-
 class Household {
   final String id;
   final String name;
@@ -190,7 +162,6 @@ class Household {
   final List<String> memberIds;
   final List<Member> members;
   final List<Category> categories;
-  final List<PaymentMethod> paymentMethods;
   final List<Account> cashAccounts;
   final List<Account> savingsAccounts;
 
@@ -204,7 +175,6 @@ class Household {
     required this.memberIds,
     required this.members,
     required this.categories,
-    required this.paymentMethods,
     this.cashAccounts = const [],
     this.savingsAccounts = const [],
   });
@@ -234,13 +204,6 @@ class Household {
     return null;
   }
 
-  PaymentMethod? paymentMethodOf(String id) {
-    for (final p in paymentMethods) {
-      if (p.id == id) return p;
-    }
-    return null;
-  }
-
   /// `memberAccess` is the uid→accessLevel map mirrored from `members[]`.
   /// Stored alongside members so Firestore rules can look up the caller's
   /// access level in O(1) without scanning the array.
@@ -260,7 +223,6 @@ class Household {
         'members': members.map((m) => m.toMap()).toList(),
         'memberAccess': memberAccessMap(members),
         'categories': categories.map((c) => c.toMap()).toList(),
-        'paymentMethods': paymentMethods.map((p) => p.toMap()).toList(),
         'cashAccounts': cashAccounts.map((a) => a.toMap()).toList(),
         'savingsAccounts': savingsAccounts.map((a) => a.toMap()).toList(),
         'schemaVersion': 2,
@@ -281,10 +243,6 @@ class Household {
           .toList(),
       categories: ((m['categories'] as List?) ?? const [])
           .map((e) => Category.fromMap(Map<String, dynamic>.from(e as Map)))
-          .toList(),
-      paymentMethods: ((m['paymentMethods'] as List?) ?? const [])
-          .map((e) =>
-              PaymentMethod.fromMap(Map<String, dynamic>.from(e as Map)))
           .toList(),
       cashAccounts: ((m['cashAccounts'] as List?) ?? const [])
           .map((e) => Account.fromMap(

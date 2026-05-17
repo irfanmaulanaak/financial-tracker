@@ -58,12 +58,11 @@ categories: [{
   sortOrder: number
 }]
 
-paymentMethods: [{
-  id: string
-  label: string             // 'Tunai', 'BCA Debit', 'GoPay', ...
-  type: 'cash'|'debit'|'ewallet'|'credit'
-  builtIn: boolean
-}]
+// LEGACY. Older households persisted a seeded list of payment methods
+// here ('Tunai', 'BCA Debit', 'GoPay', ...). The picker has been
+// removed: cash flow now uses sourceAccountId → cashAccounts/savingsAccounts,
+// credit flow uses cardId → cards subcollection. New households don't
+// write this field. Old data is silently ignored on read.
 
 cashAccounts: [{ id, label, hint, value, sortOrder }]
 savingsAccounts: [{ id, label, hint, value, interestRate?, maturity?, sortOrder }]
@@ -73,13 +72,34 @@ savingsAccounts: [{ id, label, hint, value, interestRate?, maturity?, sortOrder 
 ```
 amount: number
 categoryId: string
-paymentMethodId: string
+paymentMethodId: string?  // LEGACY; null on new rows
 note: string?
 spentBy: uid
 date: timestamp           // user-selected; backdate allowed
 recurring: boolean        // metadata only Phase 1-3
-cardId: string?           // if paid via CC
+cardId: string?           // if paid via CC; bumps card.used in same txn
 installmentPlanId: string?
+sourceAccountId: string?  // → cashAccounts[].id or savingsAccounts[].id;
+                          // repo decrements that balance in the same txn
+                          // and refunds it on delete. Null for CC and
+                          // for legacy rows recorded before this field.
+createdAt: timestamp
+createdBy: uid
+```
+
+### `households/{hid}/transfers/{tid}` — subcollection
+Move money between two of the household's tracked accounts (cash ↔ savings).
+The repo decrements the source by `amount + fee` and increments the
+destination by `amount` in the same transaction. The fee is the operator
+/ top-up surcharge — money leaves the household but doesn't land anywhere.
+```
+amount: number
+fee: number               // 0 if no fee
+sourceAccountId: string   // → cashAccounts[].id or savingsAccounts[].id
+destinationAccountId: string
+note: string?
+transferredBy: uid
+date: timestamp
 createdAt: timestamp
 createdBy: uid
 ```
@@ -156,12 +176,15 @@ accessLevel: 'full'|'limited'|'view'
 ```
 
 ## Composite Indexes
-- `expenses`: (date desc) — implicit
-- `expenses`: (categoryId, date desc)
-- `expenses`: (spentBy, date desc)
-- `expenses`: (cardId, date desc)
-- `incomes`: (date desc)
-- `incomes`: (destinationAccountId, date desc)
+Configured in `firestore.indexes.json` (deploy with `firebase deploy --only firestore:indexes`):
+- `expenses`: (recurring asc, date asc) — recurring runner
+- `expenses`: (categoryId asc, date desc) — category detail screen
+- `incomes`: (recurring asc, date asc) — recurring runner (income path reserved)
+
+Implicit / not yet needed (single-field auto-indexes cover them):
+- `expenses`: (date desc), (spentBy, date desc), (cardId, date desc), (sourceAccountId, date desc)
+- `incomes`: (date desc), (destinationAccountId, date desc)
+- `transfers`: (date desc)
 
 ## Security Rules
 See `firestore.rules` for the canonical version. Summary:
@@ -169,10 +192,13 @@ See `firestore.rules` for the canonical version. Summary:
 - `households/{hid}`:
   - `get` open to any authed user (so a joiner can validate via invite).
   - `list` blocked for non-members.
-  - `update` requires `memberAccess[<uid>] == 'full'`. Self-join branch
+  - `update` requires `memberAccess[<uid>] == 'full'`, EXCEPT `limited`
+    users may update only `cashAccounts` / `savingsAccounts` (so the
+    expense + income recording transactions can decrement the source /
+    bump the destination account in one atomic write). Self-join branch
     requires a valid `claimedInvite`.
-  - Subcollections: `expenses`/`incomes` writable by full + limited;
-    `cards`/`goals`/`investments` writable by full only.
+  - Subcollections: `expenses`/`incomes`/`transfers` writable by full +
+    limited; `cards`/`goals`/`investments` writable by full only.
 - `invites/{code}` — `get` open to authed users, `list` blocked.
 
 ## Notes

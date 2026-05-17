@@ -8,6 +8,7 @@ import '../../core/payday.dart';
 import '../../theme.dart';
 import '../../ui/ft_ui.dart';
 import '../expenses/expense.dart';
+import '../expenses/expense_detail_sheet.dart';
 import '../expenses/expense_repository.dart';
 import '../home/widgets/home_formatters.dart';
 import '../household/household.dart';
@@ -95,6 +96,10 @@ class CategoryDetailScreen extends ConsumerWidget {
                         margin: const EdgeInsets.fromLTRB(22, 0, 22, 8),
                         padding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 12),
+                        onTap: () => ExpenseDetailSheet.show(
+                          context: context,
+                          expense: e,
+                        ),
                         child: Row(
                           children: [
                             Expanded(

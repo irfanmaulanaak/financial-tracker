@@ -31,6 +31,7 @@ import 'features/onboarding/landing_screen.dart';
 import 'features/profile/edit_profile_screen.dart';
 import 'features/settings/settings_screen.dart';
 import 'features/spend/spend_screen.dart';
+import 'features/transfers/transfer_screen.dart';
 import 'ui/ft_motion.dart';
 import 'core/providers.dart';
 
@@ -98,6 +99,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       _fadeRoute('/accounts', (_) => const AccountsScreen()),
       _fadeRoute('/incomes', (_) => const IncomeLogScreen()),
       _fadeRoute('/incomes/new', (_) => const RecordIncomeScreen()),
+      _fadeRoute('/transfer/new', (_) => const TransferScreen()),
       _fadeRoute('/cards', (_) => const CardsScreen()),
       _fadeRoute('/cards/:cardId', (state) =>
           CardDetailScreen(cardId: state.pathParameters['cardId']!)),

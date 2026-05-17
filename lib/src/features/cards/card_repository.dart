@@ -91,8 +91,37 @@ class CardRepository {
     });
   }
 
+  /// Deletes a card. Refuses when the card still has outstanding debt
+  /// (`used > 0`) or any active installment plan (`monthsPaid < monthsTotal`).
+  /// Otherwise cascades installment docs (historical, all-paid) and then
+  /// deletes the card root.
+  ///
+  /// Throws:
+  /// - `StateError('card_missing')` if the card doesn't exist.
+  /// - `StateError('card_has_balance')` if `used > 0`.
+  /// - `StateError('card_has_active_installments')` if any plan isn't done.
   Future<void> deleteCard({required String hid, required String cardId}) async {
-    await _cards(hid).doc(cardId).delete();
+    final cardRef = _cards(hid).doc(cardId);
+    final cardSnap = await cardRef.get();
+    if (!cardSnap.exists) throw StateError('card_missing');
+    final card = CreditCard.fromSnapshot(cardSnap);
+    if (card.used > 0) throw StateError('card_has_balance');
+
+    final instSnap = await _installments(hid, cardId).get();
+    final hasActive = instSnap.docs.any((d) {
+      final inst = Installment.fromSnapshot(d, cardId);
+      return !inst.isComplete;
+    });
+    if (hasActive) throw StateError('card_has_active_installments');
+
+    if (instSnap.docs.isNotEmpty) {
+      final batch = _db.batch();
+      for (final d in instSnap.docs) {
+        batch.delete(d.reference);
+      }
+      await batch.commit();
+    }
+    await cardRef.delete();
   }
 
   /// Atomically: (a) adjusts card.used by +delta (clamped at 0).

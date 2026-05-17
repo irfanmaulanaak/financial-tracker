@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/cicilan.dart';
 import '../../core/formatters.dart';
@@ -9,6 +10,7 @@ import '../household/household_providers.dart';
 import 'credit_card.dart';
 import 'card_repository.dart';
 import 'edit_card_sheet.dart';
+import 'widgets/card_detail_header.dart';
 import 'widgets/installment_list.dart';
 
 final _cardProvider =
@@ -61,6 +63,42 @@ class CardDetailScreen extends ConsumerWidget {
           );
     }
 
+    Future<void> deleteCard(CreditCard c) async {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Hapus kartu?'),
+          content: Text(
+            'Kartu "${c.label}" akan dihapus permanen.\n'
+            'Riwayat pengeluaran tetap tersimpan.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Batal'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: FtColors.danger),
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Hapus'),
+            ),
+          ],
+        ),
+      );
+      if (ok != true) return;
+      try {
+        await ref
+            .read(cardRepositoryProvider)
+            .deleteCard(hid: household.id, cardId: cardId);
+        if (context.mounted) context.pop();
+      } on StateError catch (e) {
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(_deleteErrorMessage(e.message))),
+        );
+      }
+    }
+
     return Scaffold(
       backgroundColor: FtColors.bg,
       body: cardAsync.when(
@@ -92,13 +130,28 @@ class CardDetailScreen extends ConsumerWidget {
                 children: [
                   FtSubHeader(
                     title: card.label,
-                    trailing: IconButton.filledTonal(
-                      tooltip: 'Edit',
-                      onPressed: () => editCard(card),
-                      icon: const Icon(Icons.edit_outlined, size: 18),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton.filledTonal(
+                          tooltip: 'Edit',
+                          onPressed: () => editCard(card),
+                          icon: const Icon(Icons.edit_outlined, size: 18),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton.filledTonal(
+                          tooltip: 'Hapus',
+                          onPressed: () => deleteCard(card),
+                          icon: Icon(
+                            Icons.delete_outline,
+                            size: 18,
+                            color: FtColors.danger,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  _Header(card: card, available: available),
+                  CardDetailHeader(card: card, available: available),
                   const SizedBox(height: 14),
                   Row(
                     children: [
@@ -163,7 +216,7 @@ class CardDetailScreen extends ConsumerWidget {
                           ]
                         : items
                               .map(
-                                (i) => _InstallmentTile(
+                                (i) => CardInstallmentTile(
                                   inst: i,
                                   onPaidOne: () => ref
                                       .read(cardRepositoryProvider)
@@ -218,144 +271,16 @@ class CardDetailScreen extends ConsumerWidget {
   }
 }
 
-class _Header extends StatelessWidget {
-  const _Header({required this.card, required this.available});
-  final CreditCard card;
-  final int available;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = _parseColor(card.accent);
-    final pct = card.limit == 0
-        ? 0.0
-        : (card.used / card.limit).clamp(0.0, 1.0);
-    return FtCard(
-      backgroundColor: color,
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  card.label,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
-                  ),
-                ),
-              ),
-              if (card.last4.isNotEmpty)
-                Text(
-                  '•••• ${card.last4}',
-                  style: const TextStyle(color: Colors.white70),
-                ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Terpakai',
-            style: const TextStyle(color: Colors.white70, fontSize: 12),
-          ),
-          Text(
-            Money.format(card.used),
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 28,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Tersedia: ${Money.format(available)} dari ${Money.format(card.limit)}',
-            style: const TextStyle(color: Colors.white70, fontSize: 12),
-          ),
-          const SizedBox(height: 12),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: LinearProgressIndicator(
-              value: pct,
-              minHeight: 6,
-              backgroundColor: Colors.white.withValues(alpha: 0.3),
-              valueColor: const AlwaysStoppedAnimation(Colors.white),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Jatuh tempo: tgl ${card.dueDay}  •  APR: ${(card.apr * 100).toStringAsFixed(1)}%',
-            style: const TextStyle(color: Colors.white70, fontSize: 12),
-          ),
-        ],
-      ),
-    );
+String _deleteErrorMessage(String? code) {
+  switch (code) {
+    case 'card_has_balance':
+      return 'Tidak bisa hapus: kartu masih punya saldo terpakai. '
+          'Lunasi dulu lewat tombol "Lunasi".';
+    case 'card_has_active_installments':
+      return 'Tidak bisa hapus: ada cicilan yang belum selesai.';
+    case 'card_missing':
+      return 'Kartu sudah tidak ada.';
+    default:
+      return 'Gagal menghapus kartu.';
   }
-}
-
-class _InstallmentTile extends StatelessWidget {
-  const _InstallmentTile({required this.inst, required this.onPaidOne});
-  final Installment inst;
-  final VoidCallback onPaidOne;
-
-  @override
-  Widget build(BuildContext context) {
-    final pct = inst.monthsPaid / inst.monthsTotal;
-    return FtCard(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: Padding(
-        padding: EdgeInsets.zero,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    inst.label,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-                Text(
-                  '${inst.monthsPaid}/${inst.monthsTotal} bln',
-                  style: const TextStyle(fontSize: 12),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: FtProgressBar(value: pct, max: 1, color: FtColors.sky),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Cicilan: ${Money.format(inst.monthly)} / bln  •  Sisa: ${Money.format(inst.remainingAmount)}',
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                ),
-                if (!inst.isComplete)
-                  TextButton(
-                    onPressed: onPaidOne,
-                    child: const Text('Tandai dibayar'),
-                  )
-                else
-                  const Chip(
-                    label: Text('Lunas'),
-                    visualDensity: VisualDensity.compact,
-                  ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-Color _parseColor(String hex) {
-  final h = hex.replaceFirst('#', '');
-  return Color(int.parse('FF$h', radix: 16));
 }

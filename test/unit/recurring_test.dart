@@ -1,4 +1,5 @@
 import 'package:financial_tracker/src/core/recurring.dart';
+import 'package:financial_tracker/src/core/recurring_runner.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -74,6 +75,31 @@ void main() {
       );
       expect(out.length, 1);
       expect(out['rent'], DateTime(2025, 3, 1));
+    });
+  });
+
+  group('recurringDocId', () {
+    test('stable across calls with the same input', () {
+      final id1 = recurringDocId('rent|cash1|1500000||', DateTime(2025, 5, 1));
+      final id2 = recurringDocId('rent|cash1|1500000||', DateTime(2025, 5, 1));
+      expect(id1, id2);
+    });
+
+    test('different date → different id', () {
+      final id1 = recurringDocId('rent|cash1|1500000||', DateTime(2025, 5, 1));
+      final id2 = recurringDocId('rent|cash1|1500000||', DateTime(2025, 6, 1));
+      expect(id1, isNot(id2));
+    });
+
+    test('different template key → different id', () {
+      final id1 = recurringDocId('rent|cash1|1500000||', DateTime(2025, 5, 1));
+      final id2 = recurringDocId('rent|cash1|2000000||', DateTime(2025, 5, 1));
+      expect(id1, isNot(id2));
+    });
+
+    test('format matches recur_<hex>_<yyyymmdd>', () {
+      final id = recurringDocId('x', DateTime(2026, 3, 7));
+      expect(id, matches(RegExp(r'^recur_[0-9a-f]{8}_20260307$')));
     });
   });
 }

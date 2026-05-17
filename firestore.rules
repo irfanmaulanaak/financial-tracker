@@ -46,7 +46,10 @@ service cloud.firestore {
 
       // Existing-member update.
       // - `view`     → blocked.
-      // - `limited`  → blocked at root (settings/members/categories/etc).
+      // - `limited`  → blocked for settings/members/categories.
+      //                Allowed for cashAccounts/savingsAccounts ONLY (so
+      //                recording an expense or income can decrement / bump
+      //                the source/destination account in the same txn).
       //                Subcollection writes are gated separately below.
       // - `full`     → allowed.
       // Self-edit profile (members[<self>]) currently requires `full`.
@@ -54,6 +57,16 @@ service cloud.firestore {
       allow update: if request.auth != null
                     && request.auth.uid in resource.data.memberIds
                     && resource.data.memberAccess[request.auth.uid] == 'full';
+
+      // Limited tier: can update only cashAccounts/savingsAccounts (account
+      // balance side-effects of recording a txn). All other fields must
+      // stay byte-equal to the existing doc.
+      allow update: if request.auth != null
+                    && request.auth.uid in resource.data.memberIds
+                    && resource.data.memberAccess[request.auth.uid] == 'limited'
+                    && request.resource.data.diff(resource.data)
+                         .affectedKeys()
+                         .hasOnly(['cashAccounts', 'savingsAccounts']);
 
       // Non-member self-join: must add only themselves AND reference a valid,
       // unconsumed invite for THIS household. The `claimedInvite` field on
@@ -104,12 +117,19 @@ service cloud.firestore {
         return level() == 'full';
       }
 
-      // expenses + incomes: full + limited can write.
+      // expenses + incomes + transfers: full + limited can write. Each of
+      // these flows updates the corresponding subcollection AND the
+      // household root's cashAccounts/savingsAccounts in the same txn —
+      // the limited-tier root-doc rule above scopes that side-effect.
       match /expenses/{document=**} {
         allow read: if isMember();
         allow write: if isMember() && canTxn();
       }
       match /incomes/{document=**} {
+        allow read: if isMember();
+        allow write: if isMember() && canTxn();
+      }
+      match /transfers/{document=**} {
         allow read: if isMember();
         allow write: if isMember() && canTxn();
       }

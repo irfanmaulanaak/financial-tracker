@@ -12,6 +12,7 @@ import '../household/household_providers.dart';
 import '../household/name_format.dart';
 import '../members/member_chip.dart';
 import 'expense.dart';
+import 'expense_detail_sheet.dart';
 import 'expense_repository.dart';
 
 class ExpenseLogScreen extends ConsumerStatefulWidget {
@@ -178,6 +179,10 @@ class _ExpenseLogScreenState extends ConsumerState<ExpenseLogScreen> {
                                 expense: e,
                                 category: household.categoryOf(e.categoryId),
                                 spender: household.memberOf(e.spentBy),
+                                onTap: () => ExpenseDetailSheet.show(
+                                  context: context,
+                                  expense: e,
+                                ),
                                 onDelete: () => _confirmDelete(household, e),
                               ),
                             ),
@@ -225,11 +230,13 @@ class _ExpenseTile extends ConsumerWidget {
     required this.expense,
     required this.category,
     required this.spender,
+    required this.onTap,
     required this.onDelete,
   });
   final Expense expense;
   final Category? category;
   final Member? spender;
+  final VoidCallback onTap;
   final VoidCallback onDelete;
 
   @override
@@ -238,6 +245,7 @@ class _ExpenseTile extends ConsumerWidget {
     return FtCard(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
       padding: const EdgeInsets.all(14),
+      onTap: onTap,
       onLongPress: onDelete,
       child: Row(
         children: [

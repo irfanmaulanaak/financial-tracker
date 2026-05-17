@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../theme.dart';
 import '../../ui/ft_haptics.dart';
@@ -70,6 +71,13 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen>
               investments: invTotal,
               total: grandTotal,
             ),
+            if (ref.watch(canRecordTxnProvider) &&
+                household.cashAccounts.length +
+                        household.savingsAccounts.length >=
+                    2) ...[
+              const SizedBox(height: 4),
+              const _TransferCta(),
+            ],
             _TabsBar(controller: _tabs),
             Expanded(
               child: TabBarView(
@@ -144,6 +152,74 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen>
           currentValue: draft.currentValue,
           costBasis: draft.costBasis,
         );
+  }
+}
+
+/// "Pindah Dana" action pill rendered just below the hero. Hidden for
+/// view-only users and when the household has < 2 tracked accounts (no
+/// pair to transfer between).
+class _TransferCta extends StatelessWidget {
+  const _TransferCta();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+      child: FtTapScale(
+        scale: 0.985,
+        onTap: () => context.push('/transfer/new'),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+          decoration: BoxDecoration(
+            color: FtColors.surface,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: FtColors.line, width: 0.5),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: FtColors.sky.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: FtColors.sky.withValues(alpha: 0.24),
+                    width: 0.5,
+                  ),
+                ),
+                alignment: Alignment.center,
+                child: Icon(Icons.compare_arrows_rounded,
+                    size: 16, color: FtColors.sky),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Pindah Dana',
+                      style: TextStyle(
+                        color: FtColors.ink,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Pindahkan saldo antar rekening, dengan biaya opsional',
+                      style: TextStyle(color: FtColors.ink3, fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded,
+                  size: 18, color: FtColors.ink4),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
