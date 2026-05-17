@@ -1,6 +1,10 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/pwa_install.dart';
 import '../../../theme.dart';
 import '../../../ui/ft_haptics.dart';
 import '../../../ui/ft_motion.dart';
@@ -72,10 +76,10 @@ class HomeHeader extends StatelessWidget {
               ],
             ),
           ),
-          if (household.members.isNotEmpty) ...[
+          if (household.members.isNotEmpty)
             _MemberStackPill(members: household.members, onTap: onMembers),
-            const SizedBox(width: 8),
-          ],
+          const SizedBox(width: 8),
+          const _InstallAppPill(),
           _BellButton(),
           const SizedBox(width: 8),
           _OverflowMenu(onSelected: onSelected),
@@ -182,6 +186,229 @@ class _MemberStackPill extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// PWA install affordance. Only ever renders something on web, and only
+/// when the browser actually supports installing (Chrome/Edge: native
+/// prompt; iOS Safari: shows manual instructions). On native builds the
+/// stub `PwaInstall` returns false → widget collapses to `SizedBox.shrink()`.
+class _InstallAppPill extends StatefulWidget {
+  const _InstallAppPill();
+
+  @override
+  State<_InstallAppPill> createState() => _InstallAppPillState();
+}
+
+class _InstallAppPillState extends State<_InstallAppPill> {
+  bool _canPrompt = false;
+  bool _needsIos = false;
+  Timer? _poll;
+
+  @override
+  void initState() {
+    super.initState();
+    if (!kIsWeb) return;
+    _refresh();
+    // beforeinstallprompt fires async after page load — re-check a few
+    // times during the first ~6 seconds so the pill appears once Chrome
+    // decides the site is installable.
+    _poll = Timer.periodic(const Duration(milliseconds: 1500), (t) {
+      if (!mounted || t.tick > 4) {
+        t.cancel();
+        return;
+      }
+      _refresh();
+    });
+  }
+
+  void _refresh() {
+    final canPrompt = PwaInstall.canPrompt;
+    final needsIos = PwaInstall.needsIosInstructions;
+    if (canPrompt != _canPrompt || needsIos != _needsIos) {
+      setState(() {
+        _canPrompt = canPrompt;
+        _needsIos = needsIos;
+      });
+    }
+  }
+
+  Future<void> _onTap() async {
+    FtHaptics.select();
+    if (_canPrompt) {
+      await PwaInstall.prompt();
+      _refresh();
+    } else if (_needsIos) {
+      await _showIosInstructions(context);
+    }
+  }
+
+  @override
+  void dispose() {
+    _poll?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_canPrompt && !_needsIos) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: FtTapScale(
+        scale: 0.94,
+        onTap: _onTap,
+        child: Container(
+          height: 28,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: BoxDecoration(
+            color: FtColors.clay.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: FtColors.clay.withValues(alpha: 0.3),
+              width: 0.5,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.install_mobile_rounded,
+                size: 13,
+                color: FtColors.clay,
+              ),
+              const SizedBox(width: 5),
+              Text(
+                'Pasang',
+                style: TextStyle(
+                  color: FtColors.clay,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.2,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// iOS Safari can't be triggered programmatically — show the manual
+/// "Share → Add to Home Screen" flow instead.
+Future<void> _showIosInstructions(BuildContext context) {
+  return showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: FtColors.surface,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (ctx) {
+      return Padding(
+        padding: EdgeInsets.fromLTRB(
+          22,
+          18,
+          22,
+          18 + MediaQuery.viewPaddingOf(ctx).bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 36,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 14),
+              decoration: BoxDecoration(
+                color: FtColors.line,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Text(
+              'Pasang sebagai app',
+              style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                    color: FtColors.ink,
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Di Safari, ikuti langkah berikut agar FinSist tampil seperti app:',
+              style: TextStyle(color: FtColors.ink3, fontSize: 12, height: 1.5),
+            ),
+            const SizedBox(height: 14),
+            _Step(
+              n: 1,
+              icon: Icons.ios_share_rounded,
+              text: 'Ketuk tombol Bagikan di bagian bawah Safari.',
+            ),
+            _Step(
+              n: 2,
+              icon: Icons.add_box_outlined,
+              text: 'Pilih “Tambahkan ke Layar Utama”.',
+            ),
+            _Step(
+              n: 3,
+              icon: Icons.check_rounded,
+              text: 'Ketuk “Tambah”. Ikon FinSist akan muncul di home screen.',
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Mengerti'),
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
+class _Step extends StatelessWidget {
+  const _Step({required this.n, required this.icon, required this.text});
+  final int n;
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 22,
+            height: 22,
+            decoration: BoxDecoration(
+              color: FtColors.surfaceAlt,
+              shape: BoxShape.circle,
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              '$n',
+              style: TextStyle(
+                color: FtColors.ink2,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Icon(icon, color: FtColors.ink2, size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(color: FtColors.ink, fontSize: 13, height: 1.4),
+            ),
+          ),
+        ],
       ),
     );
   }
