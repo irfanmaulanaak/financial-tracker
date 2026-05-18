@@ -54,6 +54,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     } on FirebaseAuthException catch (e) {
       FtHaptics.error();
       setState(() => _error = _friendlyAuthError(e));
+    } catch (e) {
+      FtHaptics.error();
+      setState(() => _error = 'Gagal mendaftar: $e');
     } finally {
       if (mounted) setState(() => _busy = false);
     }

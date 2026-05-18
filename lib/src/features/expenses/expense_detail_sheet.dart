@@ -205,12 +205,18 @@ class ExpenseDetailSheet extends ConsumerWidget {
       ),
     );
     if (ok != true) return;
-    await ref
-        .read(expenseRepositoryProvider)
-        .delete(householdId: household.id, expenseId: expense.id);
-    if (context.mounted) {
-      FtHaptics.success();
-      Navigator.of(context).pop();
+    try {
+      await ref
+          .read(expenseRepositoryProvider)
+          .delete(householdId: household.id, expenseId: expense.id);
+      if (context.mounted) {
+        FtHaptics.success();
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
+      if (context.mounted) {
+        showFtErrorSnack(context, e, prefix: 'Gagal menghapus pengeluaran');
+      }
     }
   }
 }

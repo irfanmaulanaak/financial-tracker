@@ -85,12 +85,22 @@ class IncomeLogScreen extends ConsumerWidget {
                               ),
                             );
                             if (ok == true) {
-                              await ref
-                                  .read(incomeRepositoryProvider)
-                                  .delete(
-                                    householdId: household.id,
-                                    incomeId: inc.id,
+                              try {
+                                await ref
+                                    .read(incomeRepositoryProvider)
+                                    .delete(
+                                      householdId: household.id,
+                                      incomeId: inc.id,
+                                    );
+                              } catch (e) {
+                                if (context.mounted) {
+                                  showFtErrorSnack(
+                                    context,
+                                    e,
+                                    prefix: 'Gagal menghapus pemasukan',
                                   );
+                                }
+                              }
                             }
                           },
                           child: Row(

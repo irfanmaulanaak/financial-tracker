@@ -11,6 +11,7 @@ import 'ft_haptics.dart';
 import 'ft_motion.dart';
 
 export 'ft_motion.dart';
+export 'ft_snackbar.dart';
 
 class FtCard extends StatelessWidget {
   const FtCard({

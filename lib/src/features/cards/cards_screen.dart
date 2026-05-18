@@ -213,19 +213,25 @@ class CardsScreen extends ConsumerWidget {
       builder: (_) => EditCardSheet(defaultOwnerId: defaultOwnerId),
     );
     if (result == null) return;
-    await ref
-        .read(cardRepositoryProvider)
-        .addCard(
-          hid: hid,
-          ownerId: result.ownerId,
-          label: result.label,
-          last4: result.last4,
-          limit: result.limit,
-          dueDay: result.dueDay,
-          apr: result.apr,
-          accent: result.accent,
-          minPaymentPct: result.minPaymentPct,
-        );
+    try {
+      await ref
+          .read(cardRepositoryProvider)
+          .addCard(
+            hid: hid,
+            ownerId: result.ownerId,
+            label: result.label,
+            last4: result.last4,
+            limit: result.limit,
+            dueDay: result.dueDay,
+            apr: result.apr,
+            accent: result.accent,
+            minPaymentPct: result.minPaymentPct,
+          );
+    } catch (e) {
+      if (context.mounted) {
+        showFtErrorSnack(context, e, prefix: 'Gagal menambah kartu');
+      }
+    }
   }
 }
 

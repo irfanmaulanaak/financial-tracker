@@ -59,11 +59,17 @@ class HouseholdSection extends StatelessWidget {
       ),
     );
     if (ok == true && ctrl.text.trim().isNotEmpty) {
-      await ref
-          .read(firestoreProvider)
-          .collection('households')
-          .doc(household.id)
-          .update({'name': ctrl.text.trim()});
+      try {
+        await ref
+            .read(firestoreProvider)
+            .collection('households')
+            .doc(household.id)
+            .update({'name': ctrl.text.trim()});
+      } catch (e) {
+        if (context.mounted) {
+          showFtErrorSnack(context, e, prefix: 'Gagal menyimpan nama');
+        }
+      }
     }
     ctrl.dispose();
   }
@@ -106,11 +112,17 @@ class HouseholdSection extends StatelessWidget {
       ),
     );
     if (ok == true) {
-      await ref
-          .read(firestoreProvider)
-          .collection('households')
-          .doc(household.id)
-          .update({'payday': selected});
+      try {
+        await ref
+            .read(firestoreProvider)
+            .collection('households')
+            .doc(household.id)
+            .update({'payday': selected});
+      } catch (e) {
+        if (context.mounted) {
+          showFtErrorSnack(context, e, prefix: 'Gagal menyimpan payday');
+        }
+      }
     }
   }
 
@@ -149,11 +161,17 @@ class HouseholdSection extends StatelessWidget {
     if (ok == true) {
       final v = Money.parse(ctrl.text);
       if (v != null) {
-        await ref
-            .read(firestoreProvider)
-            .collection('households')
-            .doc(household.id)
-            .update({'monthlyBudgetTotal': v});
+        try {
+          await ref
+              .read(firestoreProvider)
+              .collection('households')
+              .doc(household.id)
+              .update({'monthlyBudgetTotal': v});
+        } catch (e) {
+          if (context.mounted) {
+            showFtErrorSnack(context, e, prefix: 'Gagal menyimpan anggaran');
+          }
+        }
       }
     }
     ctrl.dispose();

@@ -48,19 +48,25 @@ class CardDetailScreen extends ConsumerWidget {
         builder: (_) => EditCardSheet(initial: c),
       );
       if (result == null) return;
-      await ref
-          .read(cardRepositoryProvider)
-          .updateCard(
-            hid: household.id,
-            cardId: cardId,
-            label: result.label,
-            last4: result.last4,
-            limit: result.limit,
-            dueDay: result.dueDay,
-            apr: result.apr,
-            accent: result.accent,
-            minPaymentPct: result.minPaymentPct,
-          );
+      try {
+        await ref
+            .read(cardRepositoryProvider)
+            .updateCard(
+              hid: household.id,
+              cardId: cardId,
+              label: result.label,
+              last4: result.last4,
+              limit: result.limit,
+              dueDay: result.dueDay,
+              apr: result.apr,
+              accent: result.accent,
+              minPaymentPct: result.minPaymentPct,
+            );
+      } catch (e) {
+        if (context.mounted) {
+          showFtErrorSnack(context, e, prefix: 'Gagal menyimpan kartu');
+        }
+      }
     }
 
     Future<void> deleteCard(CreditCard c) async {
@@ -93,9 +99,10 @@ class CardDetailScreen extends ConsumerWidget {
         if (context.mounted) context.pop();
       } on StateError catch (e) {
         if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_deleteErrorMessage(e.message))),
-        );
+        showFtErrorSnack(context, _deleteErrorMessage(e.message));
+      } catch (e) {
+        if (!context.mounted) return;
+        showFtErrorSnack(context, e, prefix: 'Gagal menghapus kartu');
       }
     }
 
@@ -218,13 +225,25 @@ class CardDetailScreen extends ConsumerWidget {
                               .map(
                                 (i) => CardInstallmentTile(
                                   inst: i,
-                                  onPaidOne: () => ref
-                                      .read(cardRepositoryProvider)
-                                      .incrementInstallment(
-                                        hid: household.id,
-                                        cardId: cardId,
-                                        installmentId: i.id,
-                                      ),
+                                  onPaidOne: () async {
+                                    try {
+                                      await ref
+                                          .read(cardRepositoryProvider)
+                                          .incrementInstallment(
+                                            hid: household.id,
+                                            cardId: cardId,
+                                            installmentId: i.id,
+                                          );
+                                    } catch (e) {
+                                      if (context.mounted) {
+                                        showFtErrorSnack(
+                                          context,
+                                          e,
+                                          prefix: 'Gagal mencatat cicilan',
+                                        );
+                                      }
+                                    }
+                                  },
                                 ),
                               )
                               .toList(),
@@ -266,7 +285,13 @@ class CardDetailScreen extends ConsumerWidget {
       ),
     );
     if (ok == true) {
-      await action();
+      try {
+        await action();
+      } catch (e) {
+        if (context.mounted) {
+          showFtErrorSnack(context, e, prefix: 'Gagal membayar kartu');
+        }
+      }
     }
   }
 }

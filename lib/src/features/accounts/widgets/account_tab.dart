@@ -193,24 +193,30 @@ class _AccountTabState extends ConsumerState<AccountTab> {
       builder: (_) => AccountEditSheet(initial: a),
     );
     if (result == null) return;
-    if (result.deltaMode) {
-      await ref.read(accountsRepositoryProvider).applyDelta(
-            householdId: widget.household.id,
-            kind: a.kind,
-            accountId: a.id,
-            delta: result.value,
-          );
-    } else {
-      await ref.read(accountsRepositoryProvider).updateAccount(
-            householdId: widget.household.id,
-            kind: a.kind,
-            accountId: a.id,
-            label: result.label,
-            hint: result.hint,
-            value: result.value,
-            subKind: result.kind == AccountKind.cash ? result.subKind : null,
-            newKind: result.kind != a.kind ? result.kind : null,
-          );
+    try {
+      if (result.deltaMode) {
+        await ref.read(accountsRepositoryProvider).applyDelta(
+              householdId: widget.household.id,
+              kind: a.kind,
+              accountId: a.id,
+              delta: result.value,
+            );
+      } else {
+        await ref.read(accountsRepositoryProvider).updateAccount(
+              householdId: widget.household.id,
+              kind: a.kind,
+              accountId: a.id,
+              label: result.label,
+              hint: result.hint,
+              value: result.value,
+              subKind: result.kind == AccountKind.cash ? result.subKind : null,
+              newKind: result.kind != a.kind ? result.kind : null,
+            );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        showFtErrorSnack(context, e, prefix: 'Gagal menyimpan rekening');
+      }
     }
   }
 
@@ -237,11 +243,17 @@ class _AccountTabState extends ConsumerState<AccountTab> {
       ),
     );
     if (ok != true) return;
-    await ref.read(accountsRepositoryProvider).delete(
-          householdId: widget.household.id,
-          kind: a.kind,
-          accountId: a.id,
-        );
+    try {
+      await ref.read(accountsRepositoryProvider).delete(
+            householdId: widget.household.id,
+            kind: a.kind,
+            accountId: a.id,
+          );
+    } catch (e) {
+      if (context.mounted) {
+        showFtErrorSnack(context, e, prefix: 'Gagal menghapus rekening');
+      }
+    }
   }
 }
 

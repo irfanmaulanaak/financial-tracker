@@ -97,9 +97,15 @@ class InvestasiList extends ConsumerWidget {
       builder: (_) => UpdateInvestmentValueSheet(investment: i),
     );
     if (v != null) {
-      await ref
-          .read(investmentsRepositoryProvider)
-          .updateValue(hid: householdId, id: i.id, currentValue: v);
+      try {
+        await ref
+            .read(investmentsRepositoryProvider)
+            .updateValue(hid: householdId, id: i.id, currentValue: v);
+      } catch (e) {
+        if (context.mounted) {
+          showFtErrorSnack(context, e, prefix: 'Gagal memperbarui investasi');
+        }
+      }
     }
   }
 
@@ -122,9 +128,15 @@ class InvestasiList extends ConsumerWidget {
       ),
     );
     if (ok == true) {
-      await ref
-          .read(investmentsRepositoryProvider)
-          .delete(hid: householdId, id: i.id);
+      try {
+        await ref
+            .read(investmentsRepositoryProvider)
+            .delete(hid: householdId, id: i.id);
+      } catch (e) {
+        if (context.mounted) {
+          showFtErrorSnack(context, e, prefix: 'Gagal menghapus investasi');
+        }
+      }
     }
   }
 }

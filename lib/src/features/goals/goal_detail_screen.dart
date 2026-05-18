@@ -308,14 +308,20 @@ class _Body extends ConsumerWidget {
     );
     if (amount != null) {
       final uid = ref.read(authStateProvider).value?.uid ?? '';
-      await ref
-          .read(goalRepositoryProvider)
-          .contribute(
-            hid: householdId,
-            goalId: goal.id,
-            amount: amount,
-            byUid: uid,
-          );
+      try {
+        await ref
+            .read(goalRepositoryProvider)
+            .contribute(
+              hid: householdId,
+              goalId: goal.id,
+              amount: amount,
+              byUid: uid,
+            );
+      } catch (e) {
+        if (context.mounted) {
+          showFtErrorSnack(context, e, prefix: 'Gagal menyetor ke tujuan');
+        }
+      }
     }
     ctrl.dispose();
   }

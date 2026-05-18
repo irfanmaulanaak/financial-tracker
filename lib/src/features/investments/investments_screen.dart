@@ -95,15 +95,21 @@ class InvestmentsScreen extends ConsumerWidget {
       builder: (_) => const _InvestmentEditSheet(),
     );
     if (draft == null) return;
-    await ref
-        .read(investmentsRepositoryProvider)
-        .add(
-          hid: hid,
-          label: draft.label,
-          type: draft.type,
-          currentValue: draft.currentValue,
-          costBasis: draft.costBasis,
-        );
+    try {
+      await ref
+          .read(investmentsRepositoryProvider)
+          .add(
+            hid: hid,
+            label: draft.label,
+            type: draft.type,
+            currentValue: draft.currentValue,
+            costBasis: draft.costBasis,
+          );
+    } catch (e) {
+      if (context.mounted) {
+        showFtErrorSnack(context, e, prefix: 'Gagal menambah investasi');
+      }
+    }
   }
 
   Future<void> _openUpdateValue(
@@ -118,9 +124,15 @@ class InvestmentsScreen extends ConsumerWidget {
       builder: (_) => UpdateInvestmentValueSheet(investment: i),
     );
     if (v != null) {
-      await ref
-          .read(investmentsRepositoryProvider)
-          .updateValue(hid: hid, id: i.id, currentValue: v);
+      try {
+        await ref
+            .read(investmentsRepositoryProvider)
+            .updateValue(hid: hid, id: i.id, currentValue: v);
+      } catch (e) {
+        if (context.mounted) {
+          showFtErrorSnack(context, e, prefix: 'Gagal memperbarui investasi');
+        }
+      }
     }
   }
 
@@ -147,7 +159,15 @@ class InvestmentsScreen extends ConsumerWidget {
       ),
     );
     if (ok == true) {
-      await ref.read(investmentsRepositoryProvider).delete(hid: hid, id: i.id);
+      try {
+        await ref
+            .read(investmentsRepositoryProvider)
+            .delete(hid: hid, id: i.id);
+      } catch (e) {
+        if (context.mounted) {
+          showFtErrorSnack(context, e, prefix: 'Gagal menghapus investasi');
+        }
+      }
     }
   }
 }
