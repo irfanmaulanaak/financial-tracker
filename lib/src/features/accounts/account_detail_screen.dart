@@ -152,12 +152,14 @@ class _NotFoundView extends StatelessWidget {
 }
 
 class _TxnEntry {
-  _TxnEntry.expense(this.expense)
-      : income = null,
-        date = expense.date;
-  _TxnEntry.income(this.income)
+  _TxnEntry.expense(Expense e)
+      : expense = e,
+        income = null,
+        date = e.date;
+  _TxnEntry.income(Income i)
       : expense = null,
-        date = income.date;
+        income = i,
+        date = i.date;
   final Expense? expense;
   final Income? income;
   final DateTime date;
