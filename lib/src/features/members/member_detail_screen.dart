@@ -113,12 +113,7 @@ class MemberDetailScreen extends ConsumerWidget {
           );
       FtHaptics.success();
     } catch (e) {
-      FtHaptics.error();
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal: $e')),
-        );
-      }
+      if (context.mounted) showFtErrorSnack(context, e, prefix: 'Gagal');
     }
   }
 
@@ -159,12 +154,7 @@ class MemberDetailScreen extends ConsumerWidget {
       FtHaptics.success();
       if (context.mounted) context.pop();
     } catch (e) {
-      FtHaptics.error();
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal: $e')),
-        );
-      }
+      if (context.mounted) showFtErrorSnack(context, e, prefix: 'Gagal');
     }
   }
 }

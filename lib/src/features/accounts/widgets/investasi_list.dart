@@ -3,8 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/formatters.dart';
+import '../../../core/hide_assets_provider.dart';
 import '../../../theme.dart';
 import '../../../ui/ft_ui.dart';
+import '../../home/widgets/home_formatters.dart';
 import '../../investments/investment.dart';
 import '../../investments/investments_repository.dart';
 
@@ -25,6 +27,7 @@ class InvestasiList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final hidden = ref.watch(hideAssetsProvider);
     if (isLoading) {
       return ListView(
         padding: const EdgeInsets.fromLTRB(22, 4, 22, 120),
@@ -61,7 +64,7 @@ class InvestasiList extends ConsumerWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(22, 4, 22, 120),
       children: [
-        InvestasiSummary(summary: summary),
+        InvestasiSummary(summary: summary, hidden: hidden),
         const SizedBox(height: 14),
         if (items.isEmpty)
           Padding(
@@ -78,6 +81,7 @@ class InvestasiList extends ConsumerWidget {
           for (final i in items)
             InvestmentTile(
               inv: i,
+              hidden: hidden,
               onUpdate: () => _openUpdate(context, ref, i),
               onDelete: () => _confirmDelete(context, ref, i),
             ),
@@ -91,49 +95,21 @@ class InvestasiList extends ConsumerWidget {
 
   Future<void> _openUpdate(
       BuildContext context, WidgetRef ref, Investment i) async {
-    final ctrl = TextEditingController(text: i.currentValue.toString());
     final v = await showModalBottomSheet<int>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => Padding(
-        padding: EdgeInsets.only(
-          left: 16,
-          right: 16,
-          top: 16,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Update ${i.label}',
-                style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 12),
-            TextField(
-              controller: ctrl,
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration: const InputDecoration(
-                labelText: 'Nilai sekarang',
-                prefixText: 'Rp ',
-              ),
-            ),
-            const SizedBox(height: 16),
-            FilledButton(
-              onPressed: () {
-                final v = int.tryParse(ctrl.text);
-                if (v == null) return;
-                Navigator.pop(context, v);
-              },
-              child: const Text('Simpan'),
-            ),
-          ],
-        ),
-      ),
+      builder: (_) => UpdateInvestmentValueSheet(investment: i),
     );
     if (v != null) {
-      await ref
-          .read(investmentsRepositoryProvider)
-          .updateValue(hid: householdId, id: i.id, currentValue: v);
+      try {
+        await ref
+            .read(investmentsRepositoryProvider)
+            .updateValue(hid: householdId, id: i.id, currentValue: v);
+      } catch (e) {
+        if (context.mounted) {
+          showFtErrorSnack(context, e, prefix: 'Gagal memperbarui investasi');
+        }
+      }
     }
   }
 
@@ -156,16 +132,27 @@ class InvestasiList extends ConsumerWidget {
       ),
     );
     if (ok == true) {
-      await ref
-          .read(investmentsRepositoryProvider)
-          .delete(hid: householdId, id: i.id);
+      try {
+        await ref
+            .read(investmentsRepositoryProvider)
+            .delete(hid: householdId, id: i.id);
+      } catch (e) {
+        if (context.mounted) {
+          showFtErrorSnack(context, e, prefix: 'Gagal menghapus investasi');
+        }
+      }
     }
   }
 }
 
 class InvestasiSummary extends StatelessWidget {
-  const InvestasiSummary({super.key, required this.summary});
+  const InvestasiSummary({
+    super.key,
+    required this.summary,
+    this.hidden = false,
+  });
   final PortfolioSummary summary;
+  final bool hidden;
 
   @override
   Widget build(BuildContext context) {
@@ -179,7 +166,7 @@ class InvestasiSummary extends StatelessWidget {
           const Eyebrow('Total portofolio'),
           const SizedBox(height: 6),
           Text(
-            Money.format(summary.totalValue),
+            hidden ? maskMoney() : Money.format(summary.totalValue),
             style: Theme.of(context).textTheme.headlineMedium,
           ),
           const SizedBox(height: 6),
@@ -194,7 +181,9 @@ class InvestasiSummary extends StatelessWidget {
               ),
               const SizedBox(width: 4),
               Text(
-                '${positive ? '+' : ''}${Money.format(summary.totalGain)} (${(summary.gainPct * 100).toStringAsFixed(1)}%)',
+                hidden
+                    ? '${maskMoney()} (${(summary.gainPct * 100).toStringAsFixed(1)}%)'
+                    : '${positive ? '+' : ''}${Money.format(summary.totalGain)} (${(summary.gainPct * 100).toStringAsFixed(1)}%)',
                 style: TextStyle(color: color, fontWeight: FontWeight.w600),
               ),
               const SizedBox(width: 10),
@@ -215,10 +204,12 @@ class InvestmentTile extends StatelessWidget {
     required this.inv,
     required this.onUpdate,
     required this.onDelete,
+    this.hidden = false,
   });
   final Investment inv;
   final VoidCallback onUpdate;
   final VoidCallback onDelete;
+  final bool hidden;
 
   @override
   Widget build(BuildContext context) {
@@ -262,7 +253,9 @@ class InvestmentTile extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '${investmentTypeLabel(inv.type)} • cost ${Money.format(inv.costBasis)}',
+                  hidden
+                      ? '${investmentTypeLabel(inv.type)} • cost ${maskMoney()}'
+                      : '${investmentTypeLabel(inv.type)} • cost ${Money.format(inv.costBasis)}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -274,7 +267,7 @@ class InvestmentTile extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                Money.format(inv.currentValue),
+                hidden ? maskMoney() : Money.format(inv.currentValue),
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               Text(
@@ -359,7 +352,10 @@ class _InvestmentEditSheetState extends State<InvestmentEditSheet> {
             TextField(
               controller: _cost,
               keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                ThousandsSeparatorFormatter(),
+              ],
               decoration: const InputDecoration(
                 labelText: 'Modal (cost basis)',
                 prefixText: 'Rp ',
@@ -369,7 +365,10 @@ class _InvestmentEditSheetState extends State<InvestmentEditSheet> {
             TextField(
               controller: _current,
               keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                ThousandsSeparatorFormatter(),
+              ],
               decoration: const InputDecoration(
                 labelText: 'Nilai saat ini',
                 prefixText: 'Rp ',
@@ -379,8 +378,8 @@ class _InvestmentEditSheetState extends State<InvestmentEditSheet> {
             FilledButton(
               onPressed: () {
                 final label = _label.text.trim();
-                final cv = int.tryParse(_current.text) ?? 0;
-                final cb = int.tryParse(_cost.text) ?? 0;
+                final cv = Money.parse(_current.text) ?? 0;
+                final cb = Money.parse(_cost.text) ?? 0;
                 if (label.isEmpty || cv < 0 || cb < 0) return;
                 Navigator.pop(
                     context, InvestmentDraft(label, _type, cv, cb));
@@ -402,3 +401,78 @@ IconData _investmentIcon(InvestmentType t) => switch (t) {
       InvestmentType.crypto => Icons.currency_bitcoin_rounded,
       InvestmentType.lainnya => Icons.account_balance_rounded,
     };
+
+/// Stateful update sheet for "Nilai sekarang". A stateless `Padding` here
+/// would capture `MediaQuery.viewInsets.bottom` once and leave the input
+/// trapped under the keyboard — instead this widget re-reads viewInsets on
+/// every build so the bottom padding tracks the keyboard.
+class UpdateInvestmentValueSheet extends StatefulWidget {
+  const UpdateInvestmentValueSheet({super.key, required this.investment});
+  final Investment investment;
+
+  @override
+  State<UpdateInvestmentValueSheet> createState() =>
+      _UpdateInvestmentValueSheetState();
+}
+
+class _UpdateInvestmentValueSheetState
+    extends State<UpdateInvestmentValueSheet> {
+  late final TextEditingController _ctrl = TextEditingController(
+    text: Money.displayDigits(widget.investment.currentValue),
+  );
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    final v = Money.parse(_ctrl.text);
+    if (v == null) return;
+    Navigator.pop(context, v);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final viewInsets = MediaQuery.of(context).viewInsets.bottom;
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        top: 16,
+        bottom: viewInsets + 16,
+      ),
+      child: SingleChildScrollView(
+        reverse: true,
+        physics: const ClampingScrollPhysics(),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Update ${widget.investment.label}',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _ctrl,
+              autofocus: true,
+              keyboardType: TextInputType.number,
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                ThousandsSeparatorFormatter(),
+              ],
+              decoration: const InputDecoration(
+                labelText: 'Nilai sekarang',
+                prefixText: 'Rp ',
+              ),
+            ),
+            const SizedBox(height: 16),
+            FilledButton(onPressed: _save, child: const Text('Simpan')),
+          ],
+        ),
+      ),
+    );
+  }
+}

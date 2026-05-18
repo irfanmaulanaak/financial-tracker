@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/formatters.dart';
 import '../household/household_providers.dart';
 import '../household/name_format.dart';
 import 'credit_card.dart';
@@ -46,7 +47,9 @@ class _EditCardSheetState extends ConsumerState<EditCardSheet> {
   late final _last4 =
       TextEditingController(text: widget.initial?.last4 ?? '');
   late final _limit = TextEditingController(
-      text: widget.initial != null ? widget.initial!.limit.toString() : '');
+      text: widget.initial != null
+          ? Money.displayDigits(widget.initial!.limit)
+          : '');
   late int _dueDay = widget.initial?.dueDay ?? 25;
   late double _apr = widget.initial?.apr ?? 0.18;
   late double _minPct = widget.initial?.minPaymentPct ?? 0.10;
@@ -74,7 +77,7 @@ class _EditCardSheetState extends ConsumerState<EditCardSheet> {
 
   void _save() {
     if (_label.text.trim().isEmpty || _ownerId == null) return;
-    final limit = int.tryParse(_limit.text.replaceAll(RegExp(r'\D'), '')) ?? 0;
+    final limit = Money.parse(_limit.text) ?? 0;
     if (limit <= 0) return;
     Navigator.pop(
       context,
@@ -130,7 +133,10 @@ class _EditCardSheetState extends ConsumerState<EditCardSheet> {
             TextField(
               controller: _limit,
               keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                ThousandsSeparatorFormatter(),
+              ],
               decoration: const InputDecoration(
                 labelText: 'Limit kartu',
                 prefixText: 'Rp ',

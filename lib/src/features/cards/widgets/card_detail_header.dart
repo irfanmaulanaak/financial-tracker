@@ -91,10 +91,14 @@ class CardInstallmentTile extends StatelessWidget {
     super.key,
     required this.inst,
     required this.onPaidOne,
+    this.onEdit,
+    this.onDelete,
   });
 
   final Installment inst;
   final VoidCallback onPaidOne;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -118,6 +122,28 @@ class CardInstallmentTile extends StatelessWidget {
                   '${inst.monthsPaid}/${inst.monthsTotal} bln',
                   style: const TextStyle(fontSize: 12),
                 ),
+                if (onEdit != null)
+                  IconButton(
+                    visualDensity: VisualDensity.compact,
+                    padding: EdgeInsets.zero,
+                    constraints:
+                        const BoxConstraints(minWidth: 32, minHeight: 32),
+                    tooltip: 'Edit cicilan',
+                    onPressed: onEdit,
+                    icon: Icon(Icons.edit_outlined,
+                        size: 16, color: FtColors.ink2),
+                  ),
+                if (onDelete != null)
+                  IconButton(
+                    visualDensity: VisualDensity.compact,
+                    padding: EdgeInsets.zero,
+                    constraints:
+                        const BoxConstraints(minWidth: 32, minHeight: 32),
+                    tooltip: 'Hapus cicilan',
+                    onPressed: onDelete,
+                    icon: Icon(Icons.delete_outline,
+                        size: 16, color: FtColors.danger),
+                  ),
               ],
             ),
             const SizedBox(height: 4),

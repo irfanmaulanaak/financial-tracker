@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/formatters.dart';
 import '../../theme.dart';
 import '../../ui/ft_motion.dart';
+import '../accounts/account.dart';
 
 /// Account row used by both `record_income_screen` (destination) and
 /// `record_expense_screen` (source). Each entry is a tuple of id + label +
@@ -12,10 +13,15 @@ class RecordAccountChoice {
     required this.id,
     required this.label,
     required this.hint,
+    this.subKind = AccountSubKind.bank,
   });
   final String id;
   final String label;
   final String hint;
+
+  /// For cash accounts, mirrors `Account.subKind`. Savings accounts pass
+  /// through as `bank` since they're bank-issued products.
+  final AccountSubKind subKind;
 }
 
 /// Renders a vertical list of selectable account rows. Selected row is
@@ -156,21 +162,22 @@ class _AccountRow extends StatelessWidget {
 /// Helper that builds a [RecordAccountChoice] list combining cash + savings
 /// accounts with a localized hint per row.
 List<RecordAccountChoice> recordAccountChoices({
-  required Iterable<dynamic> cashAccounts,
-  required Iterable<dynamic> savingsAccounts,
+  required Iterable<Account> cashAccounts,
+  required Iterable<Account> savingsAccounts,
 }) {
   return [
     for (final a in cashAccounts)
       RecordAccountChoice(
-        id: a.id as String,
-        label: a.label as String,
-        hint: 'Tunai · ${Money.format(a.value as int)}',
+        id: a.id,
+        label: a.label,
+        hint: 'Tunai · ${Money.format(a.value)}',
+        subKind: a.subKind,
       ),
     for (final a in savingsAccounts)
       RecordAccountChoice(
-        id: a.id as String,
-        label: a.label as String,
-        hint: 'Tabungan · ${Money.format(a.value as int)}',
+        id: a.id,
+        label: a.label,
+        hint: 'Tabungan · ${Money.format(a.value)}',
       ),
   ];
 }

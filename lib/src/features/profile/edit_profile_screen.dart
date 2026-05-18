@@ -71,11 +71,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       if (!mounted) return;
       context.pop();
     } catch (e) {
-      FtHaptics.error();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal menyimpan: $e')),
-      );
+      showFtErrorSnack(context, e, prefix: 'Gagal menyimpan');
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -107,9 +104,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       await ref.read(authRepositoryProvider).deleteCurrentUser();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal hapus akun: $e')),
-      );
+      showFtErrorSnack(context, e, prefix: 'Gagal hapus akun');
     }
   }
 

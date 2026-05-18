@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 /// IDR + id-ID formatting helpers. Locked currency; no multi-currency support.
@@ -17,6 +18,35 @@ class Money {
     final digits = input.replaceAll(RegExp(r'\D'), '');
     if (digits.isEmpty) return null;
     return int.tryParse(digits);
+  }
+
+  /// Returns the digit-grouped seed for a `TextEditingController` ("1.000.000",
+  /// empty when zero). Strips the "Rp" prefix from [format].
+  static String displayDigits(int amount) =>
+      amount == 0 ? '' : format(amount).replaceFirst(RegExp(r'^Rp\s*'), '');
+}
+
+/// Input formatter that re-groups digits into id-ID style (`1.000.000`).
+/// Cursor always settles at end-of-text after reformatting.
+class ThousandsSeparatorFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final digits = newValue.text.replaceAll(RegExp(r'\D'), '');
+    if (digits.isEmpty) {
+      return const TextEditingValue(
+        text: '',
+        selection: TextSelection.collapsed(offset: 0),
+      );
+    }
+    final n = int.parse(digits);
+    final grouped = Money.format(n).replaceFirst(RegExp(r'^Rp\s*'), '');
+    return TextEditingValue(
+      text: grouped,
+      selection: TextSelection.collapsed(offset: grouped.length),
+    );
   }
 }
 

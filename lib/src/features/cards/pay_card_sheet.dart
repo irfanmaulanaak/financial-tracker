@@ -6,7 +6,6 @@ import '../../core/formatters.dart';
 import '../../theme.dart';
 import '../../ui/ft_haptics.dart';
 import '../../ui/ft_keypad.dart';
-import '../../ui/ft_motion.dart';
 import '../../ui/ft_ui.dart';
 import 'card_repository.dart';
 import 'credit_card.dart';
@@ -81,8 +80,9 @@ class _PayCardSheetState extends ConsumerState<PayCardSheet> {
       FtHaptics.success();
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
-      FtHaptics.error();
-      if (mounted) setState(() => _busy = false);
+      if (!mounted) return;
+      setState(() => _busy = false);
+      showFtErrorSnack(context, e, prefix: 'Gagal membayar kartu');
     }
   }
 

@@ -167,6 +167,53 @@ async function payFull(db, hid, cardId) {
   });
 }
 
+/**
+ * Mirrors ExpenseRepository.updateCicilanPlan: reverses old remaining debt
+ * from card.used, recomputes the plan with new principal/months/apr, applies
+ * the fresh plan.total, resets monthsPaid to 0, and rewrites expense.amount.
+ */
+async function updateCicilanPlan(db, hid, expenseId, { newPrincipal, newMonths, newApr, newLabel }) {
+  const expenseRef = doc(db, 'households', hid, 'expenses', expenseId);
+  // flat-rate plan
+  const monthlyRate = newApr / 12;
+  const totalInterest = Math.round(newPrincipal * monthlyRate * newMonths);
+  const newTotal = newApr === 0 ? newPrincipal : newPrincipal + totalInterest;
+  const newMonthly = Math.round(newTotal / newMonths);
+
+  await runTransaction(db, async (tx) => {
+    const eSnap = await tx.get(expenseRef);
+    if (!eSnap.exists()) throw new Error('expense_missing');
+    const old = eSnap.data();
+    const cardRef = doc(db, 'households', hid, 'cards', old.cardId);
+    const instRef = doc(
+      db,
+      'households', hid, 'cards', old.cardId,
+      'installments', old.installmentPlanId,
+    );
+    const instSnap = await tx.get(instRef);
+    if (!instSnap.exists()) throw new Error('installment_missing');
+    const cardSnap = await tx.get(cardRef);
+    if (!cardSnap.exists()) throw new Error('card_missing');
+
+    const oldInst = instSnap.data();
+    const oldRemaining =
+      Math.max(0, (oldInst.monthsTotal || 0) - (oldInst.monthsPaid || 0)) *
+      (oldInst.monthly || 0);
+    const used = cardSnap.data().used || 0;
+    const nextUsed = Math.max(0, used - oldRemaining + newTotal);
+
+    tx.update(cardRef, { used: nextUsed });
+    tx.update(instRef, {
+      ...(newLabel != null ? { label: newLabel } : {}),
+      total: newTotal,
+      monthly: newMonthly,
+      monthsTotal: newMonths,
+      monthsPaid: 0,
+    });
+    tx.set(expenseRef, { ...old, amount: newPrincipal });
+  });
+}
+
 /** Mirrors ExpenseRepository.delete (reverses card.used / removes installment). */
 async function deleteExpense(db, hid, expenseId) {
   const expenseRef = doc(db, 'households', hid, 'expenses', expenseId);
@@ -188,7 +235,14 @@ async function deleteExpense(db, hid, expenseId) {
       const cardSnap = await tx.get(cardRef);
       const instSnap = await tx.get(instRef);
       if (cardSnap.exists() && instSnap.exists()) {
-        const next = Math.max(0, (cardSnap.data().used || 0) - instSnap.data().total);
+        // Reverse only the **remaining** debt — `tandai dibayar` taps already
+        // chipped each month's `monthly` off `card.used`, so the card already
+        // reflects the post-tap state.
+        const inst = instSnap.data();
+        const remaining =
+          Math.max(0, (inst.monthsTotal || 0) - (inst.monthsPaid || 0)) *
+          (inst.monthly || 0);
+        const next = Math.max(0, (cardSnap.data().used || 0) - remaining);
         tx.update(cardRef, { used: next });
       }
       if (instSnap.exists()) tx.delete(instRef);
@@ -306,6 +360,47 @@ describe('flows / cicilan (Phase 3)', () => {
     expect(card.data().used).to.equal(11800000);
   });
 
+  it('updateCicilanPlan recalibrates card.used by (newTotal - oldRemaining)', async () => {
+    const alice = await dbAs('alice');
+    await seedWithoutRules(async (db) => {
+      await setDoc(doc(db, 'households/h1'), buildHousehold('alice'));
+      await setDoc(doc(db, 'households/h1/cards/c1'), baseCard());
+    });
+    // Original 3-month 0% plan: monthly 1M, total 3M.
+    const r = await addCicilanExpense(alice, 'h1', {
+      cardId: 'c1', principal: 3000000, months: 3, apr: 0, spentBy: 'alice',
+    });
+    const cardRef = doc(alice, 'households/h1/cards/c1');
+    const instRef =
+      doc(alice, 'households/h1/cards/c1/installments', r.installmentId);
+
+    // Tap once: card.used = 2M, monthsPaid = 1.
+    await runTransaction(alice, async (tx) => {
+      const instSnap = await tx.get(instRef);
+      const cardSnap = await tx.get(cardRef);
+      tx.update(cardRef, {
+        used: Math.max(0, (cardSnap.data().used || 0) - instSnap.data().monthly),
+      });
+      tx.update(instRef, { monthsPaid: 1 });
+    });
+    let card = await getDoc(cardRef);
+    expect(card.data().used).to.equal(2000000);
+
+    // Edit plan to 6-month 0% with 6M principal.
+    // oldRemaining = 2M, newTotal = 6M, so card.used = 2M - 2M + 6M = 6M.
+    await updateCicilanPlan(alice, 'h1', r.expenseId, {
+      newPrincipal: 6000000, newMonths: 6, newApr: 0, newLabel: 'Updated',
+    });
+    card = await getDoc(cardRef);
+    expect(card.data().used).to.equal(6000000);
+
+    const inst = await getDoc(instRef);
+    expect(inst.data().monthsPaid).to.equal(0); // reset
+    expect(inst.data().monthsTotal).to.equal(6);
+    expect(inst.data().monthly).to.equal(1000000);
+    expect(inst.data().label).to.equal('Updated');
+  });
+
   it('installment doc lives in cards/{cardId}/installments subcollection', async () => {
     const alice = await dbAs('alice');
     await seedWithoutRules(async (db) => {
@@ -372,7 +467,7 @@ describe('flows / card payments', () => {
     expect(card.data().used).to.equal(0);
   });
 
-  it('installment monthsPaid increment', async () => {
+  it('installment monthsPaid increment also debits card.used by monthly', async () => {
     const alice = await dbAs('alice');
     await seedWithoutRules(async (db) => {
       await setDoc(doc(db, 'households/h1'), buildHousehold('alice'));
@@ -381,15 +476,23 @@ describe('flows / card payments', () => {
     const r = await addCicilanExpense(alice, 'h1', {
       cardId: 'c1', principal: 3000000, months: 3, apr: 0, spentBy: 'alice',
     });
-    // bump monthsPaid via direct update (mirrors CardRepository.incrementInstallment)
+    // Mirrors CardRepository.incrementInstallment: bump monthsPaid AND
+    // debit card.used by inst.monthly atomically.
     const instRef =
       doc(alice, 'households/h1/cards/c1/installments', r.installmentId);
+    const cardRef = doc(alice, 'households/h1/cards/c1');
     await runTransaction(alice, async (tx) => {
-      const snap = await tx.get(instRef);
-      tx.update(instRef, { monthsPaid: (snap.data().monthsPaid || 0) + 1 });
+      const instSnap = await tx.get(instRef);
+      const cardSnap = await tx.get(cardRef);
+      const monthly = instSnap.data().monthly || 0;
+      const used = cardSnap.data().used || 0;
+      tx.update(cardRef, { used: Math.max(0, used - monthly) });
+      tx.update(instRef, { monthsPaid: (instSnap.data().monthsPaid || 0) + 1 });
     });
-    const after = await getDoc(instRef);
-    expect(after.data().monthsPaid).to.equal(1);
+    const inst = await getDoc(instRef);
+    const card = await getDoc(cardRef);
+    expect(inst.data().monthsPaid).to.equal(1);
+    expect(card.data().used).to.equal(2000000); // 3M - 1 * 1M
   });
 });
 
@@ -434,6 +537,45 @@ describe('flows / expense delete reverses derived balances', () => {
     const inst = await getDoc(
       doc(alice, 'households/h1/cards/c1/installments', r.installmentId)
     );
+    expect(inst.exists()).to.equal(false);
+  });
+
+  it('deleting partially-paid cicilan reverses only remaining debt', async () => {
+    const alice = await dbAs('alice');
+    await seedWithoutRules(async (db) => {
+      await setDoc(doc(db, 'households/h1'), buildHousehold('alice'));
+      await setDoc(doc(db, 'households/h1/cards/c1'), baseCard());
+    });
+    // 3-month 0% cicilan: monthly = 1M, total = 3M.
+    const r = await addCicilanExpense(alice, 'h1', {
+      cardId: 'c1', principal: 3000000, months: 3, apr: 0, spentBy: 'alice',
+    });
+    const instRef =
+      doc(alice, 'households/h1/cards/c1/installments', r.installmentId);
+    const cardRef = doc(alice, 'households/h1/cards/c1');
+
+    // Tap "Tandai dibayar" twice — each tap debits monthly from card.used.
+    for (let i = 0; i < 2; i++) {
+      await runTransaction(alice, async (tx) => {
+        const instSnap = await tx.get(instRef);
+        const cardSnap = await tx.get(cardRef);
+        const monthly = instSnap.data().monthly || 0;
+        const used = cardSnap.data().used || 0;
+        tx.update(cardRef, { used: Math.max(0, used - monthly) });
+        tx.update(instRef, {
+          monthsPaid: (instSnap.data().monthsPaid || 0) + 1,
+        });
+      });
+    }
+    let card = await getDoc(cardRef);
+    expect(card.data().used).to.equal(1000000); // 3M - 2 * 1M
+
+    // Deleting the cicilan now reverses only the **remaining** 1M, not 3M.
+    await deleteExpense(alice, 'h1', r.expenseId);
+    card = await getDoc(cardRef);
+    expect(card.data().used).to.equal(0);
+
+    const inst = await getDoc(instRef);
     expect(inst.exists()).to.equal(false);
   });
 

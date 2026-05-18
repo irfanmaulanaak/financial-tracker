@@ -145,7 +145,10 @@ class GoalsScreen extends ConsumerWidget {
             TextField(
               controller: ctrl,
               keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                ThousandsSeparatorFormatter(),
+              ],
               decoration: const InputDecoration(
                 labelText: 'Jumlah',
                 prefixText: 'Rp ',
@@ -154,8 +157,8 @@ class GoalsScreen extends ConsumerWidget {
             const SizedBox(height: 16),
             FilledButton(
               onPressed: () {
-                final v = int.tryParse(ctrl.text);
-                if (v == null || v <= 0) return;
+                final v = Money.parse(ctrl.text) ?? 0;
+                if (v <= 0) return;
                 Navigator.pop(context, v);
               },
               child: const Text('Simpan'),
@@ -166,14 +169,20 @@ class GoalsScreen extends ConsumerWidget {
     );
     if (amount != null) {
       final uid = ref.read(authStateProvider).value?.uid ?? '';
-      await ref
-          .read(goalRepositoryProvider)
-          .contribute(
-            hid: hid,
-            goalId: goal.id,
-            amount: amount,
-            byUid: uid,
-          );
+      try {
+        await ref
+            .read(goalRepositoryProvider)
+            .contribute(
+              hid: hid,
+              goalId: goal.id,
+              amount: amount,
+              byUid: uid,
+            );
+      } catch (e) {
+        if (context.mounted) {
+          showFtErrorSnack(context, e, prefix: 'Gagal menyetor ke tujuan');
+        }
+      }
     }
     ctrl.dispose();
   }
@@ -202,7 +211,15 @@ class GoalsScreen extends ConsumerWidget {
       ),
     );
     if (ok == true) {
-      await ref.read(goalRepositoryProvider).delete(hid: hid, goalId: goal.id);
+      try {
+        await ref
+            .read(goalRepositoryProvider)
+            .delete(hid: hid, goalId: goal.id);
+      } catch (e) {
+        if (context.mounted) {
+          showFtErrorSnack(context, e, prefix: 'Gagal menghapus tujuan');
+        }
+      }
     }
   }
 }

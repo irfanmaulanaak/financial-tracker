@@ -62,6 +62,10 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
 
       final csv = expensesToCsv(rows);
       await _shareCsv(csv, 'pengeluaran_${_stamp()}.csv');
+    } catch (e) {
+      if (mounted) {
+        showFtErrorSnack(context, e, prefix: 'Gagal ekspor pengeluaran');
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -88,6 +92,10 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
       });
       final csv = expensesToCsv(rows);
       await _shareCsv(csv, 'pemasukan_${_stamp()}.csv');
+    } catch (e) {
+      if (mounted) {
+        showFtErrorSnack(context, e, prefix: 'Gagal ekspor pemasukan');
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }

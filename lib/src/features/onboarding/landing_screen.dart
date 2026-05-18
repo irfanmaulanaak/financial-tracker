@@ -23,7 +23,15 @@ class LandingScreen extends ConsumerWidget {
                 alignment: Alignment.centerRight,
                 child: IconButton.filledTonal(
                   tooltip: 'Keluar',
-                  onPressed: () => ref.read(authRepositoryProvider).signOut(),
+                  onPressed: () async {
+                    try {
+                      await ref.read(authRepositoryProvider).signOut();
+                    } catch (e) {
+                      if (context.mounted) {
+                        showFtErrorSnack(context, e, prefix: 'Gagal keluar');
+                      }
+                    }
+                  },
                   icon: const Icon(Icons.logout, size: 18),
                 ),
               ),

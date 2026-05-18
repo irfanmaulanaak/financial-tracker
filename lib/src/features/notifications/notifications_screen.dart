@@ -74,8 +74,14 @@ class NotificationsScreen extends ConsumerWidget {
       ),
     );
     if (ok != true) return;
-    await ref.read(clearNotificationsProvider)();
-    FtHaptics.success();
+    try {
+      await ref.read(clearNotificationsProvider)();
+      FtHaptics.success();
+    } catch (e) {
+      if (context.mounted) {
+        showFtErrorSnack(context, e, prefix: 'Gagal membersihkan notifikasi');
+      }
+    }
   }
 }
 

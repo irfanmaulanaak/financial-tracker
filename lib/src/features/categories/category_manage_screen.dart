@@ -39,7 +39,7 @@ class CategoryManageScreen extends ConsumerWidget {
             _CategoryTile(
               category: c,
               onEdit: () => _openEditSheet(context, ref, household, c),
-              onArchive: () => _archive(ref, household, c, true),
+              onArchive: () => _archive(context, ref, household, c, true),
             ),
           if (archived.isNotEmpty) ...[
             const FtSectionHeader(title: 'Arsip'),
@@ -48,7 +48,7 @@ class CategoryManageScreen extends ConsumerWidget {
                 category: c,
                 archived: true,
                 onEdit: () => _openEditSheet(context, ref, household, c),
-                onArchive: () => _archive(ref, household, c, false),
+                onArchive: () => _archive(context, ref, household, c, false),
               ),
           ],
         ],
@@ -57,6 +57,7 @@ class CategoryManageScreen extends ConsumerWidget {
   }
 
   Future<void> _archive(
+    BuildContext context,
     WidgetRef ref,
     Household h,
     Category c,
@@ -65,9 +66,15 @@ class CategoryManageScreen extends ConsumerWidget {
     final updated = h.categories
         .map((x) => x.id == c.id ? x.copyWith(archived: archived) : x)
         .toList();
-    await ref
-        .read(householdRepositoryProvider)
-        .updateCategories(householdId: h.id, categories: updated);
+    try {
+      await ref
+          .read(householdRepositoryProvider)
+          .updateCategories(householdId: h.id, categories: updated);
+    } catch (e) {
+      if (context.mounted) {
+        showFtErrorSnack(context, e, prefix: 'Gagal mengubah kategori');
+      }
+    }
   }
 
   Future<void> _openAddSheet(
@@ -81,15 +88,21 @@ class CategoryManageScreen extends ConsumerWidget {
       builder: (_) => const _CategoryEditSheet(),
     );
     if (saved == null) return;
-    await ref
-        .read(householdRepositoryProvider)
-        .addCategory(
-          householdId: h.id,
-          label: saved.label,
-          icon: saved.icon,
-          color: saved.color,
-          monthlyBudget: saved.budget,
-        );
+    try {
+      await ref
+          .read(householdRepositoryProvider)
+          .addCategory(
+            householdId: h.id,
+            label: saved.label,
+            icon: saved.icon,
+            color: saved.color,
+            monthlyBudget: saved.budget,
+          );
+    } catch (e) {
+      if (context.mounted) {
+        showFtErrorSnack(context, e, prefix: 'Gagal menambah kategori');
+      }
+    }
   }
 
   Future<void> _openEditSheet(
@@ -116,9 +129,15 @@ class CategoryManageScreen extends ConsumerWidget {
               : x,
         )
         .toList();
-    await ref
-        .read(householdRepositoryProvider)
-        .updateCategories(householdId: h.id, categories: updated);
+    try {
+      await ref
+          .read(householdRepositoryProvider)
+          .updateCategories(householdId: h.id, categories: updated);
+    } catch (e) {
+      if (context.mounted) {
+        showFtErrorSnack(context, e, prefix: 'Gagal menyimpan kategori');
+      }
+    }
   }
 }
 
@@ -210,8 +229,8 @@ class _CategoryEditSheetState extends State<_CategoryEditSheet> {
     text: widget.initial?.label ?? '',
   );
   late final TextEditingController _budget = TextEditingController(
-    text: widget.initial != null && widget.initial!.monthlyBudget > 0
-        ? widget.initial!.monthlyBudget.toString()
+    text: widget.initial != null
+        ? Money.displayDigits(widget.initial!.monthlyBudget)
         : '',
   );
   String _color = '#3B82F6';
@@ -288,7 +307,10 @@ class _CategoryEditSheetState extends State<_CategoryEditSheet> {
             TextField(
               controller: _budget,
               keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                ThousandsSeparatorFormatter(),
+              ],
               decoration: const InputDecoration(
                 labelText: 'Budget bulanan',
                 prefixText: 'Rp ',

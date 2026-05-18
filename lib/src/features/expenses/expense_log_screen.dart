@@ -218,9 +218,14 @@ class _ExpenseLogScreenState extends ConsumerState<ExpenseLogScreen> {
       ),
     );
     if (ok == true) {
-      await ref
-          .read(expenseRepositoryProvider)
-          .delete(householdId: household.id, expenseId: e.id);
+      try {
+        await ref
+            .read(expenseRepositoryProvider)
+            .delete(householdId: household.id, expenseId: e.id);
+      } catch (err) {
+        if (!mounted) return;
+        showFtErrorSnack(context, err, prefix: 'Gagal menghapus pengeluaran');
+      }
     }
   }
 }

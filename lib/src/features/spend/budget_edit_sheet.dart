@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/formatters.dart';
 import '../../theme.dart';
 import '../../ui/ft_haptics.dart';
+import '../../ui/ft_snackbar.dart';
 import '../household/household.dart';
 import '../household/household_providers.dart';
 import '../household/household_repository.dart';
@@ -36,9 +37,7 @@ class BudgetEditSheet extends ConsumerStatefulWidget {
 
 class _BudgetEditSheetState extends ConsumerState<BudgetEditSheet> {
   late final TextEditingController _budget = TextEditingController(
-    text: widget.category.monthlyBudget > 0
-        ? widget.category.monthlyBudget.toString()
-        : '',
+    text: Money.displayDigits(widget.category.monthlyBudget),
   );
   bool _busy = false;
 
@@ -67,6 +66,8 @@ class _BudgetEditSheetState extends ConsumerState<BudgetEditSheet> {
         FtHaptics.success();
         Navigator.of(context).pop();
       }
+    } catch (e) {
+      if (mounted) showFtErrorSnack(context, e, prefix: 'Gagal menyimpan anggaran');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -106,7 +107,10 @@ class _BudgetEditSheetState extends ConsumerState<BudgetEditSheet> {
               autofocus: true,
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: false),
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                ThousandsSeparatorFormatter(),
+              ],
               decoration: const InputDecoration(
                 labelText: 'Anggaran bulanan',
                 prefixText: 'Rp ',

@@ -126,13 +126,20 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen>
       builder: (_) => AccountEditSheet(initialKind: kind),
     );
     if (draft == null) return;
-    await ref.read(accountsRepositoryProvider).add(
-          householdId: household.id,
-          kind: draft.kind,
-          label: draft.label,
-          hint: draft.hint,
-          value: draft.value,
-        );
+    try {
+      await ref.read(accountsRepositoryProvider).add(
+            householdId: household.id,
+            kind: draft.kind,
+            label: draft.label,
+            hint: draft.hint,
+            value: draft.value,
+            subKind: draft.subKind,
+          );
+    } catch (e) {
+      if (context.mounted) {
+        showFtErrorSnack(context, e, prefix: 'Gagal menambah rekening');
+      }
+    }
   }
 
   Future<void> _addInvestment(
@@ -145,13 +152,19 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen>
       builder: (_) => const InvestmentEditSheet(),
     );
     if (draft == null) return;
-    await ref.read(investmentsRepositoryProvider).add(
-          hid: household.id,
-          label: draft.label,
-          type: draft.type,
-          currentValue: draft.currentValue,
-          costBasis: draft.costBasis,
-        );
+    try {
+      await ref.read(investmentsRepositoryProvider).add(
+            hid: household.id,
+            label: draft.label,
+            type: draft.type,
+            currentValue: draft.currentValue,
+            costBasis: draft.costBasis,
+          );
+    } catch (e) {
+      if (context.mounted) {
+        showFtErrorSnack(context, e, prefix: 'Gagal menambah investasi');
+      }
+    }
   }
 }
 

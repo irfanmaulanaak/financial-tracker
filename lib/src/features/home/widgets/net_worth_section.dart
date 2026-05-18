@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/hide_assets_provider.dart';
 import '../../../core/net_worth.dart';
 import '../../../theme.dart';
 import '../../../ui/ft_donut.dart';
@@ -10,7 +12,7 @@ import 'home_formatters.dart';
 /// Combined asset hero card — replaces the older AssetHero + AssetBreakdown
 /// pair. Matches the dense layout in `claude-design/design/screens-home.jsx`
 /// (total + mini donut + sparkline + 3-col breakdown).
-class AssetHeroCard extends StatelessWidget {
+class AssetHeroCard extends ConsumerWidget {
   const AssetHeroCard({
     super.key,
     required this.nw,
@@ -30,8 +32,10 @@ class AssetHeroCard extends StatelessWidget {
   final List<double> trend;
 
   @override
-  Widget build(BuildContext context) {
-    final showDelta = cycleNet != null && cycleNet != 0 && nw.total > 0;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final hidden = ref.watch(hideAssetsProvider);
+    final showDelta =
+        !hidden && cycleNet != null && cycleNet != 0 && nw.total > 0;
     final positive = (cycleNet ?? 0) >= 0;
     final segments = <FtDonutSegment>[
       if (nw.cash > 0)
@@ -48,7 +52,13 @@ class AssetHeroCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Eyebrow('Total Aset'),
+          Row(
+            children: [
+              const Eyebrow('Total Aset'),
+              const Spacer(),
+              const HideAssetsEye(),
+            ],
+          ),
           const SizedBox(height: 8),
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -62,7 +72,7 @@ class AssetHeroCard extends StatelessWidget {
                       duration: const Duration(milliseconds: 420),
                       distance: 6,
                       child: Text(
-                        compactMoney(nw.total),
+                        hidden ? maskMoney() : compactMoney(nw.total),
                         style: Theme.of(context)
                             .textTheme
                             .displayLarge
@@ -108,18 +118,21 @@ class AssetHeroCard extends StatelessWidget {
                 label: 'Tunai',
                 value: nw.cash,
                 color: FtColors.sky,
+                hidden: hidden,
               ),
               const SizedBox(width: 8),
               _BreakdownStat(
                 label: 'Tabungan',
                 value: nw.savings,
                 color: FtColors.moss,
+                hidden: hidden,
               ),
               const SizedBox(width: 8),
               _BreakdownStat(
                 label: 'Investasi',
                 value: nw.investments,
                 color: FtColors.clay,
+                hidden: hidden,
               ),
               if (nw.debt > 0) ...[
                 const SizedBox(width: 8),
@@ -127,6 +140,7 @@ class AssetHeroCard extends StatelessWidget {
                   label: 'Utang',
                   value: -nw.debt,
                   color: FtColors.plum,
+                  hidden: hidden,
                 ),
               ],
             ],
@@ -142,11 +156,13 @@ class _BreakdownStat extends StatelessWidget {
     required this.label,
     required this.value,
     required this.color,
+    this.hidden = false,
   });
 
   final String label;
   final int value;
   final Color color;
+  final bool hidden;
 
   @override
   Widget build(BuildContext context) {
@@ -178,7 +194,7 @@ class _BreakdownStat extends StatelessWidget {
           ),
           const SizedBox(height: 3),
           Text(
-            compactMoney(value),
+            hidden ? maskMoney() : compactMoney(value),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(

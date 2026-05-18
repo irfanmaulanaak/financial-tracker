@@ -10,10 +10,16 @@ import '../../ui/ft_haptics.dart';
 import '../../ui/ft_input.dart';
 import '../../ui/ft_submit_dot.dart';
 import '../../ui/ft_ui.dart';
+import '../accounts/account.dart';
 import '../household/household_providers.dart';
 import '../record_common/account_picker.dart';
 import '../record_common/money_field.dart';
 import 'transfer_repository.dart';
+
+/// Sub-account filter applied independently to each picker. `all` includes
+/// savings; `bank` keeps savings + cash-bank rows; `ewallet` keeps only
+/// cash-ewallet rows.
+enum _AccountFilter { all, bank, ewallet }
 
 /// Move money between two of the household's tracked accounts. Tracked
 /// in `households/{hid}/transfers` so the user can audit the history;
@@ -35,10 +41,30 @@ class _TransferScreenState extends ConsumerState<TransferScreen> {
   int _fee = 0;
   String? _sourceId;
   String? _destinationId;
+  _AccountFilter _sourceFilter = _AccountFilter.all;
+  _AccountFilter _destFilter = _AccountFilter.all;
   DateTime _date = DateTime.now();
   final _note = TextEditingController();
   bool _busy = false;
   String? _error;
+
+  List<RecordAccountChoice> _applyFilter(
+    List<RecordAccountChoice> input,
+    _AccountFilter f,
+  ) {
+    switch (f) {
+      case _AccountFilter.all:
+        return input;
+      case _AccountFilter.bank:
+        return input
+            .where((c) => c.subKind == AccountSubKind.bank)
+            .toList();
+      case _AccountFilter.ewallet:
+        return input
+            .where((c) => c.subKind == AccountSubKind.ewallet)
+            .toList();
+    }
+  }
 
   @override
   void dispose() {
@@ -145,7 +171,9 @@ class _TransferScreenState extends ConsumerState<TransferScreen> {
         ),
       );
     }
-    final destChoices = all.where((a) => a.id != _sourceId).toList();
+    final filteredSource = _applyFilter(all, _sourceFilter);
+    final filteredDest =
+        _applyFilter(all.where((a) => a.id != _sourceId).toList(), _destFilter);
     final canSubmit = _amount > 0 &&
         _sourceId != null &&
         _destinationId != null &&
@@ -197,9 +225,22 @@ class _TransferScreenState extends ConsumerState<TransferScreen> {
                     ],
                     const SizedBox(height: 22),
                     const Eyebrow('Dari rekening'),
+                    const SizedBox(height: 8),
+                    _FilterBar(
+                      value: _sourceFilter,
+                      onChanged: (f) {
+                        setState(() {
+                          _sourceFilter = f;
+                          final stillVisible = _applyFilter(all, f)
+                              .any((c) => c.id == _sourceId);
+                          if (!stillVisible) _sourceId = null;
+                          _error = null;
+                        });
+                      },
+                    ),
                     const SizedBox(height: 10),
                     RecordAccountPicker(
-                      accounts: all,
+                      accounts: filteredSource,
                       selectedId: _sourceId,
                       accent: FtColors.sky,
                       onSelect: (id) {
@@ -212,9 +253,24 @@ class _TransferScreenState extends ConsumerState<TransferScreen> {
                     ),
                     const SizedBox(height: 18),
                     const Eyebrow('Ke rekening'),
+                    const SizedBox(height: 8),
+                    _FilterBar(
+                      value: _destFilter,
+                      onChanged: (f) {
+                        setState(() {
+                          _destFilter = f;
+                          final stillVisible = _applyFilter(
+                            all.where((a) => a.id != _sourceId).toList(),
+                            f,
+                          ).any((c) => c.id == _destinationId);
+                          if (!stillVisible) _destinationId = null;
+                          _error = null;
+                        });
+                      },
+                    ),
                     const SizedBox(height: 10),
                     RecordAccountPicker(
-                      accounts: destChoices,
+                      accounts: filteredDest,
                       selectedId: _destinationId,
                       accent: FtColors.moss,
                       onSelect: (id) {
@@ -355,6 +411,32 @@ class _FeeRowState extends State<_FeeRow> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _FilterBar extends StatelessWidget {
+  const _FilterBar({required this.value, required this.onChanged});
+  final _AccountFilter value;
+  final ValueChanged<_AccountFilter> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return SegmentedButton<_AccountFilter>(
+      showSelectedIcon: false,
+      style: const ButtonStyle(
+        visualDensity: VisualDensity.compact,
+        textStyle: WidgetStatePropertyAll(
+          TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+        ),
+      ),
+      segments: const [
+        ButtonSegment(value: _AccountFilter.all, label: Text('Semua')),
+        ButtonSegment(value: _AccountFilter.bank, label: Text('Bank')),
+        ButtonSegment(value: _AccountFilter.ewallet, label: Text('E-wallet')),
+      ],
+      selected: {value},
+      onSelectionChanged: (s) => onChanged(s.first),
     );
   }
 }

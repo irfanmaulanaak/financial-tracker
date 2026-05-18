@@ -34,7 +34,6 @@ class _CreatorWizardScreenState extends ConsumerState<CreatorWizardScreen> {
   };
 
   bool _busy = false;
-  String? _error;
   String? _createdHouseholdId;
   String? _inviteCode;
 
@@ -53,13 +52,10 @@ class _CreatorWizardScreenState extends ConsumerState<CreatorWizardScreen> {
     if (user == null) return;
     final budget = Money.parse(_budgetCtrl.text) ?? 0;
     if (_nameCtrl.text.trim().isEmpty || budget <= 0) {
-      setState(() => _error = 'Nama dan budget wajib diisi');
+      showFtErrorSnack(context, 'Nama dan budget wajib diisi');
       return;
     }
-    setState(() {
-      _busy = true;
-      _error = null;
-    });
+    setState(() => _busy = true);
     try {
       final categoryBudgets = <String, int>{
         for (final entry in _catBudgets.entries)
@@ -82,7 +78,9 @@ class _CreatorWizardScreenState extends ConsumerState<CreatorWizardScreen> {
         _step = 3;
       });
     } catch (e) {
-      setState(() => _error = 'Gagal membuat rumah tangga: $e');
+      if (mounted) {
+        showFtErrorSnack(context, e, prefix: 'Gagal membuat rumah tangga');
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -92,10 +90,7 @@ class _CreatorWizardScreenState extends ConsumerState<CreatorWizardScreen> {
     if (_createdHouseholdId == null) return;
     final user = ref.read(firebaseAuthProvider).currentUser;
     if (user == null) return;
-    setState(() {
-      _busy = true;
-      _error = null;
-    });
+    setState(() => _busy = true);
     try {
       final code = await ref
           .read(householdRepositoryProvider)
@@ -105,7 +100,7 @@ class _CreatorWizardScreenState extends ConsumerState<CreatorWizardScreen> {
           );
       setState(() => _inviteCode = code);
     } catch (e) {
-      setState(() => _error = 'Gagal membuat kode: $e');
+      if (mounted) showFtErrorSnack(context, e, prefix: 'Gagal membuat kode');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -192,10 +187,13 @@ class _CreatorWizardScreenState extends ConsumerState<CreatorWizardScreen> {
         TextField(
           controller: _budgetCtrl,
           keyboardType: TextInputType.number,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            ThousandsSeparatorFormatter(),
+          ],
           decoration: const InputDecoration(
             labelText: 'Total budget per siklus (Rp)',
-            hintText: '9000000',
+            hintText: '9.000.000',
           ),
         ),
         const SizedBox(height: 24),
@@ -262,7 +260,10 @@ class _CreatorWizardScreenState extends ConsumerState<CreatorWizardScreen> {
               return TextField(
                 controller: _catBudgets[c.id],
                 keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  ThousandsSeparatorFormatter(),
+                ],
                 decoration: InputDecoration(
                   labelText: c.label,
                   prefixText: 'Rp ',
@@ -271,9 +272,6 @@ class _CreatorWizardScreenState extends ConsumerState<CreatorWizardScreen> {
             },
           ),
         ),
-        if (_error != null) ...[
-          const SizedBox(height: 8),
-        ],
         const SizedBox(height: 16),
         FilledButton(
           onPressed: _busy ? null : _createHousehold,
@@ -318,9 +316,6 @@ class _CreatorWizardScreenState extends ConsumerState<CreatorWizardScreen> {
           )
         else
           _InviteCodeCard(code: _inviteCode!),
-        if (_error != null) ...[
-          const SizedBox(height: 8),
-        ],
         const Spacer(),
         FilledButton(
           onPressed: () => context.go('/home'),

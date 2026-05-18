@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/formatters.dart';
@@ -58,11 +59,17 @@ class HouseholdSection extends StatelessWidget {
       ),
     );
     if (ok == true && ctrl.text.trim().isNotEmpty) {
-      await ref
-          .read(firestoreProvider)
-          .collection('households')
-          .doc(household.id)
-          .update({'name': ctrl.text.trim()});
+      try {
+        await ref
+            .read(firestoreProvider)
+            .collection('households')
+            .doc(household.id)
+            .update({'name': ctrl.text.trim()});
+      } catch (e) {
+        if (context.mounted) {
+          showFtErrorSnack(context, e, prefix: 'Gagal menyimpan nama');
+        }
+      }
     }
     ctrl.dispose();
   }
@@ -105,17 +112,23 @@ class HouseholdSection extends StatelessWidget {
       ),
     );
     if (ok == true) {
-      await ref
-          .read(firestoreProvider)
-          .collection('households')
-          .doc(household.id)
-          .update({'payday': selected});
+      try {
+        await ref
+            .read(firestoreProvider)
+            .collection('households')
+            .doc(household.id)
+            .update({'payday': selected});
+      } catch (e) {
+        if (context.mounted) {
+          showFtErrorSnack(context, e, prefix: 'Gagal menyimpan payday');
+        }
+      }
     }
   }
 
   Future<void> _editBudget(BuildContext context) async {
     final ctrl = TextEditingController(
-      text: household.monthlyBudgetTotal.toString(),
+      text: Money.displayDigits(household.monthlyBudgetTotal),
     );
     final ok = await showDialog<bool>(
       context: context,
@@ -124,9 +137,13 @@ class HouseholdSection extends StatelessWidget {
         content: TextField(
           controller: ctrl,
           keyboardType: TextInputType.number,
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            ThousandsSeparatorFormatter(),
+          ],
           decoration: const InputDecoration(
             prefixText: 'Rp ',
-            hintText: '5000000',
+            hintText: '5.000.000',
           ),
         ),
         actions: [
@@ -142,13 +159,19 @@ class HouseholdSection extends StatelessWidget {
       ),
     );
     if (ok == true) {
-      final v = int.tryParse(ctrl.text.replaceAll(RegExp(r'\D'), ''));
+      final v = Money.parse(ctrl.text);
       if (v != null) {
-        await ref
-            .read(firestoreProvider)
-            .collection('households')
-            .doc(household.id)
-            .update({'monthlyBudgetTotal': v});
+        try {
+          await ref
+              .read(firestoreProvider)
+              .collection('households')
+              .doc(household.id)
+              .update({'monthlyBudgetTotal': v});
+        } catch (e) {
+          if (context.mounted) {
+            showFtErrorSnack(context, e, prefix: 'Gagal menyimpan anggaran');
+          }
+        }
       }
     }
     ctrl.dispose();

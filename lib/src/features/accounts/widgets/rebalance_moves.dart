@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/allocation_recommendation.dart';
+import '../../../core/hide_assets_provider.dart';
 import '../../../theme.dart';
 import '../../../ui/ft_ui.dart';
 import '../../home/widgets/home_formatters.dart';
@@ -8,12 +10,13 @@ import '../../home/widgets/home_formatters.dart';
 /// "Langkah Rebalancing" section under the allocation card. Renders a header
 /// pill with the move count + a card with one row per move (`from → to` +
 /// reason + amount). Returns a single info card when no moves are needed.
-class RebalanceMoves extends StatelessWidget {
+class RebalanceMoves extends ConsumerWidget {
   const RebalanceMoves({super.key, required this.rec});
   final AllocationRecommendation rec;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final hidden = ref.watch(hideAssetsProvider);
     if (rec.moves.isEmpty) {
       return FtCard(
         child: Row(
@@ -70,7 +73,7 @@ class RebalanceMoves extends StatelessWidget {
             children: [
               for (var i = 0; i < rec.moves.length; i++) ...[
                 if (i > 0) const Divider(height: 1),
-                _MoveRow(move: rec.moves[i]),
+                _MoveRow(move: rec.moves[i], hidden: hidden),
               ],
             ],
           ),
@@ -81,8 +84,9 @@ class RebalanceMoves extends StatelessWidget {
 }
 
 class _MoveRow extends StatelessWidget {
-  const _MoveRow({required this.move});
+  const _MoveRow({required this.move, this.hidden = false});
   final AllocationMove move;
+  final bool hidden;
 
   @override
   Widget build(BuildContext context) {
@@ -117,7 +121,7 @@ class _MoveRow extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                compactMoney(move.amount),
+                hidden ? maskMoney() : compactMoney(move.amount),
                 style: TextStyle(
                   color: FtColors.ink,
                   fontSize: 12,

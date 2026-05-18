@@ -26,6 +26,7 @@ class AccountsRepository {
     required String label,
     String? hint,
     int value = 0,
+    AccountSubKind subKind = AccountSubKind.bank,
   }) async {
     final ref = _balancesDoc(householdId);
     final id = shortId();
@@ -39,6 +40,7 @@ class AccountsRepository {
       final next = Account(
         id: id,
         kind: kind,
+        subKind: subKind,
         label: label,
         hint: hint,
         value: value,
@@ -58,6 +60,10 @@ class AccountsRepository {
     return outcome;
   }
 
+  /// Updates an account in place when [newKind] is null or matches [kind].
+  /// When [newKind] differs, atomically moves the row to the other array,
+  /// preserving id / value / label / hint. Moving to savings drops the
+  /// subKind; moving back to cash defaults subKind to `bank`.
   Future<void> updateAccount({
     required String householdId,
     required AccountKind kind,
@@ -65,25 +71,60 @@ class AccountsRepository {
     String? label,
     String? hint,
     int? value,
+    AccountSubKind? subKind,
+    AccountKind? newKind,
   }) async {
     final ref = _balancesDoc(householdId);
     await _db.runTransaction((tx) async {
       final snap = await tx.get(ref);
       if (!snap.exists) throw StateError('balances_missing');
       final balances = HouseholdBalances.fromSnapshot(snap);
-      final list = kind == AccountKind.cash
+      final fromList = kind == AccountKind.cash
           ? balances.cashAccounts
           : balances.savingsAccounts;
-      final exists = list.any((a) => a.id == accountId);
-      if (!exists) throw StateError('account_missing');
-      final updated = list
-          .map((a) => a.id == accountId
-              ? a.copyWith(label: label, hint: hint, value: value)
-              : a)
-          .toList();
-      tx.update(ref, {
-        _fieldFor(kind): updated.map((a) => a.toMap()).toList(),
-      });
+      final existing = fromList.where((a) => a.id == accountId).toList();
+      if (existing.isEmpty) throw StateError('account_missing');
+
+      final targetKind = newKind ?? kind;
+      if (targetKind == kind) {
+        final updated = fromList
+            .map((a) => a.id == accountId
+                ? a.copyWith(
+                    label: label,
+                    hint: hint,
+                    value: value,
+                    subKind: subKind,
+                  )
+                : a)
+            .toList();
+        tx.update(ref, {
+          _fieldFor(kind): updated.map((a) => a.toMap()).toList(),
+        });
+      } else {
+        final src = existing.first;
+        final remaining = fromList.where((a) => a.id != accountId).toList();
+        final toList = targetKind == AccountKind.cash
+            ? balances.cashAccounts
+            : balances.savingsAccounts;
+        final moved = Account(
+          id: src.id,
+          kind: targetKind,
+          subKind: targetKind == AccountKind.cash
+              ? (subKind ?? AccountSubKind.bank)
+              : AccountSubKind.bank,
+          label: label ?? src.label,
+          hint: hint ?? src.hint,
+          value: value ?? src.value,
+          sortOrder: toList.length,
+        );
+        tx.update(ref, {
+          _fieldFor(kind): remaining.map((a) => a.toMap()).toList(),
+          _fieldFor(targetKind): [
+            ...toList.map((a) => a.toMap()),
+            moved.toMap(),
+          ],
+        });
+      }
     });
   }
 

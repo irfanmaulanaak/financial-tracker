@@ -61,6 +61,9 @@ class _EmailLinkScreenState extends ConsumerState<EmailLinkScreen> {
     } on FirebaseAuthException catch (e) {
       FtHaptics.error();
       setState(() => _error = _friendly(e));
+    } catch (e) {
+      FtHaptics.error();
+      setState(() => _error = 'Gagal mengirim link: $e');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -87,6 +90,9 @@ class _EmailLinkScreenState extends ConsumerState<EmailLinkScreen> {
     } on FirebaseAuthException catch (e) {
       FtHaptics.error();
       setState(() => _error = _friendly(e));
+    } catch (e) {
+      FtHaptics.error();
+      setState(() => _error = 'Gagal masuk: $e');
     } finally {
       if (mounted) setState(() => _busy = false);
     }

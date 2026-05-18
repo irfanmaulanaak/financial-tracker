@@ -94,9 +94,15 @@ class SettingsScreen extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.fromLTRB(22, 0, 22, 24),
               child: OutlinedButton(
-                onPressed: () {
+                onPressed: () async {
                   FtHaptics.warning();
-                  ref.read(authRepositoryProvider).signOut();
+                  try {
+                    await ref.read(authRepositoryProvider).signOut();
+                  } catch (e) {
+                    if (context.mounted) {
+                      showFtErrorSnack(context, e, prefix: 'Gagal keluar');
+                    }
+                  }
                 },
                 child: const Text('Keluar'),
               ),

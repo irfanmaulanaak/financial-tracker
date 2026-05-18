@@ -29,6 +29,8 @@ class _MemberListScreenState extends ConsumerState<MemberListScreen> {
           .read(householdRepositoryProvider)
           .createInvite(householdId: householdId, generatedBy: uid);
       setState(() => _newInviteCode = code);
+    } catch (e) {
+      if (mounted) showFtErrorSnack(context, e, prefix: 'Gagal membuat kode');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -55,9 +57,13 @@ class _MemberListScreenState extends ConsumerState<MemberListScreen> {
       ),
     );
     if (confirmed != true) return;
-    await ref
-        .read(householdRepositoryProvider)
-        .leave(householdId: householdId, userId: uid);
+    try {
+      await ref
+          .read(householdRepositoryProvider)
+          .leave(householdId: householdId, userId: uid);
+    } catch (e) {
+      if (mounted) showFtErrorSnack(context, e, prefix: 'Gagal keluar');
+    }
   }
 
   @override
