@@ -19,6 +19,12 @@ String compactMoney(num value) {
 
 String moneyNoSymbol(num value) => Money.format(value).replaceFirst('Rp', '');
 
+/// Masked placeholder for asset/balance amounts when the user has toggled
+/// "hide assets" on (BCA-style privacy). Keep style consistent across
+/// hero/breakdown displays.
+const String _maskedMoney = 'Rp ••••';
+String maskMoney() => _maskedMoney;
+
 String _trim(num n) {
   final s = n.toStringAsFixed(1);
   return s.endsWith('.0') ? s.substring(0, s.length - 2) : s;

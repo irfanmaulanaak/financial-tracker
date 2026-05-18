@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/hide_assets_provider.dart';
 import '../../../theme.dart';
 import '../../../ui/ft_ui.dart';
 import '../../home/widgets/home_formatters.dart';
 
 /// Top "Total Aset" card on the Aset screen — big serif total, divider,
 /// 3-segment composition bar, and a 3-column breakdown row beneath it.
-class AssetsHero extends StatelessWidget {
+class AssetsHero extends ConsumerWidget {
   const AssetsHero({
     super.key,
     required this.cash,
@@ -20,20 +22,27 @@ class AssetsHero extends StatelessWidget {
   final int total;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final hidden = ref.watch(hideAssetsProvider);
     return FtCard(
       margin: const EdgeInsets.fromLTRB(22, 4, 22, 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Eyebrow('Total Aset'),
+          Row(
+            children: [
+              const Eyebrow('Total Aset'),
+              const Spacer(),
+              const HideAssetsEye(),
+            ],
+          ),
           const SizedBox(height: 6),
           FtFadeUp(
             duration: const Duration(milliseconds: 380),
             distance: 6,
             child: Text.rich(
               TextSpan(
-                text: moneyNoSymbol(total),
+                text: hidden ? '•••• ' : moneyNoSymbol(total),
                 children: [
                   TextSpan(
                     text: ' IDR',
@@ -70,16 +79,19 @@ class AssetsHero extends StatelessWidget {
                 label: 'Tunai',
                 value: cash,
                 color: FtColors.sky,
+                hidden: hidden,
               ),
               _CompositionStat(
                 label: 'Tabungan',
                 value: savings,
                 color: FtColors.moss,
+                hidden: hidden,
               ),
               _CompositionStat(
                 label: 'Investasi',
                 value: investments,
                 color: FtColors.clay,
+                hidden: hidden,
               ),
             ],
           ),
@@ -136,10 +148,12 @@ class _CompositionStat extends StatelessWidget {
     required this.label,
     required this.value,
     required this.color,
+    this.hidden = false,
   });
   final String label;
   final int value;
   final Color color;
+  final bool hidden;
 
   @override
   Widget build(BuildContext context) {
@@ -168,7 +182,7 @@ class _CompositionStat extends StatelessWidget {
           ),
           const SizedBox(height: 3),
           Text(
-            compactMoney(value),
+            hidden ? maskMoney() : compactMoney(value),
             style: TextStyle(
               color: FtColors.ink,
               fontSize: 13,

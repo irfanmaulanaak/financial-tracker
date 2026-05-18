@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/health_score.dart';
+import '../../../core/hide_assets_provider.dart';
 import '../../../core/net_worth.dart';
 import '../../../theme.dart';
 import '../../../ui/ft_sparkline.dart';
@@ -137,7 +138,7 @@ class HomeBBody extends ConsumerWidget {
   }
 }
 
-class _DenseHero extends StatelessWidget {
+class _DenseHero extends ConsumerWidget {
   const _DenseHero({
     required this.nw,
     required this.categories,
@@ -152,7 +153,8 @@ class _DenseHero extends StatelessWidget {
   final List<double> trend;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final hidden = ref.watch(hideAssetsProvider);
     final donutSegments = <DonutSegment>[
       if (nw.cash > 0)
         DonutSegment(value: nw.cash.toDouble(), color: FtColors.sky),
@@ -174,10 +176,16 @@ class _DenseHero extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Eyebrow('Total Aset'),
+                    Row(
+                      children: [
+                        const Eyebrow('Total Aset'),
+                        const Spacer(),
+                        const HideAssetsEye(),
+                      ],
+                    ),
                     const SizedBox(height: 6),
                     Text(
-                      compactMoney(nw.total),
+                      hidden ? maskMoney() : compactMoney(nw.total),
                       style: Theme.of(context)
                           .textTheme
                           .headlineLarge
@@ -213,17 +221,17 @@ class _DenseHero extends StatelessWidget {
               children: [
                 _Stat(
                   label: 'Tunai',
-                  value: compactMoney(nw.cash),
+                  value: hidden ? maskMoney() : compactMoney(nw.cash),
                   color: FtColors.sky,
                 ),
                 _Stat(
                   label: 'Tabungan',
-                  value: compactMoney(nw.savings),
+                  value: hidden ? maskMoney() : compactMoney(nw.savings),
                   color: FtColors.moss,
                 ),
                 _Stat(
                   label: 'Investasi',
-                  value: compactMoney(nw.investments),
+                  value: hidden ? maskMoney() : compactMoney(nw.investments),
                   color: FtColors.clay,
                 ),
               ],
