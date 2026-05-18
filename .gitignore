@@ -44,9 +44,9 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# Emulator integration tests
+# Emulator integration tests. package-lock.json IS committed so CI uses
+# `npm ci` deterministically + setup-node@v4 can cache against it.
 /emulator_tests/node_modules/
-/emulator_tests/package-lock.json
 /firestore-debug.log
 /firebase-debug.log
 
