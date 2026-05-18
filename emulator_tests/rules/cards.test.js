@@ -57,6 +57,22 @@ function buildHousehold(creator) {
   };
 }
 
+/**
+ * Mirrors lib/src/features/cards/credit_card.dart `Installment.remainingAmount`.
+ * Derives from `total` (not `remainingMonths * monthly`) so monthsPaid==0
+ * reverses the full `total` on delete — `monthly = round(total/months)`
+ * otherwise strands a few IDR when it doesn't divide evenly.
+ */
+function installmentRemaining(inst) {
+  const monthsTotal = inst.monthsTotal || 0;
+  const monthsPaid = inst.monthsPaid || 0;
+  const monthly = inst.monthly || 0;
+  const total = inst.total || 0;
+  if (monthsPaid <= 0) return total;
+  if (monthsPaid >= monthsTotal) return 0;
+  return Math.max(0, Math.min(total, total - monthly * monthsPaid));
+}
+
 const baseCard = (overrides = {}) => ({
   ownerId: 'alice',
   label: 'BCA Visa',
@@ -196,9 +212,7 @@ async function updateCicilanPlan(db, hid, expenseId, { newPrincipal, newMonths, 
     if (!cardSnap.exists()) throw new Error('card_missing');
 
     const oldInst = instSnap.data();
-    const oldRemaining =
-      Math.max(0, (oldInst.monthsTotal || 0) - (oldInst.monthsPaid || 0)) *
-      (oldInst.monthly || 0);
+    const oldRemaining = installmentRemaining(oldInst);
     const used = cardSnap.data().used || 0;
     const nextUsed = Math.max(0, used - oldRemaining + newTotal);
 
@@ -238,10 +252,7 @@ async function deleteExpense(db, hid, expenseId) {
         // Reverse only the **remaining** debt — `tandai dibayar` taps already
         // chipped each month's `monthly` off `card.used`, so the card already
         // reflects the post-tap state.
-        const inst = instSnap.data();
-        const remaining =
-          Math.max(0, (inst.monthsTotal || 0) - (inst.monthsPaid || 0)) *
-          (inst.monthly || 0);
+        const remaining = installmentRemaining(instSnap.data());
         const next = Math.max(0, (cardSnap.data().used || 0) - remaining);
         tx.update(cardRef, { used: next });
       }

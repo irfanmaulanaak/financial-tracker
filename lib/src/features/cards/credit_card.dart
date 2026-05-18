@@ -102,7 +102,17 @@ class Installment {
 
   bool get isComplete => monthsPaid >= monthsTotal;
   int get remainingMonths => (monthsTotal - monthsPaid).clamp(0, monthsTotal);
-  int get remainingAmount => remainingMonths * monthly;
+  // Derive from `total` not `remainingMonths * monthly` to avoid the rounding
+  // drift that bites when monthly = round(total / months) doesn't divide
+  // evenly (e.g. 11_800_000 / 12 → 983_333, leaving 4 IDR stranded on the
+  // card on delete). Either edge stays exact:
+  //   - monthsPaid == 0           → remainingAmount = total
+  //   - monthsPaid >= monthsTotal → remainingAmount = 0
+  int get remainingAmount {
+    if (monthsPaid <= 0) return total;
+    if (monthsPaid >= monthsTotal) return 0;
+    return (total - monthly * monthsPaid).clamp(0, total);
+  }
 
   Map<String, dynamic> toMap() => {
         'expenseId': expenseId,
