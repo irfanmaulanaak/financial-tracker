@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers.dart';
 import '../accounts/account.dart';
-import '../household/household.dart';
+import '../accounts/household_balances.dart';
 import 'income.dart';
 
 class IncomeRepository {
@@ -14,6 +14,8 @@ class IncomeRepository {
       _db.collection('households').doc(hid);
   CollectionReference<Map<String, dynamic>> _incomes(String hid) =>
       _householdDoc(hid).collection('incomes');
+  DocumentReference<Map<String, dynamic>> _balancesDoc(String hid) =>
+      HouseholdBalances.ref(_db, hid);
 
   Stream<List<Income>> watchRecent({required String hid, int limit = 25}) {
     return _incomes(hid)
@@ -41,7 +43,7 @@ class IncomeRepository {
     final incomeRef = docId != null
         ? _incomes(householdId).doc(docId)
         : _incomes(householdId).doc();
-    final householdRef = _householdDoc(householdId);
+    final balancesRef = _balancesDoc(householdId);
 
     await _db.runTransaction((tx) async {
       // Idempotency: deterministic [docId] (recurring runner) skips when
@@ -51,13 +53,13 @@ class IncomeRepository {
         final iSnap = await tx.get(incomeRef);
         if (iSnap.exists) return;
       }
-      final hSnap = await tx.get(householdRef);
-      if (!hSnap.exists) throw StateError('household_missing');
-      final household = Household.fromSnapshot(hSnap);
-      final inCash = household.cashAccounts
+      final bSnap = await tx.get(balancesRef);
+      if (!bSnap.exists) throw StateError('balances_missing');
+      final balances = HouseholdBalances.fromSnapshot(bSnap);
+      final inCash = balances.cashAccounts
           .where((a) => a.id == destinationAccountId)
           .toList();
-      final inSavings = household.savingsAccounts
+      final inSavings = balances.savingsAccounts
           .where((a) => a.id == destinationAccountId)
           .toList();
       if (inCash.isEmpty && inSavings.isEmpty) {
@@ -65,7 +67,7 @@ class IncomeRepository {
       }
       final kind = inCash.isNotEmpty ? AccountKind.cash : AccountKind.savings;
       final list =
-          kind == AccountKind.cash ? household.cashAccounts : household.savingsAccounts;
+          kind == AccountKind.cash ? balances.cashAccounts : balances.savingsAccounts;
       final updatedList = list
           .map((a) => a.id == destinationAccountId
               ? a.copyWith(value: a.value + amount)
@@ -88,7 +90,7 @@ class IncomeRepository {
           createdBy: receivedBy,
         ).toMap(),
       );
-      tx.update(householdRef, {
+      tx.update(balancesRef, {
         field: updatedList.map((a) => a.toMap()).toList(),
       });
     });
@@ -103,26 +105,26 @@ class IncomeRepository {
     required String incomeId,
   }) async {
     final incomeRef = _incomes(householdId).doc(incomeId);
-    final householdRef = _householdDoc(householdId);
+    final balancesRef = _balancesDoc(householdId);
     await _db.runTransaction((tx) async {
       final iSnap = await tx.get(incomeRef);
       if (!iSnap.exists) return;
       final income = Income.fromSnapshot(iSnap);
-      final hSnap = await tx.get(householdRef);
-      if (hSnap.exists) {
-        final household = Household.fromSnapshot(hSnap);
-        final inCash = household.cashAccounts
+      final bSnap = await tx.get(balancesRef);
+      if (bSnap.exists) {
+        final balances = HouseholdBalances.fromSnapshot(bSnap);
+        final inCash = balances.cashAccounts
             .where((a) => a.id == income.destinationAccountId)
             .toList();
-        final inSavings = household.savingsAccounts
+        final inSavings = balances.savingsAccounts
             .where((a) => a.id == income.destinationAccountId)
             .toList();
         if (inCash.isNotEmpty || inSavings.isNotEmpty) {
           final kind =
               inCash.isNotEmpty ? AccountKind.cash : AccountKind.savings;
           final list = kind == AccountKind.cash
-              ? household.cashAccounts
-              : household.savingsAccounts;
+              ? balances.cashAccounts
+              : balances.savingsAccounts;
           final updated = list
               .map((a) => a.id == income.destinationAccountId
                   ? a.copyWith(
@@ -131,7 +133,7 @@ class IncomeRepository {
               .toList();
           final field =
               kind == AccountKind.cash ? 'cashAccounts' : 'savingsAccounts';
-          tx.update(householdRef, {
+          tx.update(balancesRef, {
             field: updated.map((a) => a.toMap()).toList(),
           });
         }

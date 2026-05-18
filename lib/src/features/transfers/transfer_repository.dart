@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers.dart';
 import '../accounts/account.dart';
-import '../household/household.dart';
+import '../accounts/household_balances.dart';
 import 'transfer.dart';
 
 /// Firestore writes for the household's `transfers` subcollection.
@@ -13,7 +13,8 @@ import 'transfer.dart';
 ///   2. destination.value += amount
 ///   3. transfers/{tid} is written
 ///
-/// All in one Firestore transaction. Throws:
+/// All in one Firestore transaction against `households/{hid}/private/balances`
+/// (full-tier only — SEC-004). Throws:
 /// - `same_account` — source equals destination
 /// - `account_missing` — either id not found in cash/savings accounts
 /// - `insufficient` — source has < amount + fee
@@ -23,8 +24,8 @@ class TransferRepository {
 
   CollectionReference<Map<String, dynamic>> _col(String hid) =>
       _db.collection('households').doc(hid).collection('transfers');
-  DocumentReference<Map<String, dynamic>> _householdDoc(String hid) =>
-      _db.collection('households').doc(hid);
+  DocumentReference<Map<String, dynamic>> _balancesDoc(String hid) =>
+      HouseholdBalances.ref(_db, hid);
 
   Stream<List<Transfer>> watchRecent({
     required String householdId,
@@ -53,20 +54,20 @@ class TransferRepository {
     }
     final ts = now ?? DateTime.now();
     final ref = _col(householdId).doc();
-    final hRef = _householdDoc(householdId);
+    final balancesRef = _balancesDoc(householdId);
 
     await _db.runTransaction((tx) async {
-      final hSnap = await tx.get(hRef);
-      if (!hSnap.exists) throw StateError('household_missing');
-      final household = Household.fromSnapshot(hSnap);
-      final src = household.accountOf(sourceAccountId);
-      final dst = household.accountOf(destinationAccountId);
+      final bSnap = await tx.get(balancesRef);
+      if (!bSnap.exists) throw StateError('balances_missing');
+      final balances = HouseholdBalances.fromSnapshot(bSnap);
+      final src = balances.accountOf(sourceAccountId);
+      final dst = balances.accountOf(destinationAccountId);
       if (src == null || dst == null) throw StateError('account_missing');
       if (src.value < amount + fee) throw StateError('insufficient');
 
       // Build new lists per kind. A transfer might be cash→savings, so we
       // may need to update both `cashAccounts` and `savingsAccounts`.
-      final newCash = household.cashAccounts.map((a) {
+      final newCash = balances.cashAccounts.map((a) {
         if (a.id == src.id && src.kind == AccountKind.cash) {
           return a.copyWith(value: a.value - amount - fee);
         }
@@ -75,7 +76,7 @@ class TransferRepository {
         }
         return a;
       }).toList();
-      final newSavings = household.savingsAccounts.map((a) {
+      final newSavings = balances.savingsAccounts.map((a) {
         if (a.id == src.id && src.kind == AccountKind.savings) {
           return a.copyWith(value: a.value - amount - fee);
         }
@@ -106,7 +107,7 @@ class TransferRepository {
           dst.kind == AccountKind.cash;
       final touchedSavings = src.kind == AccountKind.savings ||
           dst.kind == AccountKind.savings;
-      tx.update(hRef, {
+      tx.update(balancesRef, {
         if (touchedCash)
           'cashAccounts': newCash.map((a) => a.toMap()).toList(),
         if (touchedSavings)
@@ -123,17 +124,17 @@ class TransferRepository {
     required String transferId,
   }) async {
     final ref = _col(householdId).doc(transferId);
-    final hRef = _householdDoc(householdId);
+    final balancesRef = _balancesDoc(householdId);
     await _db.runTransaction((tx) async {
       final tSnap = await tx.get(ref);
       if (!tSnap.exists) return;
       final t = Transfer.fromSnapshot(tSnap);
-      final hSnap = await tx.get(hRef);
-      if (hSnap.exists) {
-        final household = Household.fromSnapshot(hSnap);
-        final src = household.accountOf(t.sourceAccountId);
-        final dst = household.accountOf(t.destinationAccountId);
-        final newCash = household.cashAccounts.map((a) {
+      final bSnap = await tx.get(balancesRef);
+      if (bSnap.exists) {
+        final balances = HouseholdBalances.fromSnapshot(bSnap);
+        final src = balances.accountOf(t.sourceAccountId);
+        final dst = balances.accountOf(t.destinationAccountId);
+        final newCash = balances.cashAccounts.map((a) {
           if (src != null && a.id == src.id && src.kind == AccountKind.cash) {
             return a.copyWith(value: a.value + t.amount + t.fee);
           }
@@ -142,7 +143,7 @@ class TransferRepository {
           }
           return a;
         }).toList();
-        final newSavings = household.savingsAccounts.map((a) {
+        final newSavings = balances.savingsAccounts.map((a) {
           if (src != null &&
               a.id == src.id &&
               src.kind == AccountKind.savings) {
@@ -159,7 +160,7 @@ class TransferRepository {
             dst?.kind == AccountKind.cash;
         final touchedSavings = src?.kind == AccountKind.savings ||
             dst?.kind == AccountKind.savings;
-        tx.update(hRef, {
+        tx.update(balancesRef, {
           if (touchedCash)
             'cashAccounts': newCash.map((a) => a.toMap()).toList(),
           if (touchedSavings)

@@ -20,7 +20,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers.dart';
 import '../accounts/account.dart';
-import '../household/household.dart';
+import '../accounts/household_balances.dart';
 import 'goal.dart';
 
 final _lastRunPerHousehold = <String, DateTime>{};
@@ -30,9 +30,13 @@ class AutoDebitRunner {
   final FirebaseFirestore _db;
 
   /// Materialises any missed auto-debit transfers up to [now]. Returns the
-  /// number of transfers created.
+  /// number of transfers created. `actorUid` is stamped on the contribution
+  /// doc's `byUid` to satisfy the SEC-003 rule that requires
+  /// `byUid == auth.uid` (the runner is invoked from the foreground app,
+  /// so the auth context is the current user).
   Future<int> run({
     required String householdId,
+    required String actorUid,
     DateTime? now,
   }) async {
     final n = now ?? DateTime.now();
@@ -45,6 +49,7 @@ class AutoDebitRunner {
 
     final hRef = _db.collection('households').doc(householdId);
     final goalsCol = hRef.collection('goals');
+    final balancesRef = HouseholdBalances.ref(_db, householdId);
 
     final snap = await goalsCol.where('autoDebit', isEqualTo: true).get();
     if (snap.docs.isEmpty) return 0;
@@ -61,10 +66,11 @@ class AutoDebitRunner {
       );
       for (final ym in months) {
         final ok = await _materialise(
-          householdRef: hRef,
+          balancesRef: balancesRef,
           goalRef: goalsCol.doc(goal.id),
           goal: goal,
           yyyymm: ym,
+          actorUid: actorUid,
         );
         if (ok) {
           created++;
@@ -79,22 +85,23 @@ class AutoDebitRunner {
   }
 
   Future<bool> _materialise({
-    required DocumentReference<Map<String, dynamic>> householdRef,
+    required DocumentReference<Map<String, dynamic>> balancesRef,
     required DocumentReference<Map<String, dynamic>> goalRef,
     required Goal goal,
     required String yyyymm,
+    required String actorUid,
   }) async {
     try {
       await _db.runTransaction((tx) async {
-        final hSnap = await tx.get(householdRef);
+        final bSnap = await tx.get(balancesRef);
         final gSnap = await tx.get(goalRef);
-        if (!hSnap.exists || !gSnap.exists) {
+        if (!bSnap.exists || !gSnap.exists) {
           throw StateError('missing');
         }
-        final household = Household.fromSnapshot(hSnap);
+        final balances = HouseholdBalances.fromSnapshot(bSnap);
         final fresh = Goal.fromSnapshot(gSnap);
         if (fresh.lastAutoDebitMonth == yyyymm) return; // raced; skip
-        final source = household.cashAccounts.firstWhere(
+        final source = balances.cashAccounts.firstWhere(
           (a) => a.id == goal.sourceAccountId,
           orElse: () => Account(
             id: '',
@@ -108,14 +115,14 @@ class AutoDebitRunner {
         if (source.id.isEmpty || source.value < goal.monthlyContrib) {
           throw StateError('insufficient');
         }
-        final updatedCash = household.cashAccounts
+        final updatedCash = balances.cashAccounts
             .map((a) => a.id == source.id
                 ? a.copyWith(value: a.value - goal.monthlyContrib)
                 : a)
             .toList();
         final next = (fresh.current + goal.monthlyContrib)
             .clamp(0, fresh.target);
-        tx.update(householdRef, {
+        tx.update(balancesRef, {
           'cashAccounts': updatedCash.map((a) => a.toMap()).toList(),
         });
         tx.update(goalRef, {
@@ -129,7 +136,7 @@ class AutoDebitRunner {
         tx.set(contribRef, {
           'amount': goal.monthlyContrib,
           'at': Timestamp.fromDate(_firstOfMonth(yyyymm)),
-          'byUid': '',
+          'byUid': actorUid,
           'source': 'autoDebit',
         });
       });

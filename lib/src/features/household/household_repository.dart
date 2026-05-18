@@ -5,6 +5,7 @@ import '../../core/ids.dart';
 import '../../core/invite_code.dart';
 import '../../core/providers.dart';
 import '../../core/seeded_data.dart';
+import '../accounts/household_balances.dart';
 import 'household.dart';
 
 part 'member_management.dart';
@@ -76,7 +77,10 @@ class HouseholdRepository {
       categories: categories,
     );
 
-    // Transaction: create household + link user.householdId atomically.
+    // Transaction: create household + balances doc + link user.householdId
+    // atomically. Balances live at `private/balances` (SEC-004) so the
+    // limited tier cannot read account values.
+    final balancesRef = HouseholdBalances.ref(_db, hid);
     await _db.runTransaction((tx) async {
       final userRef = _users.doc(creatorUid);
       final userSnap = await tx.get(userRef);
@@ -85,30 +89,41 @@ class HouseholdRepository {
         throw StateError('user_already_in_household');
       }
       tx.set(_households.doc(hid), household.toMap());
+      tx.set(balancesRef, HouseholdBalances.empty.toMap());
       tx.set(userRef, {'householdId': hid}, SetOptions(merge: true));
     });
     return hid;
   }
 
-  /// Generates a fresh 6-digit invite code. Retries on collision (extremely
-  /// unlikely; one in a million per attempt).
+  /// Generates a fresh 128-bit invite token. Collision space is 2^128, so a
+  /// single attempt is enough in practice; one retry is kept for paranoia.
   ///
   /// `role` and `accessLevel` are baked into the invite and applied at join
   /// time — the inviter chooses how the new member gets onboarded.
+  ///
+  /// Preview fields (`householdName`, `inviterDisplayName`) live on the
+  /// invite doc so a non-member joiner can show context WITHOUT reading the
+  /// household root (which is members-only — see firestore.rules).
   Future<String> createInvite({
     required String householdId,
     required String generatedBy,
     MemberRole role = MemberRole.other,
-    AccessLevel accessLevel = AccessLevel.full,
+    AccessLevel accessLevel = AccessLevel.limited,
     Duration ttl = const Duration(hours: 24),
     DateTime? now,
   }) async {
     final ts = now ?? DateTime.now();
-    for (var attempt = 0; attempt < 5; attempt++) {
+    final household = await get(householdId);
+    if (household == null) throw StateError('household_missing');
+    final inviter = household.memberOf(generatedBy);
+    final inviterName = inviter?.displayName ?? '';
+    for (var attempt = 0; attempt < 2; attempt++) {
       final code = InviteCode.generate();
       try {
         await _invites.doc(code).set({
           'householdId': householdId,
+          'householdName': household.name,
+          'inviterDisplayName': inviterName,
           'generatedBy': generatedBy,
           'generatedAt': Timestamp.fromDate(ts),
           'expiresAt': Timestamp.fromDate(ts.add(ttl)),
@@ -118,19 +133,23 @@ class HouseholdRepository {
         });
         return code;
       } on FirebaseException catch (e) {
-        // ALREADY_EXISTS is rare for 6-digit space at <100 outstanding codes.
         if (e.code != 'already-exists') rethrow;
       }
     }
     throw StateError('invite_code_collision_retries_exhausted');
   }
 
-  /// Validates + consumes an invite, adds user as a member, and links user doc.
-  /// All-or-nothing transaction. Throws on invalid/expired/consumed code.
+  /// Validates + consumes an invite, adds user as a member, and links user
+  /// doc. All-or-nothing transaction. Throws on invalid/expired/consumed code.
   ///
   /// Role + access level come from the invite doc (set by the inviter). The
   /// joiner can override `role` to fix the label for themselves; access level
   /// is always taken from the invite (joiner cannot escalate).
+  ///
+  /// Does NOT read the household root — that doc is members-only. The join
+  /// uses `arrayUnion` + map-dot updates so it works for a non-member, and
+  /// the Firestore rule shape-checks the result (see firestore.rules →
+  /// "Non-member self-join").
   Future<String> joinWithInvite({
     required String code,
     required String userId,
@@ -152,8 +171,6 @@ class HouseholdRepository {
 
       final householdId = inv['householdId'] as String;
       final householdRef = _households.doc(householdId);
-      final householdSnap = await tx.get(householdRef);
-      if (!householdSnap.exists) throw StateError('household_missing');
 
       final userRef = _users.doc(userId);
       final userSnap = await tx.get(userRef);
@@ -162,32 +179,25 @@ class HouseholdRepository {
         throw StateError('user_already_in_household');
       }
 
-      final household = Household.fromSnapshot(householdSnap);
-      if (household.memberIds.contains(userId)) {
-        throw StateError('already_member');
-      }
-
       final inviteRole = roleFromString(inv['role'] as String?);
       final inviteAccess =
           accessLevelFromString(inv['accessLevel'] as String?);
+      final inviteAccessStr = accessLevelToString(inviteAccess);
 
       final newMember = Member(
         userId: userId,
         displayName: displayName,
         role: role ?? inviteRole,
-        color: _pickMemberColor(household.members.length),
+        color: _pickMemberColorByUid(userId),
         joinedAt: ts,
         isCreator: false,
         accessLevel: inviteAccess,
       );
-      final updatedMembersList = [...household.members, newMember];
-      final updatedMembers = updatedMembersList.map((m) => m.toMap()).toList();
-      final updatedIds = [...household.memberIds, userId];
 
       tx.update(householdRef, {
-        'memberIds': updatedIds,
-        'members': updatedMembers,
-        'memberAccess': Household.memberAccessMap(updatedMembersList),
+        'memberIds': FieldValue.arrayUnion([userId]),
+        'members': FieldValue.arrayUnion([newMember.toMap()]),
+        'memberAccess.$userId': inviteAccessStr,
         // Required by Firestore rules to prove a valid invite was claimed
         // (see `firestore.rules` → households self-join rule).
         'claimedInvite': code,
@@ -338,16 +348,23 @@ class HouseholdRepository {
     return next;
   }
 
-  String _pickMemberColor(int index) {
+  /// Color picker that does NOT need to know the existing member count
+  /// (joiner cannot read the household root). Deterministic per uid so the
+  /// same user keeps the same color across rejoins.
+  String _pickMemberColorByUid(String uid) {
+    var hash = 0;
+    for (var i = 0; i < uid.length; i++) {
+      hash = (hash * 31 + uid.codeUnitAt(i)) & 0x7fffffff;
+    }
+    // Reserve palette[0] for creator; non-creator joiners use palette[1..].
     const palette = [
-      '#B8825A',
       '#10B981',
       '#3B82F6',
       '#EC4899',
       '#F59E0B',
       '#8B5CF6',
     ];
-    return palette[index % palette.length];
+    return palette[hash % palette.length];
   }
 }
 

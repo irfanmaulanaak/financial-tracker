@@ -4,8 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/cicilan.dart';
 import '../../core/providers.dart';
 import '../accounts/account.dart';
+import '../accounts/household_balances.dart';
 import '../cards/credit_card.dart';
-import '../household/household.dart';
 import 'expense.dart';
 
 class ExpenseRepository {
@@ -112,8 +112,7 @@ class ExpenseRepository {
     final ts = now ?? DateTime.now();
     final expenseRef =
         docId != null ? _col(householdId).doc(docId) : _col(householdId).doc();
-    final householdRef =
-        _db.collection('households').doc(householdId);
+    final balancesRef = HouseholdBalances.ref(_db, householdId);
 
     if (sourceAccountId == null) {
       // No source account picked (e.g. household has zero accounts seeded).
@@ -156,13 +155,13 @@ class ExpenseRepository {
         final eSnap = await tx.get(expenseRef);
         if (eSnap.exists) return;
       }
-      final hSnap = await tx.get(householdRef);
-      if (!hSnap.exists) throw StateError('household_missing');
-      final household = Household.fromSnapshot(hSnap);
-      final inCash = household.cashAccounts
+      final bSnap = await tx.get(balancesRef);
+      if (!bSnap.exists) throw StateError('balances_missing');
+      final balances = HouseholdBalances.fromSnapshot(bSnap);
+      final inCash = balances.cashAccounts
           .where((a) => a.id == sourceAccountId)
           .toList();
-      final inSavings = household.savingsAccounts
+      final inSavings = balances.savingsAccounts
           .where((a) => a.id == sourceAccountId)
           .toList();
       if (inCash.isEmpty && inSavings.isEmpty) {
@@ -170,8 +169,8 @@ class ExpenseRepository {
       }
       final kind = inCash.isNotEmpty ? AccountKind.cash : AccountKind.savings;
       final list = kind == AccountKind.cash
-          ? household.cashAccounts
-          : household.savingsAccounts;
+          ? balances.cashAccounts
+          : balances.savingsAccounts;
       final source = (kind == AccountKind.cash ? inCash : inSavings).first;
       if (source.value < amount) {
         throw StateError('insufficient');
@@ -201,7 +200,7 @@ class ExpenseRepository {
           createdBy: spentBy,
         ).toMap(),
       );
-      tx.update(householdRef, {
+      tx.update(balancesRef, {
         field: updatedList.map((a) => a.toMap()).toList(),
       });
     });
@@ -432,7 +431,7 @@ class ExpenseRepository {
     bool newRecurring = false,
   }) async {
     final expenseRef = _col(householdId).doc(expenseId);
-    final householdRef = _db.collection('households').doc(householdId);
+    final balancesRef = HouseholdBalances.ref(_db, householdId);
 
     await _db.runTransaction((tx) async {
       final eSnap = await tx.get(expenseRef);
@@ -457,9 +456,14 @@ class ExpenseRepository {
           : null;
 
       // 1) Read everything we may need.
-      final hSnap = await tx.get(householdRef);
-      if (!hSnap.exists) throw StateError('household_missing');
-      final household = Household.fromSnapshot(hSnap);
+      final touchesAccounts = old.sourceAccountId != null ||
+          (!isCicilan && newSourceAccountId != null);
+      HouseholdBalances? balances;
+      if (touchesAccounts) {
+        final bSnap = await tx.get(balancesRef);
+        if (!bSnap.exists) throw StateError('balances_missing');
+        balances = HouseholdBalances.fromSnapshot(bSnap);
+      }
 
       CreditCard? oldCard;
       if (oldCardRef != null) {
@@ -474,8 +478,8 @@ class ExpenseRepository {
       }
 
       // 2) Reverse old account/card effect in-memory.
-      var cashAccounts = household.cashAccounts;
-      var savingsAccounts = household.savingsAccounts;
+      var cashAccounts = balances?.cashAccounts ?? const <Account>[];
+      var savingsAccounts = balances?.savingsAccounts ?? const <Account>[];
       final cardUsed = <String, int>{};
       if (oldCard != null) cardUsed[oldCard.id] = oldCard.used;
       if (newCard != null) cardUsed[newCard.id] = newCard.used;
@@ -533,13 +537,16 @@ class ExpenseRepository {
       );
       tx.set(expenseRef, updated.toMap());
 
-      final touchedAccounts = !identical(cashAccounts, household.cashAccounts) ||
-          !identical(savingsAccounts, household.savingsAccounts);
-      if (touchedAccounts) {
-        tx.update(householdRef, {
-          'cashAccounts': cashAccounts.map((a) => a.toMap()).toList(),
-          'savingsAccounts': savingsAccounts.map((a) => a.toMap()).toList(),
-        });
+      if (balances != null) {
+        final touchedAccounts =
+            !identical(cashAccounts, balances.cashAccounts) ||
+                !identical(savingsAccounts, balances.savingsAccounts);
+        if (touchedAccounts) {
+          tx.update(balancesRef, {
+            'cashAccounts': cashAccounts.map((a) => a.toMap()).toList(),
+            'savingsAccounts': savingsAccounts.map((a) => a.toMap()).toList(),
+          });
+        }
       }
       cardUsed.forEach((cid, used) {
         tx.update(_cardDoc(householdId, cid), {'used': used});
@@ -628,8 +635,7 @@ class ExpenseRepository {
     required String expenseId,
   }) async {
     final expenseRef = _col(householdId).doc(expenseId);
-    final householdRef =
-        _db.collection('households').doc(householdId);
+    final balancesRef = HouseholdBalances.ref(_db, householdId);
     await _db.runTransaction((tx) async {
       final eSnap = await tx.get(expenseRef);
       if (!eSnap.exists) return;
@@ -664,21 +670,21 @@ class ExpenseRepository {
         // Cash/debit/e-wallet expense with a tracked source account: refund
         // it. If the account no longer exists (deleted between record +
         // delete) we just drop the row — same fallback as IncomeRepository.
-        final hSnap = await tx.get(householdRef);
-        if (hSnap.exists) {
-          final household = Household.fromSnapshot(hSnap);
-          final inCash = household.cashAccounts
+        final bSnap = await tx.get(balancesRef);
+        if (bSnap.exists) {
+          final balances = HouseholdBalances.fromSnapshot(bSnap);
+          final inCash = balances.cashAccounts
               .where((a) => a.id == expense.sourceAccountId)
               .toList();
-          final inSavings = household.savingsAccounts
+          final inSavings = balances.savingsAccounts
               .where((a) => a.id == expense.sourceAccountId)
               .toList();
           if (inCash.isNotEmpty || inSavings.isNotEmpty) {
             final kind =
                 inCash.isNotEmpty ? AccountKind.cash : AccountKind.savings;
             final list = kind == AccountKind.cash
-                ? household.cashAccounts
-                : household.savingsAccounts;
+                ? balances.cashAccounts
+                : balances.savingsAccounts;
             final updated = list
                 .map((a) => a.id == expense.sourceAccountId
                     ? a.copyWith(value: a.value + expense.amount)
@@ -687,7 +693,7 @@ class ExpenseRepository {
             final field = kind == AccountKind.cash
                 ? 'cashAccounts'
                 : 'savingsAccounts';
-            tx.update(householdRef, {
+            tx.update(balancesRef, {
               field: updated.map((a) => a.toMap()).toList(),
             });
           }

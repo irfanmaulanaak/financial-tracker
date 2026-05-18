@@ -60,8 +60,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       // Fire-and-forget; failures are non-fatal (next session retries).
       // ignore: discarded_futures
       ref.read(recurringRunnerProvider).run(householdId: loadedHid);
-      // ignore: discarded_futures
-      ref.read(autoDebitRunnerProvider).run(householdId: loadedHid);
+      final uid = ref.read(authStateProvider).value?.uid;
+      if (uid != null) {
+        // ignore: discarded_futures
+        ref.read(autoDebitRunnerProvider).run(
+              householdId: loadedHid,
+              actorUid: uid,
+            );
+      }
     }
     final cycleAsync = ref.watch(cycleExpensesProvider);
     final recentAsync = ref.watch(recentExpensesProvider(5));

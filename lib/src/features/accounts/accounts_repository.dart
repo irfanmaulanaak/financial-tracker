@@ -4,15 +4,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/ids.dart';
 import '../../core/net_worth.dart' as nw;
 import '../../core/providers.dart';
-import '../household/household.dart';
 import 'account.dart';
+import 'household_balances.dart';
 
+/// Account CRUD against the private balances doc
+/// (`households/{hid}/private/balances`). Read+write require `full` tier;
+/// limited tier never reaches these methods (UI gates them).
 class AccountsRepository {
   AccountsRepository(this._db);
   final FirebaseFirestore _db;
 
-  DocumentReference<Map<String, dynamic>> _doc(String hid) =>
-      _db.collection('households').doc(hid);
+  DocumentReference<Map<String, dynamic>> _balancesDoc(String hid) =>
+      HouseholdBalances.ref(_db, hid);
 
   String _fieldFor(AccountKind kind) =>
       kind == AccountKind.cash ? 'cashAccounts' : 'savingsAccounts';
@@ -25,37 +28,36 @@ class AccountsRepository {
     int value = 0,
     AccountSubKind subKind = AccountSubKind.bank,
   }) async {
-    final account = Account(
-      id: shortId(),
-      kind: kind,
-      subKind: subKind,
-      label: label,
-      hint: hint,
-      value: value,
-      sortOrder: 0,
-    );
-    final ref = _doc(householdId);
-    await _db.runTransaction((tx) async {
+    final ref = _balancesDoc(householdId);
+    final id = shortId();
+    final outcome = await _db.runTransaction<Account>((tx) async {
       final snap = await tx.get(ref);
-      if (!snap.exists) throw StateError('household_missing');
-      final household = Household.fromSnapshot(snap);
-      final list = kind == AccountKind.cash
-          ? household.cashAccounts
-          : household.savingsAccounts;
+      final balances = snap.exists
+          ? HouseholdBalances.fromSnapshot(snap)
+          : HouseholdBalances.empty;
+      final list =
+          kind == AccountKind.cash ? balances.cashAccounts : balances.savingsAccounts;
       final next = Account(
-        id: account.id,
+        id: id,
         kind: kind,
         subKind: subKind,
-        label: account.label,
-        hint: account.hint,
-        value: account.value,
+        label: label,
+        hint: hint,
+        value: value,
         sortOrder: list.length,
       );
-      tx.update(ref, {
-        _fieldFor(kind): [...list.map((a) => a.toMap()), next.toMap()],
-      });
+      final updated = [...list, next];
+      final payload = {
+        _fieldFor(kind): updated.map((a) => a.toMap()).toList(),
+      };
+      if (snap.exists) {
+        tx.update(ref, payload);
+      } else {
+        tx.set(ref, {...HouseholdBalances.empty.toMap(), ...payload});
+      }
+      return next;
     });
-    return account;
+    return outcome;
   }
 
   /// Updates an account in place when [newKind] is null or matches [kind].
@@ -72,14 +74,14 @@ class AccountsRepository {
     AccountSubKind? subKind,
     AccountKind? newKind,
   }) async {
-    final ref = _doc(householdId);
+    final ref = _balancesDoc(householdId);
     await _db.runTransaction((tx) async {
       final snap = await tx.get(ref);
-      if (!snap.exists) throw StateError('household_missing');
-      final household = Household.fromSnapshot(snap);
+      if (!snap.exists) throw StateError('balances_missing');
+      final balances = HouseholdBalances.fromSnapshot(snap);
       final fromList = kind == AccountKind.cash
-          ? household.cashAccounts
-          : household.savingsAccounts;
+          ? balances.cashAccounts
+          : balances.savingsAccounts;
       final existing = fromList.where((a) => a.id == accountId).toList();
       if (existing.isEmpty) throw StateError('account_missing');
 
@@ -102,8 +104,8 @@ class AccountsRepository {
         final src = existing.first;
         final remaining = fromList.where((a) => a.id != accountId).toList();
         final toList = targetKind == AccountKind.cash
-            ? household.cashAccounts
-            : household.savingsAccounts;
+            ? balances.cashAccounts
+            : balances.savingsAccounts;
         final moved = Account(
           id: src.id,
           kind: targetKind,
@@ -133,14 +135,14 @@ class AccountsRepository {
     required String accountId,
     required int delta,
   }) async {
-    final ref = _doc(householdId);
+    final ref = _balancesDoc(householdId);
     await _db.runTransaction((tx) async {
       final snap = await tx.get(ref);
-      if (!snap.exists) throw StateError('household_missing');
-      final household = Household.fromSnapshot(snap);
+      if (!snap.exists) throw StateError('balances_missing');
+      final balances = HouseholdBalances.fromSnapshot(snap);
       final list = kind == AccountKind.cash
-          ? household.cashAccounts
-          : household.savingsAccounts;
+          ? balances.cashAccounts
+          : balances.savingsAccounts;
       final target = list.where((a) => a.id == accountId).toList();
       if (target.isEmpty) throw StateError('account_missing');
       final next = nw.applyDelta(currentValue: target.first.value, delta: delta);
@@ -158,14 +160,14 @@ class AccountsRepository {
     required AccountKind kind,
     required String accountId,
   }) async {
-    final ref = _doc(householdId);
+    final ref = _balancesDoc(householdId);
     await _db.runTransaction((tx) async {
       final snap = await tx.get(ref);
-      if (!snap.exists) throw StateError('household_missing');
-      final household = Household.fromSnapshot(snap);
+      if (!snap.exists) throw StateError('balances_missing');
+      final balances = HouseholdBalances.fromSnapshot(snap);
       final list = kind == AccountKind.cash
-          ? household.cashAccounts
-          : household.savingsAccounts;
+          ? balances.cashAccounts
+          : balances.savingsAccounts;
       final filtered = list.where((a) => a.id != accountId).toList();
       tx.update(ref, {
         _fieldFor(kind): filtered.map((a) => a.toMap()).toList(),

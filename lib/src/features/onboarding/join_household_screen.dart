@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -36,7 +35,7 @@ class _JoinHouseholdScreenState extends ConsumerState<JoinHouseholdScreen> {
     if (user == null) return;
     final code = InviteCode.normalise(_codeCtrl.text);
     if (!InviteCode.isValid(code)) {
-      setState(() => _error = 'Kode harus 6 digit angka');
+      setState(() => _error = 'Kode undangan tidak valid');
       return;
     }
     setState(() {
@@ -84,19 +83,19 @@ class _JoinHouseholdScreenState extends ConsumerState<JoinHouseholdScreen> {
                         const SizedBox(height: 10),
                         TextField(
                           controller: _codeCtrl,
-                          keyboardType: TextInputType.number,
-                          maxLength: 6,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly,
-                          ],
+                          keyboardType: TextInputType.visiblePassword,
+                          autocorrect: false,
+                          enableSuggestions: false,
+                          maxLength: InviteCode.length,
                           style: const TextStyle(
-                            fontSize: 28,
-                            letterSpacing: 8,
-                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Menlo',
+                            fontSize: 18,
+                            letterSpacing: 1.5,
+                            fontWeight: FontWeight.w600,
                           ),
                           textAlign: TextAlign.center,
                           decoration: const InputDecoration(
-                            hintText: '000000',
+                            hintText: 'Tempel kode di sini',
                             counterText: '',
                           ),
                         ),
