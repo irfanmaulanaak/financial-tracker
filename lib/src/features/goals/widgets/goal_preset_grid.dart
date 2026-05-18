@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../theme.dart';
+import '../../../ui/ft_breakpoints.dart';
 
 /// One preset slot in the 3×2 grid on the add-goal screen. The `tone` lookup
 /// happens in [GoalPresetGrid] via [presetColor].
@@ -75,7 +76,7 @@ class GoalPresetGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GridView.count(
-      crossAxisCount: 3,
+      crossAxisCount: context.isAtLeastMedium ? 6 : 3,
       mainAxisSpacing: 8,
       crossAxisSpacing: 8,
       shrinkWrap: true,

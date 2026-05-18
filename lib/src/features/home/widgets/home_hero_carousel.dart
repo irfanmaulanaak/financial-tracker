@@ -10,6 +10,7 @@ import '../../../core/hide_assets_provider.dart';
 import '../../../core/in_app_indicators.dart';
 import '../../../core/net_worth.dart';
 import '../../../theme.dart';
+import '../../../ui/ft_animated_number.dart';
 import '../../../ui/ft_donut.dart';
 import '../../../ui/ft_haptics.dart';
 import '../../../ui/ft_sparkline.dart';
@@ -179,16 +180,28 @@ class _AsetSlide extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      hidden ? maskMoney() : compactMoney(nw.total),
-                      style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                            fontSize: 32,
-                            height: 1,
-                            letterSpacing: -1,
-                            fontWeight: FontWeight.w500,
-                            color: FtColors.ink,
+                    hidden
+                        ? Text(
+                            maskMoney(),
+                            style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                                  fontSize: 32,
+                                  height: 1,
+                                  letterSpacing: -1,
+                                  fontWeight: FontWeight.w500,
+                                  color: FtColors.ink,
+                                ),
+                          )
+                        : FtAnimatedNumber(
+                            value: nw.total,
+                            formatter: compactMoney,
+                            style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                                  fontSize: 32,
+                                  height: 1,
+                                  letterSpacing: -1,
+                                  fontWeight: FontWeight.w500,
+                                  color: FtColors.ink,
+                                ),
                           ),
-                    ),
                     const SizedBox(height: 8),
                     if (showDelta)
                       _DeltaPill(positive: positive, amount: cycleNet.abs())

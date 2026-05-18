@@ -118,6 +118,32 @@ ThemeData buildTheme(Brightness brightness) {
     scaffoldBackgroundColor: FtColors.bg,
     textTheme: textTheme,
     primaryTextTheme: textTheme,
+    // Defer to FtTapScale for pressed feedback; bare InkWell instances opt in
+    // to ripple locally if they need it.
+    splashFactory: NoSplash.splashFactory,
+    pageTransitionsTheme: const PageTransitionsTheme(
+      builders: {
+        TargetPlatform.android: _FtFadeUpTransitionsBuilder(),
+        TargetPlatform.iOS: _FtFadeUpTransitionsBuilder(),
+        TargetPlatform.macOS: _FtFadeUpTransitionsBuilder(),
+        TargetPlatform.linux: _FtFadeUpTransitionsBuilder(),
+        TargetPlatform.windows: _FtFadeUpTransitionsBuilder(),
+        TargetPlatform.fuchsia: _FtFadeUpTransitionsBuilder(),
+      },
+    ),
+    scrollbarTheme: ScrollbarThemeData(
+      thumbVisibility: WidgetStateProperty.resolveWith(
+        (s) => s.contains(WidgetState.hovered),
+      ),
+      thumbColor: WidgetStateProperty.resolveWith((s) {
+        if (s.contains(WidgetState.dragged)) {
+          return FtColors.ink.withValues(alpha: 0.45);
+        }
+        return FtColors.ink.withValues(alpha: 0.25);
+      }),
+      radius: const Radius.circular(8),
+      thickness: WidgetStateProperty.all(6),
+    ),
     appBarTheme: AppBarTheme(
       backgroundColor: FtColors.bg,
       surfaceTintColor: Colors.transparent,
@@ -179,6 +205,17 @@ ThemeData buildTheme(Brightness brightness) {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         textStyle: sans.labelLarge
             ?.copyWith(fontWeight: FontWeight.w500, fontSize: 14),
+      ).copyWith(
+        overlayColor: WidgetStateProperty.resolveWith((s) {
+          if (s.contains(WidgetState.pressed)) {
+            return FtColors.bg.withValues(alpha: 0.12);
+          }
+          if (s.contains(WidgetState.hovered) ||
+              s.contains(WidgetState.focused)) {
+            return FtColors.bg.withValues(alpha: 0.08);
+          }
+          return null;
+        }),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
@@ -190,6 +227,17 @@ ThemeData buildTheme(Brightness brightness) {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         textStyle: sans.labelLarge
             ?.copyWith(fontWeight: FontWeight.w500, fontSize: 14),
+      ).copyWith(
+        overlayColor: WidgetStateProperty.resolveWith((s) {
+          if (s.contains(WidgetState.pressed)) {
+            return FtColors.ink.withValues(alpha: 0.06);
+          }
+          if (s.contains(WidgetState.hovered) ||
+              s.contains(WidgetState.focused)) {
+            return FtColors.ink.withValues(alpha: 0.04);
+          }
+          return null;
+        }),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
@@ -203,6 +251,39 @@ ThemeData buildTheme(Brightness brightness) {
       foregroundColor: FtColors.bg,
     ),
   );
+}
+
+/// Default page transitions builder used by `PageTransitionsTheme`. Covers
+/// any imperative `Navigator.push` path that bypasses go_router (e.g.,
+/// `showAboutDialog`, plugin-driven flows) so the editorial fade-up stays
+/// consistent across the app instead of falling back to platform defaults.
+class _FtFadeUpTransitionsBuilder extends PageTransitionsBuilder {
+  const _FtFadeUpTransitionsBuilder();
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    final curve = CurvedAnimation(
+      parent: animation,
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeInCubic,
+    );
+    return FadeTransition(
+      opacity: curve,
+      child: SlideTransition(
+        position: Tween(
+          begin: const Offset(0, 0.02),
+          end: Offset.zero,
+        ).animate(curve),
+        child: child,
+      ),
+    );
+  }
 }
 
 /// Small uppercase "eyebrow" label used above sections + form fields.

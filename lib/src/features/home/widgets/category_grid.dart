@@ -30,7 +30,11 @@ class CategoryGrid extends StatelessWidget {
         FtCard(
           margin: const EdgeInsets.fromLTRB(22, 0, 22, 16),
           child: GridView.count(
-            crossAxisCount: 2,
+            crossAxisCount: context.isAtLeastExpanded
+                ? 4
+                : context.isAtLeastMedium
+                    ? 3
+                    : 2,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             crossAxisSpacing: 12,

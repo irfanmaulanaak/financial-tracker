@@ -96,30 +96,30 @@ final routerProvider = Provider<GoRouter>((ref) {
       _fadeRoute('/home', (_) => const HomeScreen()),
       _fadeRoute('/spend', (_) => const SpendScreen()),
       _fadeRoute('/expenses', (_) => const ExpenseLogScreen()),
-      _fadeRoute('/expenses/new', (_) => const RecordExpenseScreen()),
-      _fadeRoute('/expenses/:expenseId/edit', (state) =>
+      _bottomSlideRoute('/expenses/new', (_) => const RecordExpenseScreen()),
+      _scaleRoute('/expenses/:expenseId/edit', (state) =>
           EditExpenseScreen(expenseId: state.pathParameters['expenseId']!)),
       _fadeRoute('/categories', (_) => const CategoryManageScreen()),
-      _fadeRoute('/categories/:categoryId', (state) =>
+      _scaleRoute('/categories/:categoryId', (state) =>
           CategoryDetailScreen(categoryId: state.pathParameters['categoryId']!)),
       _fadeRoute('/members', (_) => const MemberListScreen()),
-      _fadeRoute('/members/:memberId', (state) =>
+      _scaleRoute('/members/:memberId', (state) =>
           MemberDetailScreen(memberId: state.pathParameters['memberId']!)),
       _fadeRoute('/notifications', (_) => const NotificationsScreen()),
       _fadeRoute('/profile/edit', (_) => const EditProfileScreen()),
       _fadeRoute('/accounts', (_) => const AccountsScreen()),
-      _fadeRoute('/accounts/:accountId', (state) =>
+      _scaleRoute('/accounts/:accountId', (state) =>
           AccountDetailScreen(accountId: state.pathParameters['accountId']!)),
       _fadeRoute('/incomes', (_) => const IncomeLogScreen()),
-      _fadeRoute('/incomes/new', (_) => const RecordIncomeScreen()),
-      _fadeRoute('/transfer/new', (_) => const TransferScreen()),
+      _bottomSlideRoute('/incomes/new', (_) => const RecordIncomeScreen()),
+      _bottomSlideRoute('/transfer/new', (_) => const TransferScreen()),
       _fadeRoute('/cards', (_) => const CardsScreen()),
-      _fadeRoute('/cards/:cardId', (state) =>
+      _scaleRoute('/cards/:cardId', (state) =>
           CardDetailScreen(cardId: state.pathParameters['cardId']!)),
       _fadeRoute('/health', (_) => const HealthScreen()),
       _fadeRoute('/goals', (_) => const GoalsScreen()),
-      _fadeRoute('/goals/new', (_) => const AddGoalScreen()),
-      _fadeRoute('/goals/:goalId', (state) =>
+      _bottomSlideRoute('/goals/new', (_) => const AddGoalScreen()),
+      _scaleRoute('/goals/:goalId', (state) =>
           GoalDetailScreen(goalId: state.pathParameters['goalId']!)),
       _fadeRoute('/investments', (_) => const InvestmentsScreen()),
       _fadeRoute('/export', (_) => const ExportScreen()),
@@ -132,6 +132,23 @@ GoRoute _fadeRoute(String path, Widget Function(GoRouterState) builder) {
   return GoRoute(
     path: path,
     pageBuilder: (context, state) => ftFadeUpPage(context, state,
+        child: builder(state)),
+  );
+}
+
+GoRoute _scaleRoute(String path, Widget Function(GoRouterState) builder) {
+  return GoRoute(
+    path: path,
+    pageBuilder: (context, state) => ftScaleUpPage(context, state,
+        child: builder(state)),
+  );
+}
+
+GoRoute _bottomSlideRoute(
+    String path, Widget Function(GoRouterState) builder) {
+  return GoRoute(
+    path: path,
+    pageBuilder: (context, state) => ftBottomSlidePage(context, state,
         child: builder(state)),
   );
 }

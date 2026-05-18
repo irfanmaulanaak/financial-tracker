@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/providers.dart';
 import '../../theme.dart';
+import '../../ui/ft_celebrate.dart';
 import '../../ui/ft_haptics.dart';
 import '../../ui/ft_input.dart';
 import '../../ui/ft_submit_dot.dart';
@@ -81,7 +82,7 @@ class _RecordIncomeScreenState extends ConsumerState<RecordIncomeScreen> {
             recurring: _recurring,
           );
       if (mounted) {
-        FtHaptics.success();
+        FtCelebrate.show(context, message: 'Tersimpan');
         context.pop();
       }
     } on StateError catch (e) {

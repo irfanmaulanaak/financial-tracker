@@ -76,7 +76,9 @@ class IncomeLogScreen extends ConsumerWidget {
                           inc.destinationAccountId,
                         );
                         final spender = household.memberOf(inc.receivedBy);
-                        return FtCard(
+                        return FtListReveal(
+                          index: i,
+                          child: FtCard(
                           margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                           padding: const EdgeInsets.all(14),
                           onLongPress: () async {
@@ -171,6 +173,7 @@ class IncomeLogScreen extends ConsumerWidget {
                                 ),
                               ),
                             ],
+                          ),
                           ),
                         );
                       },

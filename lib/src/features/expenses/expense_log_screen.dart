@@ -165,9 +165,11 @@ class _ExpenseLogScreenState extends ConsumerState<ExpenseLogScreen> {
                           0,
                           (a, e) => a + e.amount.toInt(),
                         );
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
+                        return FtListReveal(
+                          index: dayIdx,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
                             Padding(
                               padding: const EdgeInsets.fromLTRB(22, 16, 22, 8),
                               child: Row(
@@ -201,7 +203,8 @@ class _ExpenseLogScreenState extends ConsumerState<ExpenseLogScreen> {
                                 onDelete: () => _confirmDelete(household, e),
                               ),
                             ),
-                          ],
+                            ],
+                          ),
                         );
                       },
                     );

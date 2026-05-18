@@ -244,15 +244,18 @@ class _CardsScreenState extends ConsumerState<CardsScreen> {
                     ),
                   )
                 else
-                  for (final c in items)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(22, 0, 22, 12),
-                      child: CardTile(
-                        card: c,
-                        hid: household.id,
-                        ownerName: prettyName(
-                            household.memberOf(c.ownerId)?.displayName ?? '-'),
-                        onTap: () => context.push('/cards/${c.id}'),
+                  for (var i = 0; i < items.length; i++)
+                    FtListReveal(
+                      index: i,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(22, 0, 22, 12),
+                        child: CardTile(
+                          card: items[i],
+                          hid: household.id,
+                          ownerName: prettyName(
+                              household.memberOf(items[i].ownerId)?.displayName ?? '-'),
+                          onTap: () => context.push('/cards/${items[i].id}'),
+                        ),
                       ),
                     ),
                 FtDashedAdd(

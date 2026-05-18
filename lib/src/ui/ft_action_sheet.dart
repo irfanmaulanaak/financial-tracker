@@ -4,16 +4,64 @@ import 'package:go_router/go_router.dart';
 
 import '../features/household/household_providers.dart';
 import '../theme.dart';
+import 'ft_breakpoints.dart';
 import 'ft_haptics.dart';
 import 'ft_motion.dart';
 
 /// Bottom sheet primitive — warm cream surface, rounded top, grabber handle.
 /// Animates in from below; backdrop dim layered above content.
+/// Bottom sheet primitive — warm cream surface, rounded top, grabber handle.
+/// Animates in from below; backdrop dim layered above content.
+///
+/// On `medium`+ breakpoints, automatically switches to a centered dialog
+/// (max 560 dp) so wide-screen layouts don't show a sheet stretched across
+/// 1920 px of empty space.
 Future<T?> showFtActionSheet<T>({
   required BuildContext context,
   required WidgetBuilder builder,
 }) {
   FtHaptics.select();
+  if (context.isAtLeastMedium) {
+    return showDialog<T>(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.32),
+      builder: (ctx) {
+        return Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Material(
+                color: Colors.transparent,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: FtColors.bg,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: FtColors.line, width: 0.5),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x1A000000),
+                        blurRadius: 32,
+                        offset: Offset(0, 12),
+                      ),
+                    ],
+                  ),
+                  padding: const EdgeInsets.fromLTRB(0, 14, 0, 18),
+                  child: FtFadeUp(
+                    duration: const Duration(milliseconds: 260),
+                    distance: 8,
+                    child: SingleChildScrollView(
+                      child: builder(ctx),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
   return showModalBottomSheet<T>(
     context: context,
     isScrollControlled: true,

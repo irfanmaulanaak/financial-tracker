@@ -100,19 +100,22 @@ class GoalsScreen extends ConsumerWidget {
                     ),
                   )
                 else
-                  for (final g in goals)
-                    GoalCard(
-                      goal: g,
-                      ownerLabel: g.ownerId != null
-                          ? prettyName(household
-                                  .memberOf(g.ownerId!)
-                                  ?.displayName ??
-                              '-')
-                          : 'Bersama',
-                      onContribute: () =>
-                          _openContributeSheet(context, ref, household.id, g),
-                      onDelete: () =>
-                          _confirmDelete(context, ref, household.id, g),
+                  for (var i = 0; i < goals.length; i++)
+                    FtListReveal(
+                      index: i,
+                      child: GoalCard(
+                        goal: goals[i],
+                        ownerLabel: goals[i].ownerId != null
+                            ? prettyName(household
+                                    .memberOf(goals[i].ownerId!)
+                                    ?.displayName ??
+                                '-')
+                            : 'Bersama',
+                        onContribute: () => _openContributeSheet(
+                            context, ref, household.id, goals[i]),
+                        onDelete: () =>
+                            _confirmDelete(context, ref, household.id, goals[i]),
+                      ),
                     ),
                 FtDashedAdd(
                   margin: const EdgeInsets.fromLTRB(22, 8, 22, 4),

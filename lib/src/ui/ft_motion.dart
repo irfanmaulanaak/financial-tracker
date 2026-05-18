@@ -118,8 +118,9 @@ class _FtTapScaleState extends State<FtTapScale> {
             },
       child: AnimatedScale(
         scale: _down ? widget.scale : 1.0,
-        duration: const Duration(milliseconds: 110),
-        curve: Curves.easeOut,
+        duration: const Duration(milliseconds: 140),
+        // Slight overshoot on release for an iOS-like spring feel.
+        curve: const Cubic(0.34, 1.36, 0.64, 1),
         child: widget.child,
       ),
     );
@@ -156,4 +157,155 @@ Page<T> ftFadeUpPage<T>(
       );
     },
   );
+}
+
+/// Drill-in transition for detail screens. Fades + scales the destination
+/// from 0.96 → 1.0 over 280ms, giving navigation a "zoom into" feel that
+/// reads as distinct from the lateral fade-up used for top-level routes.
+Page<T> ftScaleUpPage<T>(
+  BuildContext context,
+  GoRouterState state, {
+  required Widget child,
+}) {
+  return CustomTransitionPage<T>(
+    key: state.pageKey,
+    child: child,
+    transitionDuration: const Duration(milliseconds: 280),
+    reverseTransitionDuration: const Duration(milliseconds: 220),
+    transitionsBuilder: (_, animation, _, w) {
+      final curve = CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOutCubic,
+        reverseCurve: Curves.easeInCubic,
+      );
+      return FadeTransition(
+        opacity: curve,
+        child: ScaleTransition(
+          scale: Tween(begin: 0.96, end: 1.0).animate(curve),
+          child: w,
+        ),
+      );
+    },
+  );
+}
+
+/// Modal-style transition for record/new routes (compose-an-expense, etc.).
+/// Slides up from 8% below + fades; matches the iOS "present modally" feel.
+Page<T> ftBottomSlidePage<T>(
+  BuildContext context,
+  GoRouterState state, {
+  required Widget child,
+}) {
+  return CustomTransitionPage<T>(
+    key: state.pageKey,
+    child: child,
+    transitionDuration: const Duration(milliseconds: 320),
+    reverseTransitionDuration: const Duration(milliseconds: 240),
+    transitionsBuilder: (_, animation, _, w) {
+      final curve = CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOutCubic,
+        reverseCurve: Curves.easeInCubic,
+      );
+      return FadeTransition(
+        opacity: curve,
+        child: SlideTransition(
+          position: Tween(
+            begin: const Offset(0, 0.08),
+            end: Offset.zero,
+          ).animate(curve),
+          child: w,
+        ),
+      );
+    },
+  );
+}
+
+/// Staggered fade-up for list items. Wraps a list item's child with a
+/// per-index delay so items cascade into view instead of popping at once.
+///
+/// The first `maxStaggered` items are delayed by `index * perItemDelay`;
+/// items past that index animate without delay (so long lists don't make
+/// the user wait for the tail to finish).
+///
+/// Honors `MediaQuery.disableAnimations` (accessibility) by skipping the
+/// reveal entirely when the OS requests reduced motion.
+class FtListReveal extends StatelessWidget {
+  const FtListReveal({
+    super.key,
+    required this.index,
+    required this.child,
+    this.perItemDelay = const Duration(milliseconds: 45),
+    this.maxStaggered = 8,
+    this.distance = 6.0,
+    this.duration = const Duration(milliseconds: 280),
+  });
+
+  final int index;
+  final Widget child;
+  final Duration perItemDelay;
+  final int maxStaggered;
+  final double distance;
+  final Duration duration;
+
+  @override
+  Widget build(BuildContext context) {
+    if (MediaQuery.disableAnimationsOf(context)) return child;
+    final clampedIndex = index < maxStaggered ? index : maxStaggered;
+    final delay = perItemDelay * clampedIndex;
+    return FtFadeUp(
+      delay: delay,
+      duration: duration,
+      distance: distance,
+      child: child,
+    );
+  }
+}
+
+/// Cross-fades between loading skeleton and resolved data. Replaces the
+/// abrupt `AsyncValue.when` cut with a 240ms ease-out swap so shimmer
+/// → real content feels deliberate instead of jarring.
+///
+/// `keyOf` lets you customize the AnimatedSwitcher key when the data shape
+/// changes (e.g., switching tabs) — by default the widget keys on the
+/// AsyncValue's loading/data/error branch only.
+/// Cross-fades between loading skeleton and resolved data. Replaces the
+/// abrupt `AsyncValue.when` cut with a 240ms ease-out swap so shimmer
+/// → real content feels deliberate instead of jarring.
+///
+/// Pass `loading: true` while data is unresolved; the widget will render
+/// `skeleton`. Pass `loading: false` with `child` to swap in the data view.
+/// Use `dataKey` if the data shape changes while still loaded (e.g., a tab
+/// switch) — the AnimatedSwitcher needs a new key to detect the change.
+class FtAsyncSwitcher extends StatelessWidget {
+  const FtAsyncSwitcher({
+    super.key,
+    required this.loading,
+    required this.skeleton,
+    required this.child,
+    this.duration = const Duration(milliseconds: 240),
+    this.dataKey,
+  });
+
+  final bool loading;
+  final Widget skeleton;
+  final Widget child;
+  final Duration duration;
+  final Object? dataKey;
+
+  @override
+  Widget build(BuildContext context) {
+    final active = loading
+        ? KeyedSubtree(key: const ValueKey('_ft_skeleton'), child: skeleton)
+        : KeyedSubtree(
+            key: ValueKey(dataKey ?? '_ft_data'),
+            child: child,
+          );
+    return AnimatedSwitcher(
+      duration: duration,
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      child: active,
+    );
+  }
 }

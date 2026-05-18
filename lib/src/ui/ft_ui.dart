@@ -7,10 +7,15 @@ import 'package:go_router/go_router.dart';
 import '../features/household/household_providers.dart';
 import '../theme.dart';
 import 'ft_action_sheet.dart';
+import 'ft_breakpoints.dart';
 import 'ft_haptics.dart';
 import 'ft_motion.dart';
+import 'ft_page_container.dart';
+import 'ft_side_nav.dart';
 
+export 'ft_breakpoints.dart';
 export 'ft_motion.dart';
+export 'ft_page_container.dart';
 export 'ft_snackbar.dart';
 
 class FtCard extends StatelessWidget {
@@ -22,6 +27,7 @@ class FtCard extends StatelessWidget {
     this.backgroundColor,
     this.onTap,
     this.onLongPress,
+    this.heroTag,
   });
 
   final Widget child;
@@ -30,6 +36,11 @@ class FtCard extends StatelessWidget {
   final Color? backgroundColor;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
+
+  /// Optional Hero tag — when set, wraps the card body in a Hero so navigation
+  /// to a detail screen with the same tag produces a shared-element transition.
+  /// Pair with `ftScaleUpPage` for the cleanest visual handoff.
+  final Object? heroTag;
 
   @override
   Widget build(BuildContext context) {
@@ -47,12 +58,30 @@ class FtCard extends StatelessWidget {
       child: child,
     );
 
-    final wrapped = onTap == null && onLongPress == null
+    final maybeHero = heroTag == null
         ? card
+        : Hero(
+            tag: heroTag!,
+            // Flat surface during flight — Material default forces an
+            // opaque container which clashes with our cream theme.
+            flightShuttleBuilder: (_, animation, _, _, _) {
+              return Material(
+                color: Colors.transparent,
+                child: card,
+              );
+            },
+            child: Material(
+              color: Colors.transparent,
+              child: card,
+            ),
+          );
+
+    final wrapped = onTap == null && onLongPress == null
+        ? maybeHero
         : FtTapScale(
             onTap: onTap,
             onLongPress: onLongPress,
-            child: card,
+            child: maybeHero,
           );
 
     if (margin == null) return wrapped;
@@ -234,6 +263,16 @@ class FtStatItem extends StatelessWidget {
 
 /// App chrome: keeps the floating bottom nav above the screen body, plus a
 /// separate "Catat Aktivitas" FAB hovering above the right side of the nav.
+/// App chrome: keeps the floating bottom nav above the screen body, plus a
+/// separate "Catat Aktivitas" FAB hovering above the right side of the nav.
+/// On `medium`+ breakpoints, switches the bottom nav for a side rail (FtSideNav)
+/// so wide-screen layouts don't waste vertical space on a pill that's mostly
+/// air on tablets/desktop.
+/// App chrome: keeps the floating bottom nav above the screen body, plus a
+/// separate "Catat Aktivitas" FAB hovering above the right side of the nav.
+/// On `medium`+ breakpoints, switches the bottom nav for a side rail (FtSideNav)
+/// and width-constrains the body via `FtPageContainer` so wide-screen layouts
+/// stay readable instead of stretching edge-to-edge.
 class FtAppChrome extends StatelessWidget {
   const FtAppChrome({
     super.key,
@@ -241,6 +280,7 @@ class FtAppChrome extends StatelessWidget {
     required this.child,
     this.showNav = true,
     this.showActionFab = true,
+    this.constrainBody = true,
   });
 
   final FtTab current;
@@ -251,11 +291,41 @@ class FtAppChrome extends StatelessWidget {
   /// (e.g. the dedicated record-expense/record-income screens).
   final bool showActionFab;
 
+  /// Whether to wrap the body in `FtPageContainer` so content centers and
+  /// pins to a comfortable reading width on wide screens. Defaults to true.
+  /// Disable for screens that manage their own width constraints (e.g.
+  /// full-bleed onboarding screens).
+  final bool constrainBody;
+
   @override
   Widget build(BuildContext context) {
+    final wide = context.isAtLeastMedium;
+    final body = constrainBody ? FtPageContainer(child: child) : child;
+
+    if (wide) {
+      return Stack(
+        children: [
+          Positioned.fill(
+            child: Row(
+              children: [
+                if (showNav) FtSideNav(current: current),
+                Expanded(child: body),
+              ],
+            ),
+          ),
+          if (showNav && showActionFab)
+            Positioned(
+              right: 24,
+              bottom: MediaQuery.paddingOf(context).bottom + 24,
+              child: const _CatatAktivitasFab(),
+            ),
+        ],
+      );
+    }
+
     return Stack(
       children: [
-        Positioned.fill(child: child),
+        Positioned.fill(child: body),
         if (showNav)
           Positioned(
             left: 0,
