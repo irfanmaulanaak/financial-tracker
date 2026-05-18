@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/formatters.dart';
 import '../../../core/hide_assets_provider.dart';
@@ -191,8 +192,8 @@ class _AccountTabState extends ConsumerState<AccountTab> {
                     account: items[i],
                     accent: widget.accent,
                     hidden: hidden,
-                    onTap: () => _openEdit(context, ref, items[i]),
-                    onLongPress: () => _confirmDelete(context, ref, items[i]),
+                    onTap: () => context.push('/accounts/${items[i].id}'),
+                    onLongPress: () => _openEdit(context, ref, items[i]),
                   ),
                 ],
               ],
@@ -213,7 +214,10 @@ class _AccountTabState extends ConsumerState<AccountTab> {
     final result = await showModalBottomSheet<AccountDraft>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => AccountEditSheet(initial: a),
+      builder: (sheetCtx) => AccountEditSheet(
+        initial: a,
+        onDelete: () => _confirmDelete(context, ref, a),
+      ),
     );
     if (result == null) return;
     try {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/formatters.dart';
+import '../../../theme.dart';
 import '../account.dart';
 
 class AccountDraft {
@@ -50,9 +51,19 @@ class _SignedThousandsFormatter extends TextInputFormatter {
 }
 
 class AccountEditSheet extends StatefulWidget {
-  const AccountEditSheet({super.key, this.initial, this.initialKind});
+  const AccountEditSheet({
+    super.key,
+    this.initial,
+    this.initialKind,
+    this.onDelete,
+  });
   final Account? initial;
   final AccountKind? initialKind;
+
+  /// Called when the user taps "Hapus rekening" inside the sheet. Only
+  /// shown when [initial] is non-null (edit flow). The caller owns the
+  /// confirm dialog + repository call; the sheet just dismisses itself.
+  final VoidCallback? onDelete;
 
   @override
   State<AccountEditSheet> createState() => _AccountEditSheetState();
@@ -235,6 +246,19 @@ class _AccountEditSheetState extends State<AccountEditSheet> {
               ),
             const SizedBox(height: 24),
             FilledButton(onPressed: _save, child: const Text('Simpan')),
+            if (isEdit && widget.onDelete != null) ...[
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  widget.onDelete!();
+                },
+                style: TextButton.styleFrom(
+                  foregroundColor: FtColors.danger,
+                ),
+                child: const Text('Hapus rekening'),
+              ),
+            ],
           ],
         ),
       ),
