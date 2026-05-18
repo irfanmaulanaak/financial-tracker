@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/cicilan.dart';
 import '../../core/formatters.dart';
 import '../../theme.dart';
+import '../../ui/ft_refresh.dart';
 import '../../ui/ft_ui.dart';
 import '../home/widgets/home_formatters.dart';
 import '../household/household_providers.dart';
@@ -135,8 +136,17 @@ class _CardsScreenState extends ConsumerState<CardsScreen> {
                   : FtColors.healthOk;
           return FtAppChrome(
             current: FtTab.cards,
-            child: ListView(
+            child: FtRefreshable(
+              onRefresh: () async {
+                ref.invalidate(currentHouseholdProvider);
+                ref.invalidate(cardsProvider(household.id));
+                await ftRefreshDelay();
+              },
+              child: ListView(
               padding: const EdgeInsets.only(bottom: 120),
+              physics: const BouncingScrollPhysics(
+                parent: AlwaysScrollableScrollPhysics(),
+              ),
               children: [
                 FtSubHeader(
                   title: 'Utang & Kartu Kredit',
@@ -262,6 +272,7 @@ class _CardsScreenState extends ConsumerState<CardsScreen> {
                     income: income,
                   ),
               ],
+            ),
             ),
           );
         },

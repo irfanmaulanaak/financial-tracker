@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/formatters.dart';
 import '../../theme.dart';
+import '../../ui/ft_refresh.dart';
 import '../../ui/ft_ui.dart';
 import '../household/household.dart';
 import '../household/household_providers.dart';
@@ -24,8 +25,16 @@ class CategoryManageScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: FtColors.bg,
-      body: ListView(
+      body: FtRefreshable(
+        onRefresh: () async {
+          ref.invalidate(currentHouseholdProvider);
+          await ftRefreshDelay();
+        },
+        child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+        physics: const BouncingScrollPhysics(
+          parent: AlwaysScrollableScrollPhysics(),
+        ),
         children: [
           FtSubHeader(
             title: 'Kategori',
@@ -52,6 +61,7 @@ class CategoryManageScreen extends ConsumerWidget {
               ),
           ],
         ],
+      ),
       ),
     );
   }

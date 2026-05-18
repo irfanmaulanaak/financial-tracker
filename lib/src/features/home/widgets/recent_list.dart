@@ -5,6 +5,7 @@ import '../../../core/formatters.dart';
 import '../../../theme.dart';
 import '../../../ui/ft_ui.dart';
 import '../../expenses/expense.dart';
+import '../../expenses/expense_detail_sheet.dart';
 import '../../household/household.dart';
 import '../../members/member_chip.dart';
 import 'home_formatters.dart';
@@ -99,7 +100,11 @@ class _RecentExpenseRow extends StatelessWidget {
     final color = category != null
         ? parseColor(category!.color)
         : FtColors.ink3;
-    return Container(
+    return FtTapScale(
+      scale: 0.99,
+      onTap: () =>
+          ExpenseDetailSheet.show(context: context, expense: expense),
+      child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
       decoration: BoxDecoration(
         border: Border(top: BorderSide(color: FtColors.line, width: 0.5)),
@@ -171,6 +176,7 @@ class _RecentExpenseRow extends StatelessWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }

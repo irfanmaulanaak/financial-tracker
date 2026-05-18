@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/formatters.dart';
 import '../../core/providers.dart';
 import '../../theme.dart';
+import '../../ui/ft_refresh.dart';
 import '../../ui/ft_ui.dart';
 import '../household/household_providers.dart';
 import '../household/name_format.dart';
@@ -39,8 +40,17 @@ class GoalsScreen extends ConsumerWidget {
           final totalCurrent = goals.fold<int>(0, (a, b) => a + b.current);
           return FtAppChrome(
             current: FtTab.goals,
-            child: ListView(
+            child: FtRefreshable(
+              onRefresh: () async {
+                ref.invalidate(currentHouseholdProvider);
+                ref.invalidate(goalsProvider(household.id));
+                await ftRefreshDelay();
+              },
+              child: ListView(
               padding: const EdgeInsets.only(bottom: 120),
+              physics: const BouncingScrollPhysics(
+                parent: AlwaysScrollableScrollPhysics(),
+              ),
               children: [
                 FtSubHeader(
                   title: 'Tujuan',
@@ -110,6 +120,7 @@ class GoalsScreen extends ConsumerWidget {
                   onTap: () => context.push('/goals/new'),
                 ),
               ],
+            ),
             ),
           );
         },

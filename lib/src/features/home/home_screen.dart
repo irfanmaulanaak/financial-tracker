@@ -4,13 +4,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/expense_aggregations.dart';
 import '../../core/health_score.dart';
-import '../../core/home_layout_provider.dart';
 import '../../core/in_app_indicators.dart';
 import '../../core/net_worth.dart';
-import '../../core/payday.dart';
 import '../../core/providers.dart';
 import '../../core/recurring_runner.dart';
 import '../../theme.dart';
+import '../../ui/ft_refresh.dart';
 import '../../ui/ft_ui.dart';
 import '../auth/auth_repository.dart';
 import '../cards/credit_card.dart';
@@ -22,20 +21,18 @@ import '../goals/auto_debit_runner.dart';
 import '../goals/goal.dart';
 import '../goals/goals_screen.dart';
 import '../household/household_providers.dart';
+import '../incomes/income.dart';
+import '../incomes/income_providers.dart';
 import '../insights/insights_providers.dart';
 import '../investments/investment.dart';
 import '../investments/investments_screen.dart';
 import 'net_worth_snapshot.dart';
 import 'net_worth_snapshot_repository.dart';
 import 'widgets/banners.dart';
-import 'widgets/cards_preview.dart';
 import 'widgets/category_grid.dart';
 import 'widgets/goals_preview.dart';
-import 'widgets/health_snapshot.dart';
-import 'widgets/home_b_body.dart';
 import 'widgets/home_header.dart';
-import 'widgets/month_strip.dart';
-import 'widgets/net_worth_section.dart';
+import 'widgets/home_hero_carousel.dart';
 import 'widgets/recent_list.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -76,9 +73,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final investmentsAsync = household != null
         ? ref.watch(investmentsProvider(household.id))
         : null;
-    final prevAsync = household != null
-        ? ref.watch(previousCyclesExpensesProvider(3))
-        : null;
 
     return Scaffold(
       backgroundColor: FtColors.bg,
@@ -91,7 +85,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           }
 
           final now = DateTime.now();
-          final cycle = currentCycle(now, payday: household.payday);
           final expenses = cycleAsync.value ?? const <Expense>[];
           final records = [
             for (final e in expenses)
@@ -104,11 +97,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ];
           final totalSpentValue = totalSpent(records);
           final income = ref.watch(currentCycleIncomeTotalProvider);
+          final gajiIncome = (ref.watch(cycleIncomesProvider).value ??
+                  const <Income>[])
+              .where((i) => i.source == IncomeSource.salary)
+              .fold<int>(0, (a, b) => a + b.amount);
           final byCat = spentByCategory(records);
-          final daily = dailyBudget(
-            monthlyBudget: income,
-            cycleDays: cycleLengthDays(cycle),
-          );
           final categories =
               household.categories.where((c) => !c.archived).toList()
                 ..sort((a, b) {
@@ -121,7 +114,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           final cards = cardsAsync?.value ?? const <CreditCard>[];
           final goals = goalsAsync?.value ?? const <Goal>[];
           final investments = investmentsAsync?.value ?? const <Investment>[];
-          final prevCycles = prevAsync?.value ?? const <List<Expense>>[];
+          final prevAsync = ref.watch(previousCyclesExpensesProvider(3));
+          final prevCycles = prevAsync.value ?? const <List<Expense>>[];
           final avgPrev = prevCycles.isEmpty
               ? 0
               : prevCycles
@@ -184,10 +178,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   .length,
             ),
           );
-          final status = budgetStatus(
-            totalSpent: totalSpentValue,
-            monthlyBudget: income,
-          );
           final dueBanners = [
             for (final c in cards)
               if (daysUntilDue(dueDay: c.dueDay, now: now) case final d?)
@@ -204,134 +194,81 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
           final displayName = prettyName(
               user?.displayName ?? user?.email ?? 'Keluarga');
-          final layout = ref.watch(homeLayoutProvider);
 
-          if (layout == 'B') {
-            return FtAppChrome(
-              current: FtTab.home,
-              child: HomeBBody(
-                household: household,
-                displayName: displayName,
-                nw: nw,
-                trend: trend,
-                totalSpent: totalSpentValue,
-                income: income,
-                health: health,
-                cards: cards,
-                goals: goals,
-                categories: categories,
-                totalsByCat: byCat,
-                onMembers: () => context.push('/members'),
-                onMenuSelect: _handleMenu,
-                onAssets: () => context.push('/accounts'),
-                onExpenses: () => context.push('/expenses'),
-                onCards: () => context.push('/cards'),
-                onGoals: () => context.push('/goals'),
-                onInsights: () => context.push('/health'),
-              ),
-            );
-          }
+          // Cycle net used by the asset slide's delta pill. Use Gaji-only
+          // income so it matches the ratio slide (and what the user really
+          // means by "earnings this cycle").
+          final cycleNet = gajiIncome - totalSpentValue;
 
           return FtAppChrome(
             current: FtTab.home,
-            child: ListView(
-              padding: const EdgeInsets.only(bottom: 120),
-              physics: const BouncingScrollPhysics(
-                parent: AlwaysScrollableScrollPhysics(),
-              ),
-              children: [
-                section(
-                  HomeHeader(
-                    household: household,
-                    displayName: displayName,
-                    onMembers: () => context.push('/members'),
-                    onSelected: _handleMenu,
-                  ),
-                  index: 0,
+            child: FtRefreshable(
+              onRefresh: () async {
+                ref.invalidate(currentHouseholdProvider);
+                ref.invalidate(cycleExpensesProvider);
+                ref.invalidate(cycleIncomesProvider);
+                ref.invalidate(recentExpensesProvider(5));
+                ref.invalidate(cardsProvider(household.id));
+                ref.invalidate(goalsProvider(household.id));
+                ref.invalidate(investmentsProvider(household.id));
+                ref.invalidate(previousCyclesExpensesProvider);
+                ref.invalidate(netWorthHistoryProvider);
+                await ftRefreshDelay();
+              },
+              child: ListView(
+                padding: const EdgeInsets.only(bottom: 120),
+                physics: const BouncingScrollPhysics(
+                  parent: AlwaysScrollableScrollPhysics(),
                 ),
-                section(
-                  AssetHeroCard(
-                    nw: nw,
-                    cycleNet: income - totalSpentValue,
-                    trend: trend,
-                    onTap: () => context.push('/accounts'),
-                  ),
-                  index: 1,
-                ),
-                if (status != BudgetStatus.ok)
-                  section(BudgetBanner(status: status), index: 2),
-                for (var i = 0; i < dueBanners.length; i++)
-                  section(dueBanners[i], index: 3 + i),
-                section(
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(22, 0, 22, 16),
-                    child: IntrinsicHeight(
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Expanded(
-                            flex: 13,
-                            child: MonthStrip(
-                              totalSpent: totalSpentValue,
-                              income: income,
-                              daily: daily,
-                              todaySpend: expenses
-                                  .where((e) =>
-                                      e.date.year == now.year &&
-                                      e.date.month == now.month &&
-                                      e.date.day == now.day)
-                                  .fold<int>(0, (a, e) => a + e.amount),
-                              cycleStart: cycle.start,
-                              cycleEndExclusive: cycle.endExclusive,
-                              compact: true,
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            flex: 10,
-                            child: HealthSnapshot(
-                              score: health,
-                              onTap: () => context.push('/health'),
-                              compact: true,
-                            ),
-                          ),
-                        ],
-                      ),
+                children: [
+                  section(
+                    HomeHeader(
+                      household: household,
+                      displayName: displayName,
+                      onMembers: () => context.push('/members'),
+                      onSelected: _handleMenu,
                     ),
+                    index: 0,
                   ),
-                  index: 4,
-                ),
-                section(
-                  CategoryGrid(
-                    categories: categories.take(4).toList(),
-                    totals: byCat,
-                    onTap: () => context.push('/spend'),
+                  section(
+                    HomeHeroCarousel(
+                      nw: nw,
+                      trend: trend,
+                      cycleNet: cycleNet,
+                      spend: totalSpentValue,
+                      gajiIncome: gajiIncome,
+                      cards: cards,
+                      health: health,
+                    ),
+                    index: 1,
                   ),
-                  index: 5,
-                ),
-                section(
-                  CardsPreview(
-                    cards: cards,
-                    onTap: () => context.push('/cards'),
+                  for (var i = 0; i < dueBanners.length; i++)
+                    section(dueBanners[i], index: 2 + i),
+                  section(
+                    CategoryGrid(
+                      categories: categories.take(4).toList(),
+                      totals: byCat,
+                      onTap: () => context.push('/spend'),
+                    ),
+                    index: 3,
                   ),
-                  index: 6,
-                ),
-                section(
-                  GoalsPreview(
-                    goals: goals,
-                    onTap: () => context.push('/goals'),
+                  section(
+                    GoalsPreview(
+                      goals: goals,
+                      onTap: () => context.push('/goals'),
+                    ),
+                    index: 4,
                   ),
-                  index: 7,
-                ),
-                section(
-                  RecentList(
-                    recentAsync: recentAsync,
-                    household: household,
-                    onTap: () => context.push('/expenses'),
+                  section(
+                    RecentList(
+                      recentAsync: recentAsync,
+                      household: household,
+                      onTap: () => context.push('/expenses'),
+                    ),
+                    index: 5,
                   ),
-                  index: 8,
-                ),
-              ],
+                ],
+              ),
             ),
           );
         },

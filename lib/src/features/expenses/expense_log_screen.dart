@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/formatters.dart';
 import '../../core/payday.dart';
 import '../../theme.dart';
+import '../../ui/ft_refresh.dart';
 import '../../ui/ft_ui.dart';
 import '../home/widgets/home_formatters.dart';
 import '../household/household.dart';
@@ -92,7 +93,13 @@ class _ExpenseLogScreenState extends ConsumerState<ExpenseLogScreen> {
                 ),
               ),
             Expanded(
-              child: expensesStream.when(
+              child: FtRefreshable(
+                onRefresh: () async {
+                  ref.invalidate(currentHouseholdProvider);
+                  ref.invalidate(_expensesProvider(household.id));
+                  await ftRefreshDelay();
+                },
+                child: expensesStream.when(
                   loading: () =>
                       const Center(child: CircularProgressIndicator()),
                   error: (e, _) => Center(child: Text('Gagal: $e')),
@@ -110,25 +117,30 @@ class _ExpenseLogScreenState extends ConsumerState<ExpenseLogScreen> {
                     }).toList();
 
                     if (filtered.isEmpty) {
-                      return Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(32),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.receipt_long_outlined,
-                                size: 48,
-                                color: FtColors.ink4,
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Belum ada pengeluaran di siklus ini\n(${Dates.short(cycle.start)} – ${Dates.short(cycle.endExclusive.subtract(const Duration(days: 1)))})',
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
-                          ),
+                      return ListView(
+                        physics: const BouncingScrollPhysics(
+                          parent: AlwaysScrollableScrollPhysics(),
                         ),
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.all(32),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.receipt_long_outlined,
+                                  size: 48,
+                                  color: FtColors.ink4,
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Belum ada pengeluaran di siklus ini\n(${Dates.short(cycle.start)} – ${Dates.short(cycle.endExclusive.subtract(const Duration(days: 1)))})',
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       );
                     }
 
@@ -142,6 +154,9 @@ class _ExpenseLogScreenState extends ConsumerState<ExpenseLogScreen> {
 
                     return ListView.builder(
                       padding: const EdgeInsets.only(top: 2, bottom: 120),
+                      physics: const BouncingScrollPhysics(
+                        parent: AlwaysScrollableScrollPhysics(),
+                      ),
                       itemCount: days.length,
                       itemBuilder: (_, dayIdx) {
                         final day = days[dayIdx];
@@ -193,6 +208,7 @@ class _ExpenseLogScreenState extends ConsumerState<ExpenseLogScreen> {
                   },
                 ),
               ),
+            ),
           ],
         ),
       ),

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/expense_aggregations.dart';
 import '../../core/health_score.dart';
 import '../../theme.dart';
+import '../../ui/ft_refresh.dart';
 import '../../ui/ft_ring.dart';
 import '../../ui/ft_ui.dart';
 import '../cards/cards_screen.dart';
@@ -76,8 +77,20 @@ class HealthScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: FtColors.bg,
-      body: ListView(
+      body: FtRefreshable(
+        onRefresh: () async {
+          ref.invalidate(currentHouseholdProvider);
+          ref.invalidate(cycleExpensesProvider);
+          ref.invalidate(previousCyclesExpensesProvider);
+          ref.invalidate(cardsProvider(household.id));
+          ref.invalidate(investmentsProvider(household.id));
+          await ftRefreshDelay();
+        },
+        child: ListView(
         padding: const EdgeInsets.only(bottom: 32),
+        physics: const BouncingScrollPhysics(
+          parent: AlwaysScrollableScrollPhysics(),
+        ),
         children: [
           const FtSubHeader(title: 'Kesehatan Finansial'),
           HealthHero(score: score),
@@ -112,6 +125,7 @@ class HealthScreen extends ConsumerWidget {
             onRoute: (route) => context.push(route),
           ),
         ],
+      ),
       ),
     );
   }

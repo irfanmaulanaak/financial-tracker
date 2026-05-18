@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/formatters.dart';
 import '../../../core/hide_assets_provider.dart';
 import '../../../theme.dart';
+import '../../../ui/ft_refresh.dart';
 import '../../../ui/ft_ui.dart';
+import '../../household/household_providers.dart' show currentHouseholdProvider;
 import '../../home/widgets/home_formatters.dart';
 import '../../household/household.dart';
 import '../account.dart';
@@ -92,8 +94,16 @@ class _AccountTabState extends ConsumerState<AccountTab> {
         .isNotEmpty;
     final items = _items()..sort((a, b) => b.value.compareTo(a.value));
     if (!hasAny) {
-      return ListView(
+      return FtRefreshable(
+        onRefresh: () async {
+          ref.invalidate(currentHouseholdProvider);
+          await ftRefreshDelay();
+        },
+        child: ListView(
         padding: const EdgeInsets.fromLTRB(22, 28, 22, 120),
+        physics: const BouncingScrollPhysics(
+          parent: AlwaysScrollableScrollPhysics(),
+        ),
         children: [
           Center(
             child: Column(
@@ -120,10 +130,19 @@ class _AccountTabState extends ConsumerState<AccountTab> {
           const SizedBox(height: 20),
           FtDashedAdd(label: _addLabel, onTap: widget.onAdd),
         ],
+        ),
       );
     }
-    return ListView(
+    return FtRefreshable(
+      onRefresh: () async {
+        ref.invalidate(currentHouseholdProvider);
+        await ftRefreshDelay();
+      },
+      child: ListView(
       padding: const EdgeInsets.fromLTRB(22, 4, 22, 120),
+      physics: const BouncingScrollPhysics(
+        parent: AlwaysScrollableScrollPhysics(),
+      ),
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -182,6 +201,7 @@ class _AccountTabState extends ConsumerState<AccountTab> {
         const SizedBox(height: 12),
         FtDashedAdd(label: _addLabel, onTap: widget.onAdd),
       ],
+      ),
     );
   }
 

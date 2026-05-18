@@ -23,6 +23,25 @@ class IncomeRepository {
         .map((s) => s.docs.map(Income.fromSnapshot).toList());
   }
 
+  /// Watches recent incomes credited to a given cash/savings account.
+  ///
+  /// Single-field `where` to dodge composite-index requirements; sort/slice
+  /// client-side.
+  Stream<List<Income>> watchByAccount({
+    required String hid,
+    required String accountId,
+    int limit = 100,
+  }) {
+    return _incomes(hid)
+        .where('destinationAccountId', isEqualTo: accountId)
+        .snapshots()
+        .map((s) {
+          final rows = s.docs.map(Income.fromSnapshot).toList()
+            ..sort((a, b) => b.date.compareTo(a.date));
+          return rows.length > limit ? rows.sublist(0, limit) : rows;
+        });
+  }
+
   /// Records income + bumps the destination account in the same transaction.
   /// Throws `StateError('account_missing')` if destination doesn't exist.
   Future<String> add({

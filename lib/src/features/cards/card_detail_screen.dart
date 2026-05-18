@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/formatters.dart';
 import '../../theme.dart';
+import '../../ui/ft_refresh.dart';
 import '../../ui/ft_ui.dart';
 import '../expenses/expense.dart';
 import '../expenses/expense_detail_sheet.dart';
@@ -146,8 +147,19 @@ class CardDetailScreen extends ConsumerWidget {
           return SafeArea(
             child: FtAppChrome(
               current: FtTab.cards,
-              child: ListView(
+              child: FtRefreshable(
+                onRefresh: () async {
+                  ref.invalidate(currentHouseholdProvider);
+                  ref.invalidate(_cardProvider((hid: household.id, cardId: cardId)));
+                  ref.invalidate(cardInstallmentsProvider((hid: household.id, cardId: cardId)));
+                  ref.invalidate(cardExpensesProvider((hid: household.id, cardId: cardId)));
+                  await ftRefreshDelay();
+                },
+                child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 120),
+                physics: const BouncingScrollPhysics(
+                  parent: AlwaysScrollableScrollPhysics(),
+                ),
                 children: [
                   FtSubHeader(
                     title: card.label,
@@ -250,6 +262,7 @@ class CardDetailScreen extends ConsumerWidget {
                   const FtSectionHeader(title: 'Pengeluaran kartu'),
                   _CardExpensesList(hid: household.id, cardId: cardId),
                 ],
+              ),
               ),
             ),
           );

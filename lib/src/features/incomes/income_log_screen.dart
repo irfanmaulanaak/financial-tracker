@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/formatters.dart';
 import '../../theme.dart';
+import '../../ui/ft_refresh.dart';
 import '../../ui/ft_ui.dart';
 import '../household/household_providers.dart';
 import '../household/name_format.dart';
@@ -34,24 +35,40 @@ class IncomeLogScreen extends ConsumerWidget {
           children: [
               const FtSubHeader(title: 'Pemasukan'),
               Expanded(
-                child: incomes.when(
+                child: FtRefreshable(
+                  onRefresh: () async {
+                    ref.invalidate(currentHouseholdProvider);
+                    ref.invalidate(_incomesProvider(household.id));
+                    await ftRefreshDelay();
+                  },
+                  child: incomes.when(
                   loading: () =>
                       const Center(child: CircularProgressIndicator()),
                   error: (e, _) => Center(child: Text('Gagal: $e')),
                   data: (items) {
                     if (items.isEmpty) {
-                      return Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(32),
-                          child: Text(
-                            'Belum ada pemasukan.',
-                            style: TextStyle(color: FtColors.ink3),
-                          ),
+                      return ListView(
+                        physics: const BouncingScrollPhysics(
+                          parent: AlwaysScrollableScrollPhysics(),
                         ),
+                        children: [
+                          Padding(
+                            padding: EdgeInsets.all(32),
+                            child: Center(
+                              child: Text(
+                                'Belum ada pemasukan.',
+                                style: TextStyle(color: FtColors.ink3),
+                              ),
+                            ),
+                          ),
+                        ],
                       );
                     }
                     return ListView.builder(
                       padding: const EdgeInsets.only(bottom: 120),
+                      physics: const BouncingScrollPhysics(
+                        parent: AlwaysScrollableScrollPhysics(),
+                      ),
                       itemCount: items.length,
                       itemBuilder: (_, i) {
                         final inc = items[i];
@@ -159,6 +176,7 @@ class IncomeLogScreen extends ConsumerWidget {
                       },
                     );
                   },
+                ),
                 ),
               ),
           ],

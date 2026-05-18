@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/formatters.dart';
 import '../../core/payday.dart';
 import '../../theme.dart';
+import '../../ui/ft_refresh.dart';
 import '../../ui/ft_ui.dart';
 import '../expenses/expense.dart';
 import '../expenses/expense_detail_sheet.dart';
@@ -58,8 +59,18 @@ class CategoryDetailScreen extends ConsumerWidget {
       backgroundColor: FtColors.bg,
       body: FtAppChrome(
         current: FtTab.spend,
-        child: ListView(
+        child: FtRefreshable(
+          onRefresh: () async {
+            ref.invalidate(currentHouseholdProvider);
+            ref.invalidate(_categoryExpensesProvider((hid: household.id, catId: categoryId)));
+            ref.invalidate(previousCyclesExpensesProvider);
+            await ftRefreshDelay();
+          },
+          child: ListView(
           padding: const EdgeInsets.only(bottom: 120),
+          physics: const BouncingScrollPhysics(
+            parent: AlwaysScrollableScrollPhysics(),
+          ),
           children: [
             FtSubHeader(title: category.label),
             _HeaderCard(
@@ -140,6 +151,7 @@ class CategoryDetailScreen extends ConsumerWidget {
               },
             ),
           ],
+        ),
         ),
       ),
     );

@@ -4,11 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/formatters.dart';
-import '../../core/home_layout_provider.dart';
 import '../../core/providers.dart';
 import '../../core/theme_provider.dart';
 import '../../theme.dart';
 import '../../ui/ft_haptics.dart';
+import '../../ui/ft_refresh.dart';
 import '../../ui/ft_ui.dart';
 import '../auth/auth_repository.dart';
 import '../home/widgets/home_formatters.dart';
@@ -28,7 +28,6 @@ class SettingsScreen extends ConsumerWidget {
     final household = ref.watch(currentHouseholdProvider).value;
     final user = ref.watch(authStateProvider).value;
     final themeMode = ref.watch(themeModeProvider);
-    final layout = ref.watch(homeLayoutProvider);
     final canFull = ref.watch(canWriteAllProvider);
 
     if (household == null || user == null) {
@@ -39,8 +38,16 @@ class SettingsScreen extends ConsumerWidget {
       backgroundColor: FtColors.bg,
       body: FtAppChrome(
         current: FtTab.home,
-        child: ListView(
+        child: FtRefreshable(
+          onRefresh: () async {
+            ref.invalidate(currentHouseholdProvider);
+            await ftRefreshDelay();
+          },
+          child: ListView(
           padding: const EdgeInsets.only(bottom: 120),
+          physics: const BouncingScrollPhysics(
+            parent: AlwaysScrollableScrollPhysics(),
+          ),
           children: [
             const FtSubHeader(title: 'Profil'),
             _ProfileCard(
@@ -68,7 +75,7 @@ class SettingsScreen extends ConsumerWidget {
                 );
               },
             ),
-            _DisplaySection(themeMode: themeMode, layout: layout, ref: ref),
+            _DisplaySection(themeMode: themeMode, ref: ref),
             HouseholdSection(
               household: household,
               canEdit: canFull,
@@ -108,6 +115,7 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ),
           ],
+        ),
         ),
       ),
     );
@@ -185,11 +193,9 @@ class _ProfileCard extends StatelessWidget {
 class _DisplaySection extends ConsumerWidget {
   const _DisplaySection({
     required this.themeMode,
-    required this.layout,
     required this.ref,
   });
   final ThemeMode themeMode;
-  final String layout;
   final WidgetRef ref;
 
   @override
@@ -225,30 +231,6 @@ class _DisplaySection extends ConsumerWidget {
                       onTap: () => ref
                           .read(themeModeProvider.notifier)
                           .setTheme(ThemeMode.dark),
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(),
-              SettingsToggleRow(
-                label: 'Tata Letak Beranda',
-                value: layout == 'B' ? 'Padat' : 'Editorial',
-                child: Row(
-                  children: [
-                    SettingsChoiceChip(
-                      label: 'Editorial',
-                      active: layout == 'A',
-                      onTap: () => ref
-                          .read(homeLayoutProvider.notifier)
-                          .setLayout('A'),
-                    ),
-                    const SizedBox(width: 8),
-                    SettingsChoiceChip(
-                      label: 'Padat',
-                      active: layout == 'B',
-                      onTap: () => ref
-                          .read(homeLayoutProvider.notifier)
-                          .setLayout('B'),
                     ),
                   ],
                 ),

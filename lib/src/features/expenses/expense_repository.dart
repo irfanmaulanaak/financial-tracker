@@ -71,6 +71,27 @@ class ExpenseRepository {
         });
   }
 
+  /// Watches recent expenses paid from a given cash/savings account.
+  ///
+  /// Server-side query is a single `where('sourceAccountId', isEqualTo: ...)`
+  /// to avoid needing a composite index. Sort by date desc and slice
+  /// client-side — for a 2–5 person household per-account row counts are
+  /// small enough that this is cheap.
+  Stream<List<Expense>> watchByAccount({
+    required String householdId,
+    required String accountId,
+    int limit = 100,
+  }) {
+    return _col(householdId)
+        .where('sourceAccountId', isEqualTo: accountId)
+        .snapshots()
+        .map((s) {
+          final rows = s.docs.map(Expense.fromSnapshot).toList()
+            ..sort((a, b) => b.date.compareTo(a.date));
+          return rows.length > limit ? rows.sublist(0, limit) : rows;
+        });
+  }
+
   Stream<List<Expense>> watchByCategory({
     required String householdId,
     required String categoryId,

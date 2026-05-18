@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/formatters.dart';
 import '../../core/providers.dart';
 import '../../theme.dart';
+import '../../ui/ft_refresh.dart';
 import '../../ui/ft_ring.dart';
 import '../../ui/ft_ui.dart';
 import '../goals/contribution.dart';
@@ -90,8 +91,18 @@ class _Body extends ConsumerWidget {
 
     return FtAppChrome(
       current: FtTab.goals,
-      child: ListView(
+      child: FtRefreshable(
+        onRefresh: () async {
+          ref.invalidate(currentHouseholdProvider);
+          ref.invalidate(_goalProvider((hid: householdId, goalId: goal.id)));
+          ref.invalidate(goalContributionsProvider((hid: householdId, goalId: goal.id)));
+          await ftRefreshDelay();
+        },
+        child: ListView(
         padding: const EdgeInsets.only(bottom: 120),
+        physics: const BouncingScrollPhysics(
+          parent: AlwaysScrollableScrollPhysics(),
+        ),
         children: [
           FtSubHeader(
             title: goal.label,
@@ -258,6 +269,7 @@ class _Body extends ConsumerWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }

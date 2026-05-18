@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../theme.dart';
 import '../../ui/ft_haptics.dart';
+import '../../ui/ft_refresh.dart';
 import '../../ui/ft_ui.dart';
+import '../household/household_providers.dart';
 import 'notification_providers.dart';
 
 /// Notifications feed — `claude-design/screens-extras.jsx > NotificationsScreen`.
@@ -36,16 +38,36 @@ class NotificationsScreen extends ConsumerWidget {
                     ),
             ),
             Expanded(
-              child: feed.isEmpty
-                  ? _Empty()
-                  : ListView(
-                      padding: const EdgeInsets.only(bottom: 32),
-                      children: [
-                        if (fresh.isNotEmpty) _Group(label: 'Baru', items: fresh),
-                        if (week.isNotEmpty)
-                          _Group(label: 'Minggu ini', items: week),
-                      ],
-                    ),
+              child: FtRefreshable(
+                onRefresh: () async {
+                  ref.invalidate(currentHouseholdProvider);
+                  ref.invalidate(notificationsProvider);
+                  await ftRefreshDelay();
+                },
+                child: feed.isEmpty
+                    ? ListView(
+                        physics: const BouncingScrollPhysics(
+                          parent: AlwaysScrollableScrollPhysics(),
+                        ),
+                        children: [
+                          SizedBox(
+                            height: MediaQuery.sizeOf(context).height * 0.6,
+                            child: _Empty(),
+                          ),
+                        ],
+                      )
+                    : ListView(
+                        padding: const EdgeInsets.only(bottom: 32),
+                        physics: const BouncingScrollPhysics(
+                          parent: AlwaysScrollableScrollPhysics(),
+                        ),
+                        children: [
+                          if (fresh.isNotEmpty) _Group(label: 'Baru', items: fresh),
+                          if (week.isNotEmpty)
+                            _Group(label: 'Minggu ini', items: week),
+                        ],
+                      ),
+              ),
             ),
           ],
         ),

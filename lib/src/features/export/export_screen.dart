@@ -8,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../core/csv_export.dart';
 import '../../core/payday.dart';
 import '../../theme.dart';
+import '../../ui/ft_refresh.dart';
 import '../../ui/ft_ui.dart';
 import '../cards/credit_card.dart';
 import '../cards/cards_screen.dart';
@@ -131,8 +132,16 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
     final cycle = currentCycle(DateTime.now(), payday: household.payday);
     return Scaffold(
       backgroundColor: FtColors.bg,
-      body: ListView(
+      body: FtRefreshable(
+        onRefresh: () async {
+          ref.invalidate(currentHouseholdProvider);
+          await ftRefreshDelay();
+        },
+        child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+        physics: const BouncingScrollPhysics(
+          parent: AlwaysScrollableScrollPhysics(),
+        ),
         children: [
           const FtSubHeader(title: 'Ekspor data'),
             FtCard(
@@ -166,6 +175,7 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
             const Center(child: CircularProgressIndicator()),
           ],
         ],
+      ),
       ),
     );
   }

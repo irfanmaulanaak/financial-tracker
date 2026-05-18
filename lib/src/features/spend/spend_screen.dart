@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/expense_aggregations.dart';
 import '../../core/formatters.dart';
 import '../../theme.dart';
+import '../../ui/ft_refresh.dart';
 import '../../ui/ft_ui.dart';
 import '../expenses/expense.dart';
 import '../expenses/expense_providers.dart';
@@ -79,8 +80,18 @@ class _SpendScreenState extends ConsumerState<SpendScreen> {
       backgroundColor: FtColors.bg,
       body: FtAppChrome(
         current: FtTab.spend,
-        child: ListView(
+        child: FtRefreshable(
+          onRefresh: () async {
+            ref.invalidate(currentHouseholdProvider);
+            ref.invalidate(cycleExpensesProvider);
+            ref.invalidate(previousCyclesExpensesProvider);
+            await ftRefreshDelay();
+          },
+          child: ListView(
           padding: const EdgeInsets.only(bottom: 120),
+          physics: const BouncingScrollPhysics(
+            parent: AlwaysScrollableScrollPhysics(),
+          ),
           children: [
             const FtSubHeader(title: 'Pengeluaran Bulanan'),
             _Hero(
@@ -155,6 +166,7 @@ class _SpendScreenState extends ConsumerState<SpendScreen> {
               ),
             ),
           ],
+        ),
         ),
       ),
     );

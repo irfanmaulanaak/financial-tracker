@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/providers.dart';
 import '../../theme.dart';
 import '../../ui/ft_haptics.dart';
+import '../../ui/ft_refresh.dart';
 import '../../ui/ft_ui.dart';
 import '../expenses/expense_providers.dart';
 import '../household/household.dart';
@@ -43,8 +44,17 @@ class MemberDetailScreen extends ConsumerWidget {
       backgroundColor: FtColors.bg,
       body: SafeArea(
         bottom: false,
-        child: ListView(
+        child: FtRefreshable(
+          onRefresh: () async {
+            ref.invalidate(currentHouseholdProvider);
+            ref.invalidate(cycleExpensesProvider);
+            await ftRefreshDelay();
+          },
+          child: ListView(
           padding: const EdgeInsets.only(bottom: 32),
+          physics: const BouncingScrollPhysics(
+            parent: AlwaysScrollableScrollPhysics(),
+          ),
           children: [
             const FtSubHeader(title: 'Detail Anggota'),
             MemberHero(member: member, isMe: isMe),
@@ -90,6 +100,7 @@ class MemberDetailScreen extends ConsumerWidget {
                 ),
               ),
           ],
+        ),
         ),
       ),
     );

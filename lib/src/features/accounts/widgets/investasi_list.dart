@@ -5,7 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/formatters.dart';
 import '../../../core/hide_assets_provider.dart';
 import '../../../theme.dart';
+import '../../../ui/ft_refresh.dart';
 import '../../../ui/ft_ui.dart';
+import '../../household/household_providers.dart' show currentHouseholdProvider;
+import '../../investments/investments_screen.dart' show investmentsProvider;
 import '../../home/widgets/home_formatters.dart';
 import '../../investments/investment.dart';
 import '../../investments/investments_repository.dart';
@@ -25,12 +28,23 @@ class InvestasiList extends ConsumerWidget {
   final Object? error;
   final VoidCallback? onAdd;
 
+  Future<void> _onRefresh(WidgetRef ref) async {
+    ref.invalidate(currentHouseholdProvider);
+    ref.invalidate(investmentsProvider(householdId));
+    await ftRefreshDelay();
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final hidden = ref.watch(hideAssetsProvider);
     if (isLoading) {
-      return ListView(
+      return FtRefreshable(
+        onRefresh: () => _onRefresh(ref),
+        child: ListView(
         padding: const EdgeInsets.fromLTRB(22, 4, 22, 120),
+        physics: const BouncingScrollPhysics(
+          parent: AlwaysScrollableScrollPhysics(),
+        ),
         children: [
           FtShimmer(
             child: Container(
@@ -55,14 +69,20 @@ class InvestasiList extends ConsumerWidget {
             ),
           ],
         ],
+        ),
       );
     }
     if (error != null) {
       return Center(child: Text('Gagal: $error'));
     }
     final summary = summarisePortfolio(items);
-    return ListView(
+    return FtRefreshable(
+      onRefresh: () => _onRefresh(ref),
+      child: ListView(
       padding: const EdgeInsets.fromLTRB(22, 4, 22, 120),
+      physics: const BouncingScrollPhysics(
+        parent: AlwaysScrollableScrollPhysics(),
+      ),
       children: [
         InvestasiSummary(summary: summary, hidden: hidden),
         const SizedBox(height: 14),
@@ -90,6 +110,7 @@ class InvestasiList extends ConsumerWidget {
           FtDashedAdd(label: 'Tambah posisi investasi', onTap: onAdd!),
         ],
       ],
+      ),
     );
   }
 

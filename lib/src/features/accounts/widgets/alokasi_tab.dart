@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/allocation_recommendation.dart';
 import '../../../theme.dart';
 import '../../../ui/ft_donut.dart';
 import '../../../ui/ft_haptics.dart';
+import '../../../ui/ft_refresh.dart';
 import '../../../ui/ft_ui.dart';
 import '../../household/household.dart';
+import '../../household/household_providers.dart' show currentHouseholdProvider;
 import '../../investments/investment.dart';
 import 'rebalance_moves.dart';
 
 /// Allocation tab body: market context card → current/target donut +
 /// breakdown + summary → rebalancing moves list. Mirrors `AllocationView`
 /// in `claude-design/screens-assets.jsx`.
-class AlokasiTab extends StatefulWidget {
+class AlokasiTab extends ConsumerStatefulWidget {
   const AlokasiTab({
     super.key,
     required this.household,
@@ -22,10 +25,10 @@ class AlokasiTab extends StatefulWidget {
   final List<Investment> investments;
 
   @override
-  State<AlokasiTab> createState() => _AlokasiTabState();
+  ConsumerState<AlokasiTab> createState() => _AlokasiTabState();
 }
 
-class _AlokasiTabState extends State<AlokasiTab> {
+class _AlokasiTabState extends ConsumerState<AlokasiTab> {
   /// `false` = Sekarang (actual), `true` = Direkomendasikan (target).
   bool _showTarget = true;
 
@@ -48,8 +51,16 @@ class _AlokasiTabState extends State<AlokasiTab> {
     ];
 
     if (rec.totalValue == 0) {
-      return ListView(
+      return FtRefreshable(
+        onRefresh: () async {
+          ref.invalidate(currentHouseholdProvider);
+          await ftRefreshDelay();
+        },
+        child: ListView(
         padding: const EdgeInsets.fromLTRB(22, 16, 22, 120),
+        physics: const BouncingScrollPhysics(
+          parent: AlwaysScrollableScrollPhysics(),
+        ),
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 36),
@@ -62,11 +73,20 @@ class _AlokasiTabState extends State<AlokasiTab> {
             ),
           ),
         ],
+        ),
       );
     }
 
-    return ListView(
+    return FtRefreshable(
+      onRefresh: () async {
+        ref.invalidate(currentHouseholdProvider);
+        await ftRefreshDelay();
+      },
+      child: ListView(
       padding: const EdgeInsets.fromLTRB(22, 4, 22, 120),
+      physics: const BouncingScrollPhysics(
+        parent: AlwaysScrollableScrollPhysics(),
+      ),
       children: [
         _AllocationCard(
           showTarget: _showTarget,
@@ -96,6 +116,7 @@ class _AlokasiTabState extends State<AlokasiTab> {
           ),
         ),
       ],
+      ),
     );
   }
 }

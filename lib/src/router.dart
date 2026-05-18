@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'features/accounts/account_detail_screen.dart';
 import 'features/accounts/accounts_screen.dart';
 import 'features/auth/email_link_screen.dart';
 import 'features/auth/sign_in_screen.dart';
@@ -107,6 +108,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       _fadeRoute('/notifications', (_) => const NotificationsScreen()),
       _fadeRoute('/profile/edit', (_) => const EditProfileScreen()),
       _fadeRoute('/accounts', (_) => const AccountsScreen()),
+      _fadeRoute('/accounts/:accountId', (state) =>
+          AccountDetailScreen(accountId: state.pathParameters['accountId']!)),
       _fadeRoute('/incomes', (_) => const IncomeLogScreen()),
       _fadeRoute('/incomes/new', (_) => const RecordIncomeScreen()),
       _fadeRoute('/transfer/new', (_) => const TransferScreen()),
