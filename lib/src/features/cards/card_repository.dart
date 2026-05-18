@@ -51,6 +51,7 @@ class CardRepository {
     required int limit,
     int used = 0,
     int dueDay = 25,
+    int billingDay = 12,
     double apr = 0.18,
     String accent = '#3B82F6',
     double minPaymentPct = 0.10,
@@ -64,6 +65,7 @@ class CardRepository {
       limit: limit,
       used: used,
       dueDay: dueDay,
+      billingDay: billingDay,
       apr: apr,
       accent: accent,
       minPaymentPct: minPaymentPct,
@@ -79,6 +81,7 @@ class CardRepository {
     String? last4,
     int? limit,
     int? dueDay,
+    int? billingDay,
     double? apr,
     String? accent,
     double? minPaymentPct,
@@ -88,6 +91,7 @@ class CardRepository {
       'last4': ?last4,
       'limit': ?limit,
       'dueDay': ?dueDay,
+      'billingDay': ?billingDay,
       'apr': ?apr,
       'accent': ?accent,
       'minPaymentPct': ?minPaymentPct,
@@ -127,10 +131,11 @@ class CardRepository {
     await cardRef.delete();
   }
 
-  /// Applies the card's minimum payment: debits `amount` from the chosen
-  /// household account AND subtracts the same amount from `card.used`.
-  /// Returns the amount applied. Throws `card_missing`, `household_missing`,
-  /// `account_missing`, or `insufficient`.
+  /// Applies the card's minimum payment: debits the minimum from the chosen
+  /// household account. The card's `used` is reconciled by [recalcUsed]
+  /// after the tx — no in-flight write to `used` here. Returns the amount
+  /// applied. Throws `card_missing`, `household_missing`, `account_missing`,
+  /// or `insufficient`.
   Future<int> payMinimum({
     required String hid,
     required String cardId,
@@ -138,7 +143,7 @@ class CardRepository {
   }) async {
     final cardRef = _cards(hid).doc(cardId);
     final householdRef = _db.collection('households').doc(hid);
-    return _db.runTransaction<int>((tx) async {
+    final amount = await _db.runTransaction<int>((tx) async {
       final cardSnap = await tx.get(cardRef);
       if (!cardSnap.exists) throw StateError('card_missing');
       final card = CreditCard.fromSnapshot(cardSnap);
@@ -157,9 +162,10 @@ class CardRepository {
         sourceAccountId: sourceAccountId,
         amount: amount,
       );
-      tx.update(cardRef, {'used': card.used - amount});
       return amount;
     });
+    if (amount > 0) await recalcUsed(hid: hid, cardId: cardId);
+    return amount;
   }
 
   /// Pays a user-defined `amount` against the card from `sourceAccountId`.
@@ -174,7 +180,7 @@ class CardRepository {
     if (amount <= 0) return 0;
     final cardRef = _cards(hid).doc(cardId);
     final householdRef = _db.collection('households').doc(hid);
-    return _db.runTransaction<int>((tx) async {
+    final applied = await _db.runTransaction<int>((tx) async {
       final cardSnap = await tx.get(cardRef);
       if (!cardSnap.exists) throw StateError('card_missing');
       final card = CreditCard.fromSnapshot(cardSnap);
@@ -190,17 +196,17 @@ class CardRepository {
         sourceAccountId: sourceAccountId,
         amount: applied,
       );
-      tx.update(cardRef, {'used': card.used - applied});
       return applied;
     });
+    if (applied > 0) await recalcUsed(hid: hid, cardId: cardId);
+    return applied;
   }
 
   /// Pays this month's billing: sum of (each active installment's `monthly`)
-  /// plus any plain (non-cicilan) CC charges = `card.used - sum(remaining)`.
-  /// Debits the chosen account, decrements `card.used` by the same amount,
-  /// and advances each active installment's `monthsPaid` by one — all in a
-  /// single transaction so the cicilan progress and card balance stay in
-  /// sync. Returns the total amount paid (0 if nothing is due).
+  /// plus the card's plain (non-cicilan) charges. Debits the chosen account
+  /// and advances each active installment's `monthsPaid` by one in a single
+  /// transaction. [recalcUsed] runs post-tx to reconcile the card's `used`
+  /// under the BCA-style model. Returns the total amount paid.
   Future<int> payMonthlyBill({
     required String hid,
     required String cardId,
@@ -217,7 +223,7 @@ class CardRepository {
       final inst = Installment.fromSnapshot(d, cardId);
       if (!inst.isComplete) activeRefs.add(d.reference);
     }
-    return _db.runTransaction<int>((tx) async {
+    final amount = await _db.runTransaction<int>((tx) async {
       final cardSnap = await tx.get(cardRef);
       if (!cardSnap.exists) throw StateError('card_missing');
       final card = CreditCard.fromSnapshot(cardSnap);
@@ -248,29 +254,36 @@ class CardRepository {
         sourceAccountId: sourceAccountId,
         amount: amount,
       );
-      tx.update(cardRef, {
-        'used': (card.used - amount).clamp(0, 1 << 31),
-      });
       for (final (ref, inst) in activePlans) {
         tx.update(ref, {'monthsPaid': inst.monthsPaid + 1});
       }
       return amount;
     });
+    if (amount > 0) await recalcUsed(hid: hid, cardId: cardId);
+    return amount;
   }
 
-  /// Recomputes `card.used` from the source of truth: every expense charged
-  /// to this card. Plain CC expenses contribute their full `amount`; cicilan
-  /// expenses contribute the linked installment's `remainingAmount`
-  /// (`(monthsTotal - monthsPaid) * monthly`). Returns the new total.
+  /// Recomputes `card.used` from raw data using the BCA-style model:
+  ///   * Plain CC expenses contribute their full `amount`.
+  ///   * Cicilan expenses contribute `cicilanBlocked(...)` — the per-cicilan
+  ///     rule that pre-blocks full principal until the first billing date
+  ///     passes, then only blocks billed-but-unpaid installments.
   ///
-  /// Use this to heal drift from legacy data. Not transactional across the
-  /// expense query — Firestore transactions can't run queries — so a write
-  /// racing with this read can land on top of the new total. Acceptable for
-  /// a 2–5 user household.
+  /// Reads expenses + installments + the card outside the transaction
+  /// (Firestore txns can't run queries), then writes the new total in a
+  /// single update. Acceptable race-condition surface for a 2–5 user
+  /// household.
   Future<int> recalcUsed({
     required String hid,
     required String cardId,
+    DateTime? today,
   }) async {
+    final now = today ?? DateTime.now();
+    final cardRef = _cards(hid).doc(cardId);
+    final cardSnap = await cardRef.get();
+    if (!cardSnap.exists) throw StateError('card_missing');
+    final card = CreditCard.fromSnapshot(cardSnap);
+
     final expensesSnap = await _db
         .collection('households')
         .doc(hid)
@@ -288,22 +301,30 @@ class CardRepository {
       final exp = Expense.fromSnapshot(d);
       final planId = exp.installmentPlanId;
       if (planId != null) {
-        // Cicilan: count remaining debt. Orphaned plans (no installment doc)
-        // contribute nothing — same direction as delete(): they're gone.
+        // Cicilan: contribute the BCA-style blocked amount. Orphaned plans
+        // (no installment doc) contribute nothing — same direction as
+        // delete(): they're gone.
         final plan = installments[planId];
-        if (plan != null) total += plan.remainingAmount;
+        if (plan == null) continue;
+        total += cicilanBlocked(
+          monthsTotal: plan.monthsTotal,
+          monthsPaid: plan.monthsPaid,
+          monthly: plan.monthly,
+          startedAt: plan.startedAt,
+          today: now,
+          billingDay: card.billingDay,
+        );
       } else {
         total += exp.amount;
       }
     }
-    await _cards(hid).doc(cardId).update({'used': total});
+    await cardRef.update({'used': total});
     return total;
   }
 
-  /// Advances one month on a single installment: bumps `monthsPaid`, debits
-  /// `inst.monthly` from `card.used`, AND debits the same amount from
-  /// `sourceAccountId`. All atomic. Use this when the user pays just one
-  /// cicilan from the per-cicilan tile button.
+  /// Advances one month on a single installment: bumps `monthsPaid` and
+  /// debits `inst.monthly` from `sourceAccountId`. Card `used` is reconciled
+  /// by [recalcUsed] after the tx.
   Future<void> incrementInstallment({
     required String hid,
     required String cardId,
@@ -313,14 +334,16 @@ class CardRepository {
     final instRef = _installments(hid, cardId).doc(installmentId);
     final cardRef = _cards(hid).doc(cardId);
     final householdRef = _db.collection('households').doc(hid);
-    await _db.runTransaction((tx) async {
+    final didPay = await _db.runTransaction<bool>((tx) async {
       final instSnap = await tx.get(instRef);
       if (!instSnap.exists) throw StateError('installment_missing');
       final inst = Installment.fromSnapshot(instSnap, cardId);
-      if (inst.isComplete) return;
+      if (inst.isComplete) return false;
       final cardSnap = await tx.get(cardRef);
       if (!cardSnap.exists) throw StateError('card_missing');
-      final card = CreditCard.fromSnapshot(cardSnap);
+      // Card snapshot is read to validate existence (atomic with the
+      // monthsPaid bump). The actual `used` reconciliation happens via the
+      // post-tx recalcUsed call below.
       final hSnap = await tx.get(householdRef);
       if (!hSnap.exists) throw StateError('household_missing');
       final household = Household.fromSnapshot(hSnap);
@@ -331,11 +354,10 @@ class CardRepository {
         sourceAccountId: sourceAccountId,
         amount: inst.monthly,
       );
-      tx.update(cardRef, {
-        'used': (card.used - inst.monthly).clamp(0, 1 << 31),
-      });
       tx.update(instRef, {'monthsPaid': inst.monthsPaid + 1});
+      return true;
     });
+    if (didPay) await recalcUsed(hid: hid, cardId: cardId);
   }
 
   /// Debits `amount` from the cash- or savings-account matching

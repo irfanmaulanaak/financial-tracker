@@ -140,3 +140,89 @@ int minimumPayment({
   final raw = pct < floor ? floor : pct;
   return raw > balance ? balance : raw;
 }
+
+/// Counts how many statement-closing days have passed since `startedAt`,
+/// i.e. how many of a cicilan's installments the bank should have rolled into
+/// a bill by `today`.
+///
+/// Rule (mirrors BCA's behaviour):
+///   * If `startedAt <= billingDay-of-its-month`, the first billing crosses
+///     on the SAME month's billing day.
+///   * Otherwise the first crossing is the NEXT month's billing day.
+/// Subsequent crossings are one per month thereafter.
+///
+/// Returns 0 if no billing day has passed yet. Result is unbounded — callers
+/// cap at `monthsTotal` when computing per-cicilan amounts.
+int computeMonthsBilled({
+  required DateTime startedAt,
+  required DateTime today,
+  required int billingDay,
+}) {
+  if (!today.isAfter(startedAt) && !_sameDay(today, startedAt)) return 0;
+  final start = DateTime(startedAt.year, startedAt.month, startedAt.day);
+  final now = DateTime(today.year, today.month, today.day);
+  // First billing date is in start's month if start.day <= billingDay,
+  // otherwise next month.
+  final firstBillingMonth = start.day <= billingDay
+      ? DateTime(start.year, start.month, 1)
+      : DateTime(start.year, start.month + 1, 1);
+  final firstBillingDate = _clampToMonth(
+    firstBillingMonth.year,
+    firstBillingMonth.month,
+    billingDay,
+  );
+  if (now.isBefore(firstBillingDate)) return 0;
+  // Months between firstBillingMonth and now (inclusive of firstBillingMonth
+  // when today >= firstBillingDate, plus any subsequent months whose billing
+  // day has passed).
+  var count = 0;
+  var cursor = firstBillingMonth;
+  while (true) {
+    final billingDate =
+        _clampToMonth(cursor.year, cursor.month, billingDay);
+    if (now.isBefore(billingDate)) break;
+    count += 1;
+    cursor = DateTime(cursor.year, cursor.month + 1, 1);
+  }
+  return count;
+}
+
+/// Per-cicilan contribution to `card.used` under the BCA-style model:
+///   * If no billing has crossed yet (`monthsBilled == 0`), the bank still
+///     reserves the full unpaid principal+interest — this matches BCA's
+///     behaviour of pre-blocking just-approved cicilan.
+///   * Otherwise only the rolled-over-but-unpaid installments are blocked.
+///
+/// Inputs come from the [Installment] doc and the card's `billingDay`.
+int cicilanBlocked({
+  required int monthsTotal,
+  required int monthsPaid,
+  required int monthly,
+  required DateTime startedAt,
+  required DateTime today,
+  required int billingDay,
+}) {
+  if (monthsPaid >= monthsTotal) return 0;
+  final billed = computeMonthsBilled(
+    startedAt: startedAt,
+    today: today,
+    billingDay: billingDay,
+  );
+  if (billed == 0) {
+    return (monthsTotal - monthsPaid) * monthly;
+  }
+  final cappedBilled = billed > monthsTotal ? monthsTotal : billed;
+  final unpaidBilled = cappedBilled - monthsPaid;
+  return unpaidBilled <= 0 ? 0 : unpaidBilled * monthly;
+}
+
+DateTime _clampToMonth(int year, int month, int day) {
+  // 0th day of next month == last day of `month`. Used to clamp billingDay
+  // for short months (Feb 30 -> Feb 28/29).
+  final lastDay = DateTime(year, month + 1, 0).day;
+  final d = day > lastDay ? lastDay : day;
+  return DateTime(year, month, d);
+}
+
+bool _sameDay(DateTime a, DateTime b) =>
+    a.year == b.year && a.month == b.month && a.day == b.day;

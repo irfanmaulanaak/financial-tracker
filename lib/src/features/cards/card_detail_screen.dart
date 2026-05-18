@@ -75,6 +75,7 @@ class CardDetailScreen extends ConsumerWidget {
               last4: result.last4,
               limit: result.limit,
               dueDay: result.dueDay,
+              billingDay: result.billingDay,
               apr: result.apr,
               accent: result.accent,
               minPaymentPct: result.minPaymentPct,
@@ -267,9 +268,12 @@ class CardDetailScreen extends ConsumerWidget {
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Hitung ulang terpakai?'),
-        content: const Text(
-          'Saldo "Terpakai" akan dihitung ulang dari semua pengeluaran '
-          'kartu dan sisa cicilan. Berguna kalau angkanya kelihatan tidak sinkron.',
+        content: Text(
+          'Saldo "Terpakai" akan dihitung ulang dari pengeluaran kartu plus '
+          'cicilan yang sudah melewati tanggal tutup tagihan '
+          '(tgl ${card.billingDay}) tapi belum dibayar. Cicilan baru tetap '
+          'memblokir total pokok sampai tagihan pertama keluar — sama '
+          'seperti BCA.',
         ),
         actions: [
           TextButton(
@@ -326,6 +330,7 @@ class CardDetailScreen extends ConsumerWidget {
             newMonths: draft.months,
             newApr: draft.apr,
             newLabel: draft.label,
+            newDate: draft.newDate,
           );
     } catch (e) {
       if (context.mounted) {

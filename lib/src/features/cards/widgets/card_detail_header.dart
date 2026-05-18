@@ -77,7 +77,11 @@ class CardDetailHeader extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Jatuh tempo: tgl ${card.dueDay}  •  APR: ${(card.apr * 100).toStringAsFixed(1)}%',
+            'Tutup tagihan: tgl ${card.billingDay}  •  Jatuh tempo: tgl ${card.dueDay}',
+            style: const TextStyle(color: Colors.white70, fontSize: 12),
+          ),
+          Text(
+            'APR: ${(card.apr * 100).toStringAsFixed(1)}%',
             style: const TextStyle(color: Colors.white70, fontSize: 12),
           ),
         ],

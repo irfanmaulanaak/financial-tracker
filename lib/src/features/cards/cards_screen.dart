@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -23,11 +25,55 @@ final cardsProvider = StreamProvider.family<List<CreditCard>, String>((
   return ref.watch(cardRepositoryProvider).watchAll(hid);
 });
 
-class CardsScreen extends ConsumerWidget {
+class CardsScreen extends ConsumerStatefulWidget {
   const CardsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CardsScreen> createState() => _CardsScreenState();
+}
+
+class _CardsScreenState extends ConsumerState<CardsScreen> {
+  /// Tracks which (household, card) pairs have already been recalc'd this
+  /// session so we don't loop on every stream emit. Cleared when the
+  /// household changes.
+  final _autoSynced = <String>{};
+  bool _recalcAllRunning = false;
+
+  void _autoSyncIfNeeded(String hid, List<CreditCard> cards) {
+    final repo = ref.read(cardRepositoryProvider);
+    for (final c in cards) {
+      final key = '$hid/${c.id}';
+      if (_autoSynced.contains(key)) continue;
+      _autoSynced.add(key);
+      // Fire-and-forget. recalcUsed is idempotent; a failure here only
+      // means `used` stays stale until the user taps "Hitung ulang".
+      unawaited(repo.recalcUsed(hid: hid, cardId: c.id));
+    }
+  }
+
+  Future<void> _recalcAll(String hid, List<CreditCard> cards) async {
+    if (_recalcAllRunning || cards.isEmpty) return;
+    setState(() => _recalcAllRunning = true);
+    final repo = ref.read(cardRepositoryProvider);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      for (final c in cards) {
+        await repo.recalcUsed(hid: hid, cardId: c.id);
+      }
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('Hitung ulang ${cards.length} kartu selesai')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      showFtErrorSnack(context, e, prefix: 'Gagal hitung ulang semua');
+    } finally {
+      if (mounted) setState(() => _recalcAllRunning = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final household = ref.watch(currentHouseholdProvider).value;
     if (household == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -65,6 +111,12 @@ class CardsScreen extends ConsumerWidget {
         ),
         error: (e, _) => Center(child: Text('Gagal: $e')),
         data: (items) {
+          // Heal monthsBilled rollovers without user action — first emit
+          // per (hid, cardId) triggers a one-shot recalcUsed.
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            _autoSyncIfNeeded(household.id, items);
+          });
           final totalUsed = items.fold<int>(0, (a, b) => a + b.used);
           final totalLimit = items.fold<int>(0, (a, b) => a + b.limit);
           final totalMin = items.fold<int>(
@@ -86,7 +138,23 @@ class CardsScreen extends ConsumerWidget {
             child: ListView(
               padding: const EdgeInsets.only(bottom: 120),
               children: [
-                const FtSubHeader(title: 'Utang & Kartu Kredit'),
+                FtSubHeader(
+                  title: 'Utang & Kartu Kredit',
+                  trailing: IconButton(
+                    tooltip: 'Hitung ulang semua kartu',
+                    icon: _recalcAllRunning
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child:
+                                CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.refresh, size: 20),
+                    onPressed: items.isEmpty || _recalcAllRunning
+                        ? null
+                        : () => _recalcAll(household.id, items),
+                  ),
+                ),
                 FtCard(
                   margin: const EdgeInsets.fromLTRB(22, 4, 22, 18),
                   child: Column(
@@ -223,6 +291,7 @@ class CardsScreen extends ConsumerWidget {
             last4: result.last4,
             limit: result.limit,
             dueDay: result.dueDay,
+            billingDay: result.billingDay,
             apr: result.apr,
             accent: result.accent,
             minPaymentPct: result.minPaymentPct,

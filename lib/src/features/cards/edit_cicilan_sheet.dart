@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 
 import '../../core/formatters.dart';
 import '../record_common/installment_picker.dart';
@@ -10,11 +11,17 @@ class CicilanPlanDraft {
   final int months;
   final double apr;
   final String label;
+
+  /// Optional new transaction date. When set, the repo retroactively shifts
+  /// the cicilan's `startedAt` (and the linked expense's `date`) so the
+  /// BCA-style billing math anchors on the corrected day.
+  final DateTime? newDate;
   const CicilanPlanDraft({
     required this.principal,
     required this.months,
     required this.apr,
     required this.label,
+    this.newDate,
   });
 }
 
@@ -50,6 +57,7 @@ class _EditCicilanSheetState extends State<EditCicilanSheet> {
       TextEditingController(text: Money.displayDigits(widget.initial.total));
   late int _months = widget.initial.monthsTotal;
   late double _apr = widget.cardApr;
+  late DateTime _date = widget.initial.startedAt;
 
   @override
   void dispose() {
@@ -58,9 +66,20 @@ class _EditCicilanSheetState extends State<EditCicilanSheet> {
     super.dispose();
   }
 
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _date,
+      firstDate: DateTime(_date.year - 5),
+      lastDate: DateTime.now().add(const Duration(days: 1)),
+    );
+    if (picked != null) setState(() => _date = picked);
+  }
+
   void _save() {
     final principal = Money.parse(_principal.text) ?? 0;
     if (principal <= 0 || _label.text.trim().isEmpty) return;
+    final dateChanged = !_sameDay(_date, widget.initial.startedAt);
     Navigator.pop(
       context,
       CicilanPlanDraft(
@@ -68,9 +87,13 @@ class _EditCicilanSheetState extends State<EditCicilanSheet> {
         months: _months,
         apr: _months >= 12 ? _apr : 0.0,
         label: _label.text.trim(),
+        newDate: dateChanged ? _date : null,
       ),
     );
   }
+
+  static bool _sameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
 
   @override
   Widget build(BuildContext context) {
@@ -116,6 +139,18 @@ class _EditCicilanSheetState extends State<EditCicilanSheet> {
                 prefixText: 'Rp ',
               ),
               onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 12),
+            InkWell(
+              onTap: _pickDate,
+              borderRadius: BorderRadius.circular(8),
+              child: InputDecorator(
+                decoration: const InputDecoration(
+                  labelText: 'Tanggal transaksi',
+                  prefixIcon: Icon(Icons.event),
+                ),
+                child: Text(DateFormat('d MMM yyyy', 'id_ID').format(_date)),
+              ),
             ),
             const SizedBox(height: 16),
             const Text('Tenor', style: TextStyle(fontSize: 12)),

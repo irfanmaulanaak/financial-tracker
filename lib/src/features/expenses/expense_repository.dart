@@ -4,13 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/cicilan.dart';
 import '../../core/providers.dart';
 import '../accounts/account.dart';
-import '../cards/credit_card.dart';
+import '../cards/card_repository.dart';
 import '../household/household.dart';
 import 'expense.dart';
 
 class ExpenseRepository {
-  ExpenseRepository(this._db);
+  ExpenseRepository(this._db, this._cards);
   final FirebaseFirestore _db;
+  final CardRepository _cards;
 
   CollectionReference<Map<String, dynamic>> _col(String hid) =>
       _db.collection('households').doc(hid).collection('expenses');
@@ -208,8 +209,9 @@ class ExpenseRepository {
     return expenseRef.id;
   }
 
-  /// Records a credit-card expense and bumps `card.used` by `amount` in one
-  /// transaction. Throws `card_missing` if the card doesn't exist.
+  /// Records a credit-card expense. `card.used` is reconciled post-tx via
+  /// [CardRepository.recalcUsed] so the BCA-style formula stays the single
+  /// source of truth. Throws `card_missing` if the card doesn't exist.
   Future<String> addCardExpense({
     required String householdId,
     required int amount,
@@ -227,17 +229,16 @@ class ExpenseRepository {
         docId != null ? _col(householdId).doc(docId) : _col(householdId).doc();
     final cardRef = _cardDoc(householdId, cardId);
 
-    await _db.runTransaction((tx) async {
+    final wrote = await _db.runTransaction<bool>((tx) async {
       // Idempotency: deterministic [docId] (recurring runner) skips when
       // the row already exists so concurrent devices don't double-charge
       // the card.
       if (docId != null) {
         final eSnap = await tx.get(expenseRef);
-        if (eSnap.exists) return;
+        if (eSnap.exists) return false;
       }
       final cardSnap = await tx.get(cardRef);
       if (!cardSnap.exists) throw StateError('card_missing');
-      final card = CreditCard.fromSnapshot(cardSnap);
 
       final exp = Expense(
         id: expenseRef.id,
@@ -254,15 +255,17 @@ class ExpenseRepository {
         createdBy: spentBy,
       );
       tx.set(expenseRef, exp.toMap());
-      tx.update(cardRef, {'used': card.used + amount});
+      return true;
     });
+    if (wrote) await _cards.recalcUsed(hid: householdId, cardId: cardId);
     return expenseRef.id;
   }
 
   /// Cicilan flow: computes the plan, writes expense (amount = principal),
-  /// creates the installment doc, and bumps `card.used` by the plan's `total`
-  /// (the full remaining debt is added to the card immediately, then the
-  /// monthly progression / `pay-minimum` reduces it over time).
+  /// creates the installment doc with `startedAt = date` (so the BCA-style
+  /// `cicilanBlocked` math anchors on the transaction date), then triggers
+  /// [CardRepository.recalcUsed] post-tx so `card.used` reflects the new
+  /// blocked amount.
   ///
   /// Returns the new expense ID.
   Future<({String expenseId, String installmentId, CicilanPlan plan})>
@@ -293,7 +296,6 @@ class ExpenseRepository {
     await _db.runTransaction((tx) async {
       final cardSnap = await tx.get(cardRef);
       if (!cardSnap.exists) throw StateError('card_missing');
-      final card = CreditCard.fromSnapshot(cardSnap);
 
       final exp = Expense(
         id: expenseRef.id,
@@ -317,10 +319,10 @@ class ExpenseRepository {
         'monthly': plan.monthly,
         'monthsTotal': months,
         'monthsPaid': 0,
-        'startedAt': Timestamp.fromDate(ts),
+        'startedAt': Timestamp.fromDate(date),
       });
-      tx.update(cardRef, {'used': card.used + plan.total});
     });
+    await _cards.recalcUsed(hid: householdId, cardId: cardId);
     return (
       expenseId: expenseRef.id,
       installmentId: installmentRef.id,
@@ -328,13 +330,15 @@ class ExpenseRepository {
     );
   }
 
-  /// Edits an existing cicilan plan in one transaction. Reverses the plan's
-  /// **remaining** debt from `card.used`, recomputes the plan with the new
-  /// principal/months/apr, applies the fresh `plan.total` to `card.used`,
-  /// resets `monthsPaid` to 0, and rewrites the linked expense's `amount`.
+  /// Edits an existing cicilan plan in one transaction. Recomputes the plan
+  /// with the new principal/months/apr, resets `monthsPaid` to 0, rewrites
+  /// the linked expense's `amount`. Optional [newDate] retroactively shifts
+  /// the cicilan's `startedAt` (and the expense `date`) so the BCA-style
+  /// `monthsBilled` math lines up with the bank's transaction date.
   ///
   /// Card swap is NOT supported here (cicilan stays on its original card).
-  /// All other meta (category, date, note, spentBy, recurring) is preserved.
+  /// All other meta (category, note, spentBy, recurring) is preserved.
+  /// `card.used` is reconciled via [CardRepository.recalcUsed] after the tx.
   ///
   /// Throws `expense_missing`, `installment_missing`, or `card_missing`.
   Future<void> updateCicilanPlan({
@@ -344,6 +348,7 @@ class ExpenseRepository {
     required int newMonths,
     required double newApr,
     String? newLabel,
+    DateTime? newDate,
     InterestModel model = InterestModel.flat,
   }) async {
     final newPlan = computeCicilan(
@@ -353,6 +358,7 @@ class ExpenseRepository {
       model: model,
     );
     final expenseRef = _col(householdId).doc(expenseId);
+    String? touchedCardId;
     await _db.runTransaction((tx) async {
       final eSnap = await tx.get(expenseRef);
       if (!eSnap.exists) throw StateError('expense_missing');
@@ -368,19 +374,14 @@ class ExpenseRepository {
       final cardSnap = await tx.get(cardRef);
       if (!cardSnap.exists) throw StateError('card_missing');
 
-      final oldPlan = Installment.fromSnapshot(instSnap, old.cardId!);
-      final card = CreditCard.fromSnapshot(cardSnap);
-      final oldRemaining = oldPlan.remainingAmount;
-      final nextUsed =
-          (card.used - oldRemaining + newPlan.total).clamp(0, 1 << 31);
-
-      tx.update(cardRef, {'used': nextUsed});
+      final effectiveDate = newDate ?? old.date;
       tx.update(instRef, {
         'label': ?newLabel,
         'total': newPlan.total,
         'monthly': newPlan.monthly,
         'monthsTotal': newMonths,
         'monthsPaid': 0,
+        if (newDate != null) 'startedAt': Timestamp.fromDate(newDate),
       });
       tx.set(
         expenseRef,
@@ -391,7 +392,7 @@ class ExpenseRepository {
           paymentMethodId: old.paymentMethodId,
           note: old.note,
           spentBy: old.spentBy,
-          date: old.date,
+          date: effectiveDate,
           recurring: old.recurring,
           cardId: old.cardId,
           installmentPlanId: old.installmentPlanId,
@@ -400,20 +401,27 @@ class ExpenseRepository {
           createdBy: old.createdBy,
         ).toMap(),
       );
+      touchedCardId = old.cardId;
     });
+    if (touchedCardId != null) {
+      await _cards.recalcUsed(hid: householdId, cardId: touchedCardId!);
+    }
   }
 
-  /// Edits an expense atomically. Reverses the old balance side-effect
-  /// (account refund or `card.used` reduction) and applies the new one in
-  /// a single transaction. Supports lane swap (cash <-> credit) and changing
-  /// the source account or card.
+  /// Edits an expense atomically. Reverses the old account refund and applies
+  /// the new debit in a single transaction. Supports lane swap
+  /// (cash <-> credit) and changing the source account or card. Card-side
+  /// totals are reconciled via [CardRepository.recalcUsed] post-tx.
   ///
   /// Cicilan rule: when the existing row is a cicilan expense
   /// (`installmentPlanId != null`), only [newCategoryId], [newSpentBy],
   /// [newDate], [newNote], and [newRecurring] are honoured — the lane,
   /// amount, card, and installment plan stay locked. Pass through the
   /// original values for those fields. The repo throws
-  /// `cicilan_edit_locked` if the caller tries to change them.
+  /// `cicilan_edit_locked` if the caller tries to change them. When [newDate]
+  /// differs from the existing date, the linked installment's `startedAt`
+  /// is moved to match, so the BCA-style billing math anchors on the new
+  /// transaction date.
   ///
   /// Errors mirror the create paths:
   /// - `expense_missing`, `household_missing`, `card_missing`
@@ -434,6 +442,7 @@ class ExpenseRepository {
     final expenseRef = _col(householdId).doc(expenseId);
     final householdRef = _db.collection('households').doc(householdId);
 
+    final affectedCardIds = <String>{};
     await _db.runTransaction((tx) async {
       final eSnap = await tx.get(expenseRef);
       if (!eSnap.exists) throw StateError('expense_missing');
@@ -448,7 +457,7 @@ class ExpenseRepository {
         if (laneChanged) throw StateError('cicilan_edit_locked');
       }
 
-      // Resolve old + new lane refs up front.
+      // Resolve old + new lane refs up front (card refs validated via reads).
       final oldCardRef = old.cardId != null
           ? _cardDoc(householdId, old.cardId!)
           : null;
@@ -461,30 +470,20 @@ class ExpenseRepository {
       if (!hSnap.exists) throw StateError('household_missing');
       final household = Household.fromSnapshot(hSnap);
 
-      CreditCard? oldCard;
       if (oldCardRef != null) {
         final s = await tx.get(oldCardRef);
-        if (s.exists) oldCard = CreditCard.fromSnapshot(s);
+        if (s.exists) affectedCardIds.add(old.cardId!);
       }
-      CreditCard? newCard;
       if (newCardRef != null && newCardRef.path != oldCardRef?.path) {
         final s = await tx.get(newCardRef);
         if (!s.exists) throw StateError('card_missing');
-        newCard = CreditCard.fromSnapshot(s);
+        affectedCardIds.add(newCardId!);
       }
 
-      // 2) Reverse old account/card effect in-memory.
+      // 2) Account-side reversal/debit (card side handled by recalcUsed).
       var cashAccounts = household.cashAccounts;
       var savingsAccounts = household.savingsAccounts;
-      final cardUsed = <String, int>{};
-      if (oldCard != null) cardUsed[oldCard.id] = oldCard.used;
-      if (newCard != null) cardUsed[newCard.id] = newCard.used;
-
-      if (old.cardId != null && !isCicilan) {
-        // Plain CC: reverse oldAmount.
-        final cur = cardUsed[old.cardId!] ?? 0;
-        cardUsed[old.cardId!] = (cur - old.amount).clamp(0, 1 << 31).toInt();
-      } else if (old.sourceAccountId != null) {
+      if (old.cardId == null && old.sourceAccountId != null) {
         final res = _refundAccount(
           cashAccounts: cashAccounts,
           savingsAccounts: savingsAccounts,
@@ -496,26 +495,18 @@ class ExpenseRepository {
           savingsAccounts = res.$2;
         }
       }
-
-      // 3) Apply new side-effect. Cicilan keeps the original lane untouched
-      //    (we already reversed nothing for cicilan above).
-      if (!isCicilan) {
-        if (newCardId != null) {
-          final cur = cardUsed[newCardId] ?? 0;
-          cardUsed[newCardId] = cur + newAmount;
-        } else if (newSourceAccountId != null) {
-          final res = _debitAccount(
-            cashAccounts: cashAccounts,
-            savingsAccounts: savingsAccounts,
-            accountId: newSourceAccountId,
-            amount: newAmount,
-          );
-          cashAccounts = res.$1;
-          savingsAccounts = res.$2;
-        }
+      if (!isCicilan && newCardId == null && newSourceAccountId != null) {
+        final res = _debitAccount(
+          cashAccounts: cashAccounts,
+          savingsAccounts: savingsAccounts,
+          accountId: newSourceAccountId,
+          amount: newAmount,
+        );
+        cashAccounts = res.$1;
+        savingsAccounts = res.$2;
       }
 
-      // 4) Persist updated expense + balances.
+      // 3) Persist updated expense + (optionally) installment startedAt sync.
       final updated = Expense(
         id: old.id,
         amount: isCicilan ? old.amount : newAmount,
@@ -533,6 +524,15 @@ class ExpenseRepository {
       );
       tx.set(expenseRef, updated.toMap());
 
+      if (isCicilan &&
+          old.cardId != null &&
+          old.installmentPlanId != null &&
+          !_sameDay(old.date, newDate)) {
+        final instRef = _installments(householdId, old.cardId!)
+            .doc(old.installmentPlanId!);
+        tx.update(instRef, {'startedAt': Timestamp.fromDate(newDate)});
+      }
+
       final touchedAccounts = !identical(cashAccounts, household.cashAccounts) ||
           !identical(savingsAccounts, household.savingsAccounts);
       if (touchedAccounts) {
@@ -541,11 +541,14 @@ class ExpenseRepository {
           'savingsAccounts': savingsAccounts.map((a) => a.toMap()).toList(),
         });
       }
-      cardUsed.forEach((cid, used) {
-        tx.update(_cardDoc(householdId, cid), {'used': used});
-      });
     });
+    for (final cid in affectedCardIds) {
+      await _cards.recalcUsed(hid: householdId, cardId: cid);
+    }
   }
+
+  static bool _sameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
 
   /// Returns updated (cash, savings) lists with [amount] added back to the
   /// account matching [accountId]. Returns null if the account doesn't exist
@@ -616,13 +619,9 @@ class ExpenseRepository {
   /// - cash/debit/e-wallet expense w/ `sourceAccountId`: refunds that
   ///   household cash- or savings-account by the same `amount`
   /// - cash/debit/e-wallet expense w/o source (legacy): removes the row only
-  /// - credit-card expense: reverses `card.used` by the same `amount`
-  ///   (clamped at zero in case of stale data)
-  /// - cicilan expense: deletes the linked installment doc AND reverses
-  ///   `card.used` by the **remaining** debt
-  ///   (`(monthsTotal - monthsPaid) * monthly`). Each "Bayar bulan ini" tap
-  ///   already debits one month's `monthly` from `card.used`, so on delete
-  ///   we only reverse what's left.
+  /// - credit-card expense: row + linked installment (if any) are deleted in
+  ///   the tx; `card.used` is reconciled via [CardRepository.recalcUsed]
+  ///   post-tx so the BCA-style formula stays the single source of truth.
   Future<void> delete({
     required String householdId,
     required String expenseId,
@@ -630,36 +629,20 @@ class ExpenseRepository {
     final expenseRef = _col(householdId).doc(expenseId);
     final householdRef =
         _db.collection('households').doc(householdId);
+    String? touchedCardId;
     await _db.runTransaction((tx) async {
       final eSnap = await tx.get(expenseRef);
       if (!eSnap.exists) return;
       final expense = Expense.fromSnapshot(eSnap);
 
-      // Cicilan: reverse via the installment plan total (matches the add
-      // path that bumps card.used by plan.total).
       if (expense.cardId != null && expense.installmentPlanId != null) {
-        final instRef =
-            _installments(householdId, expense.cardId!).doc(expense.installmentPlanId!);
+        final instRef = _installments(householdId, expense.cardId!)
+            .doc(expense.installmentPlanId!);
         final instSnap = await tx.get(instRef);
-        final cardRef = _cardDoc(householdId, expense.cardId!);
-        final cardSnap = await tx.get(cardRef);
-        if (cardSnap.exists && instSnap.exists) {
-          final card = CreditCard.fromSnapshot(cardSnap);
-          final plan = Installment.fromSnapshot(instSnap, expense.cardId!);
-          final remaining = plan.remainingAmount;
-          final next = (card.used - remaining).clamp(0, 1 << 31);
-          tx.update(cardRef, {'used': next});
-        }
         if (instSnap.exists) tx.delete(instRef);
+        touchedCardId = expense.cardId;
       } else if (expense.cardId != null) {
-        // Plain CC expense.
-        final cardRef = _cardDoc(householdId, expense.cardId!);
-        final cardSnap = await tx.get(cardRef);
-        if (cardSnap.exists) {
-          final card = CreditCard.fromSnapshot(cardSnap);
-          final next = (card.used - expense.amount).clamp(0, 1 << 31);
-          tx.update(cardRef, {'used': next});
-        }
+        touchedCardId = expense.cardId;
       } else if (expense.sourceAccountId != null) {
         // Cash/debit/e-wallet expense with a tracked source account: refund
         // it. If the account no longer exists (deleted between record +
@@ -695,9 +678,15 @@ class ExpenseRepository {
       }
       tx.delete(expenseRef);
     });
+    if (touchedCardId != null) {
+      await _cards.recalcUsed(hid: householdId, cardId: touchedCardId!);
+    }
   }
 }
 
 final expenseRepositoryProvider = Provider<ExpenseRepository>((ref) {
-  return ExpenseRepository(ref.watch(firestoreProvider));
+  return ExpenseRepository(
+    ref.watch(firestoreProvider),
+    ref.watch(cardRepositoryProvider),
+  );
 });

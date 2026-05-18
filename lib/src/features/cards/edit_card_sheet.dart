@@ -13,6 +13,7 @@ class CardDraft {
   final String last4;
   final int limit;
   final int dueDay;
+  final int billingDay;
   final double apr;
   final String accent;
   final double minPaymentPct;
@@ -22,6 +23,7 @@ class CardDraft {
     required this.last4,
     required this.limit,
     required this.dueDay,
+    required this.billingDay,
     required this.apr,
     required this.accent,
     required this.minPaymentPct,
@@ -51,6 +53,7 @@ class _EditCardSheetState extends ConsumerState<EditCardSheet> {
           ? Money.displayDigits(widget.initial!.limit)
           : '');
   late int _dueDay = widget.initial?.dueDay ?? 25;
+  late int _billingDay = widget.initial?.billingDay ?? 12;
   late double _apr = widget.initial?.apr ?? 0.18;
   late double _minPct = widget.initial?.minPaymentPct ?? 0.10;
   late String _accent = widget.initial?.accent ?? '#3B82F6';
@@ -87,6 +90,7 @@ class _EditCardSheetState extends ConsumerState<EditCardSheet> {
         last4: _last4.text.trim(),
         limit: limit,
         dueDay: _dueDay,
+        billingDay: _billingDay,
         apr: _apr,
         accent: _accent,
         minPaymentPct: _minPct,
@@ -169,6 +173,21 @@ class _EditCardSheetState extends ConsumerState<EditCardSheet> {
               divisions: 30,
               label: '$_dueDay',
               onChanged: (v) => setState(() => _dueDay = v.round()),
+            ),
+            Row(
+              children: [
+                Expanded(
+                    child: Text('Tutup tagihan: tanggal $_billingDay',
+                        style: const TextStyle(fontSize: 14))),
+              ],
+            ),
+            Slider(
+              value: _billingDay.toDouble(),
+              min: 1,
+              max: 28,
+              divisions: 27,
+              label: '$_billingDay',
+              onChanged: (v) => setState(() => _billingDay = v.round()),
             ),
             Text('APR: ${(_apr * 100).toStringAsFixed(1)}%',
                 style: const TextStyle(fontSize: 14)),
