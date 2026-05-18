@@ -39,18 +39,28 @@ Future<void> bootstrapFirebase({bool? useEmulator}) async {
   // signal can still talk to Firebase. Production builds use Play Integrity
   // (Android), App Attest (iOS), and reCAPTCHA v3 (web). Enable enforcement in
   // the Firebase console only after this is rolled out to all users.
+  //
+  // Failures here MUST NOT brick startup — if the reCAPTCHA script is blocked
+  // (CSP, network) or the site key is wrong, the app should still boot. The
+  // worst case once enforcement is on is that Firestore/Auth calls fail
+  // visibly with a permission error, which the UI can surface.
   final useDebugProvider = kDebugMode || shouldUseEmulator;
-  await FirebaseAppCheck.instance.activate(
-    providerAndroid: useDebugProvider
-        ? const AndroidDebugProvider()
-        : const AndroidPlayIntegrityProvider(),
-    providerApple: useDebugProvider
-        ? const AppleDebugProvider()
-        : const AppleAppAttestProvider(),
-    providerWeb: useDebugProvider || _recaptchaV3SiteKey.trim().isEmpty
-        ? ReCaptchaV3Provider('debug')
-        : ReCaptchaV3Provider(_recaptchaV3SiteKey.trim()),
-  );
+  final webKey = _recaptchaV3SiteKey.trim();
+  try {
+    await FirebaseAppCheck.instance.activate(
+      providerAndroid: useDebugProvider
+          ? const AndroidDebugProvider()
+          : const AndroidPlayIntegrityProvider(),
+      providerApple: useDebugProvider
+          ? const AppleDebugProvider()
+          : const AppleAppAttestProvider(),
+      providerWeb: useDebugProvider || webKey.isEmpty
+          ? ReCaptchaV3Provider('debug')
+          : ReCaptchaV3Provider(webKey),
+    );
+  } catch (e, st) {
+    debugPrint('App Check activation failed (continuing): $e\n$st');
+  }
 
   if (!kIsWeb) {
     final serverClientId = _googleWebClientIdOverride.trim().isEmpty
