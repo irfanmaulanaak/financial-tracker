@@ -170,20 +170,29 @@ class CardRepository {
     });
   }
 
-  /// Increments `monthsPaid` on an installment (manual progression). When the
-  /// last month is paid the plan is marked complete (no further actions).
+  /// Increments `monthsPaid` on an installment (manual progression) AND
+  /// debits the card's `used` by the installment's `monthly` payment, so the
+  /// remaining debt on the card matches the remaining months. When the last
+  /// month is paid the plan is marked complete.
   Future<void> incrementInstallment({
     required String hid,
     required String cardId,
     required String installmentId,
   }) async {
-    final ref = _installments(hid, cardId).doc(installmentId);
+    final instRef = _installments(hid, cardId).doc(installmentId);
+    final cardRef = _cards(hid).doc(cardId);
     await _db.runTransaction((tx) async {
-      final snap = await tx.get(ref);
-      if (!snap.exists) throw StateError('installment_missing');
-      final inst = Installment.fromSnapshot(snap, cardId);
+      final instSnap = await tx.get(instRef);
+      if (!instSnap.exists) throw StateError('installment_missing');
+      final inst = Installment.fromSnapshot(instSnap, cardId);
       if (inst.isComplete) return;
-      tx.update(ref, {'monthsPaid': inst.monthsPaid + 1});
+      final cardSnap = await tx.get(cardRef);
+      if (!cardSnap.exists) throw StateError('card_missing');
+      final card = CreditCard.fromSnapshot(cardSnap);
+      tx.update(cardRef, {
+        'used': (card.used - inst.monthly).clamp(0, 1 << 31),
+      });
+      tx.update(instRef, {'monthsPaid': inst.monthsPaid + 1});
     });
   }
 }

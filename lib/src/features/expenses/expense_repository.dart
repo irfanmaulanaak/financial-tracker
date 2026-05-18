@@ -44,6 +44,26 @@ class ExpenseRepository {
         .map((s) => s.docs.map(Expense.fromSnapshot).toList());
   }
 
+  /// Watches the most recent **non-cicilan** expenses for a single card.
+  /// Filters `installmentPlanId == null` client-side because Firestore can't
+  /// combine `where(cardId)` + `where(installmentPlanId == null)` + `orderBy`
+  /// without an extra composite index for so few rows.
+  Stream<List<Expense>> watchByCard({
+    required String householdId,
+    required String cardId,
+    int limit = 20,
+  }) {
+    return _col(householdId)
+        .where('cardId', isEqualTo: cardId)
+        .orderBy('date', descending: true)
+        .limit(limit)
+        .snapshots()
+        .map((s) => s.docs
+            .map(Expense.fromSnapshot)
+            .where((e) => e.installmentPlanId == null)
+            .toList());
+  }
+
   Stream<List<Expense>> watchByCategory({
     required String householdId,
     required String categoryId,
@@ -302,6 +322,81 @@ class ExpenseRepository {
     );
   }
 
+  /// Edits an existing cicilan plan in one transaction. Reverses the plan's
+  /// **remaining** debt from `card.used`, recomputes the plan with the new
+  /// principal/months/apr, applies the fresh `plan.total` to `card.used`,
+  /// resets `monthsPaid` to 0, and rewrites the linked expense's `amount`.
+  ///
+  /// Card swap is NOT supported here (cicilan stays on its original card).
+  /// All other meta (category, date, note, spentBy, recurring) is preserved.
+  ///
+  /// Throws `expense_missing`, `installment_missing`, or `card_missing`.
+  Future<void> updateCicilanPlan({
+    required String householdId,
+    required String expenseId,
+    required int newPrincipal,
+    required int newMonths,
+    required double newApr,
+    String? newLabel,
+    InterestModel model = InterestModel.flat,
+  }) async {
+    final newPlan = computeCicilan(
+      principal: newPrincipal,
+      months: newMonths,
+      apr: newApr,
+      model: model,
+    );
+    final expenseRef = _col(householdId).doc(expenseId);
+    await _db.runTransaction((tx) async {
+      final eSnap = await tx.get(expenseRef);
+      if (!eSnap.exists) throw StateError('expense_missing');
+      final old = Expense.fromSnapshot(eSnap);
+      if (old.cardId == null || old.installmentPlanId == null) {
+        throw StateError('expense_missing');
+      }
+      final cardRef = _cardDoc(householdId, old.cardId!);
+      final instRef =
+          _installments(householdId, old.cardId!).doc(old.installmentPlanId!);
+      final instSnap = await tx.get(instRef);
+      if (!instSnap.exists) throw StateError('installment_missing');
+      final cardSnap = await tx.get(cardRef);
+      if (!cardSnap.exists) throw StateError('card_missing');
+
+      final oldPlan = Installment.fromSnapshot(instSnap, old.cardId!);
+      final card = CreditCard.fromSnapshot(cardSnap);
+      final oldRemaining = oldPlan.remainingAmount;
+      final nextUsed =
+          (card.used - oldRemaining + newPlan.total).clamp(0, 1 << 31);
+
+      tx.update(cardRef, {'used': nextUsed});
+      tx.update(instRef, {
+        'label': ?newLabel,
+        'total': newPlan.total,
+        'monthly': newPlan.monthly,
+        'monthsTotal': newMonths,
+        'monthsPaid': 0,
+      });
+      tx.set(
+        expenseRef,
+        Expense(
+          id: old.id,
+          amount: newPrincipal,
+          categoryId: old.categoryId,
+          paymentMethodId: old.paymentMethodId,
+          note: old.note,
+          spentBy: old.spentBy,
+          date: old.date,
+          recurring: old.recurring,
+          cardId: old.cardId,
+          installmentPlanId: old.installmentPlanId,
+          sourceAccountId: old.sourceAccountId,
+          createdAt: old.createdAt,
+          createdBy: old.createdBy,
+        ).toMap(),
+      );
+    });
+  }
+
   /// Edits an expense atomically. Reverses the old balance side-effect
   /// (account refund or `card.used` reduction) and applies the new one in
   /// a single transaction. Supports lane swap (cash <-> credit) and changing
@@ -518,8 +613,10 @@ class ExpenseRepository {
   /// - credit-card expense: reverses `card.used` by the same `amount`
   ///   (clamped at zero in case of stale data)
   /// - cicilan expense: deletes the linked installment doc AND reverses
-  ///   `card.used` by the plan's `total` (the full remaining debt was added
-  ///   to the card when the plan was created, so we reverse the same way)
+  ///   `card.used` by the **remaining** debt
+  ///   (`(monthsTotal - monthsPaid) * monthly`). Each "Tandai dibayar" tap
+  ///   already debits one month's `monthly` from `card.used`, so on delete
+  ///   we only reverse what's left.
   Future<void> delete({
     required String householdId,
     required String expenseId,
@@ -543,7 +640,8 @@ class ExpenseRepository {
         if (cardSnap.exists && instSnap.exists) {
           final card = CreditCard.fromSnapshot(cardSnap);
           final plan = Installment.fromSnapshot(instSnap, expense.cardId!);
-          final next = (card.used - plan.total).clamp(0, 1 << 31);
+          final remaining = plan.remainingAmount;
+          final next = (card.used - remaining).clamp(0, 1 << 31);
           tx.update(cardRef, {'used': next});
         }
         if (instSnap.exists) tx.delete(instRef);

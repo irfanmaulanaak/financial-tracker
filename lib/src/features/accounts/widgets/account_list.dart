@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/formatters.dart';
+import '../../../core/hide_assets_provider.dart';
 import '../../../theme.dart';
 import '../../../ui/ft_ui.dart';
+import '../../home/widgets/home_formatters.dart';
 import '../account.dart';
 import '../accounts_repository.dart';
 import 'account_edit_sheet.dart';
@@ -21,6 +23,7 @@ class AccountList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final hidden = ref.watch(hideAssetsProvider);
     if (accounts.isEmpty) {
       return Center(
         child: Padding(
@@ -87,7 +90,7 @@ class AccountList extends ConsumerWidget {
                 ),
               ),
               Text(
-                Money.format(a.value),
+                hidden ? maskMoney() : Money.format(a.value),
                 style: TextStyle(
                   color: FtColors.ink,
                   fontWeight: FontWeight.w700,

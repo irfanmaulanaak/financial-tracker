@@ -3,8 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/formatters.dart';
+import '../../../core/hide_assets_provider.dart';
 import '../../../theme.dart';
 import '../../../ui/ft_ui.dart';
+import '../../home/widgets/home_formatters.dart';
 import '../../investments/investment.dart';
 import '../../investments/investments_repository.dart';
 
@@ -25,6 +27,7 @@ class InvestasiList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final hidden = ref.watch(hideAssetsProvider);
     if (isLoading) {
       return ListView(
         padding: const EdgeInsets.fromLTRB(22, 4, 22, 120),
@@ -61,7 +64,7 @@ class InvestasiList extends ConsumerWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(22, 4, 22, 120),
       children: [
-        InvestasiSummary(summary: summary),
+        InvestasiSummary(summary: summary, hidden: hidden),
         const SizedBox(height: 14),
         if (items.isEmpty)
           Padding(
@@ -78,6 +81,7 @@ class InvestasiList extends ConsumerWidget {
           for (final i in items)
             InvestmentTile(
               inv: i,
+              hidden: hidden,
               onUpdate: () => _openUpdate(context, ref, i),
               onDelete: () => _confirmDelete(context, ref, i),
             ),
@@ -142,8 +146,13 @@ class InvestasiList extends ConsumerWidget {
 }
 
 class InvestasiSummary extends StatelessWidget {
-  const InvestasiSummary({super.key, required this.summary});
+  const InvestasiSummary({
+    super.key,
+    required this.summary,
+    this.hidden = false,
+  });
   final PortfolioSummary summary;
+  final bool hidden;
 
   @override
   Widget build(BuildContext context) {
@@ -157,7 +166,7 @@ class InvestasiSummary extends StatelessWidget {
           const Eyebrow('Total portofolio'),
           const SizedBox(height: 6),
           Text(
-            Money.format(summary.totalValue),
+            hidden ? maskMoney() : Money.format(summary.totalValue),
             style: Theme.of(context).textTheme.headlineMedium,
           ),
           const SizedBox(height: 6),
@@ -172,7 +181,9 @@ class InvestasiSummary extends StatelessWidget {
               ),
               const SizedBox(width: 4),
               Text(
-                '${positive ? '+' : ''}${Money.format(summary.totalGain)} (${(summary.gainPct * 100).toStringAsFixed(1)}%)',
+                hidden
+                    ? '${maskMoney()} (${(summary.gainPct * 100).toStringAsFixed(1)}%)'
+                    : '${positive ? '+' : ''}${Money.format(summary.totalGain)} (${(summary.gainPct * 100).toStringAsFixed(1)}%)',
                 style: TextStyle(color: color, fontWeight: FontWeight.w600),
               ),
               const SizedBox(width: 10),
@@ -193,10 +204,12 @@ class InvestmentTile extends StatelessWidget {
     required this.inv,
     required this.onUpdate,
     required this.onDelete,
+    this.hidden = false,
   });
   final Investment inv;
   final VoidCallback onUpdate;
   final VoidCallback onDelete;
+  final bool hidden;
 
   @override
   Widget build(BuildContext context) {
@@ -240,7 +253,9 @@ class InvestmentTile extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '${investmentTypeLabel(inv.type)} • cost ${Money.format(inv.costBasis)}',
+                  hidden
+                      ? '${investmentTypeLabel(inv.type)} • cost ${maskMoney()}'
+                      : '${investmentTypeLabel(inv.type)} • cost ${Money.format(inv.costBasis)}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -252,7 +267,7 @@ class InvestmentTile extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                Money.format(inv.currentValue),
+                hidden ? maskMoney() : Money.format(inv.currentValue),
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               Text(

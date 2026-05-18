@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/formatters.dart';
+import '../../../core/hide_assets_provider.dart';
 import '../../../theme.dart';
 import '../../../ui/ft_ui.dart';
 import '../../home/widgets/home_formatters.dart';
@@ -84,6 +85,7 @@ class _AccountTabState extends ConsumerState<AccountTab> {
 
   @override
   Widget build(BuildContext context) {
+    final hidden = ref.watch(hideAssetsProvider);
     final hasAny = (widget.kind == AccountKind.cash
             ? widget.household.cashAccounts
             : widget.household.savingsAccounts)
@@ -128,7 +130,7 @@ class _AccountTabState extends ConsumerState<AccountTab> {
           children: [
             Eyebrow('${items.length} rekening'),
             Text(
-              compactMoney(widget.total),
+              hidden ? maskMoney() : compactMoney(widget.total),
               style: TextStyle(
                 color: FtColors.ink,
                 fontSize: 12,
@@ -169,6 +171,7 @@ class _AccountTabState extends ConsumerState<AccountTab> {
                   _AccountRow(
                     account: items[i],
                     accent: widget.accent,
+                    hidden: hidden,
                     onTap: () => _openEdit(context, ref, items[i]),
                     onLongPress: () => _confirmDelete(context, ref, items[i]),
                   ),
@@ -263,11 +266,13 @@ class _AccountRow extends StatelessWidget {
     required this.accent,
     required this.onTap,
     required this.onLongPress,
+    this.hidden = false,
   });
   final Account account;
   final Color accent;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
+  final bool hidden;
 
   @override
   Widget build(BuildContext context) {
@@ -329,7 +334,7 @@ class _AccountRow extends StatelessWidget {
               ),
             ),
             Text(
-              Money.format(account.value),
+              hidden ? maskMoney() : Money.format(account.value),
               style: TextStyle(
                 color: FtColors.ink,
                 fontSize: 13,
