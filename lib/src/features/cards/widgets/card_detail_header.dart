@@ -163,7 +163,7 @@ class CardInstallmentTile extends StatelessWidget {
                 if (!inst.isComplete)
                   TextButton(
                     onPressed: onPaidOne,
-                    child: const Text('Tandai dibayar'),
+                    child: const Text('Bayar bulan ini'),
                   )
                 else
                   const Chip(

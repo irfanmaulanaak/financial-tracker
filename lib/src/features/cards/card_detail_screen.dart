@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/cicilan.dart';
 import '../../core/formatters.dart';
 import '../../theme.dart';
 import '../../ui/ft_ui.dart';
@@ -15,6 +14,8 @@ import 'credit_card.dart';
 import 'card_repository.dart';
 import 'edit_card_sheet.dart';
 import 'edit_cicilan_sheet.dart';
+import 'pay_card_sheet.dart';
+import 'pay_installment_sheet.dart';
 import 'widgets/card_detail_header.dart';
 import 'widgets/installment_list.dart';
 
@@ -140,10 +141,6 @@ class CardDetailScreen extends ConsumerWidget {
               ),
             );
           }
-          final minPay = minimumPayment(
-            balance: card.used,
-            minPaymentPct: card.minPaymentPct,
-          );
           final available = (card.limit - card.used).clamp(0, card.limit);
           return SafeArea(
             child: FtAppChrome(
@@ -182,52 +179,16 @@ class CardDetailScreen extends ConsumerWidget {
                   ),
                   CardDetailHeader(card: card, available: available),
                   const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: card.used == 0
-                              ? null
-                              : () => _confirm(
-                                  context,
-                                  'Bayar minimum (${Money.format(minPay)})?',
-                                  () async {
-                                    await ref
-                                        .read(cardRepositoryProvider)
-                                        .payMinimum(
-                                          hid: household.id,
-                                          cardId: cardId,
-                                        );
-                                  },
-                                ),
-                          icon: const Icon(
-                            Icons.account_balance_wallet_outlined,
-                          ),
-                          label: Text('Min ${Money.format(minPay)}'),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: FilledButton.icon(
-                          onPressed: card.used == 0
-                              ? null
-                              : () => _confirm(
-                                  context,
-                                  'Bayar lunas (${Money.format(card.used)})?',
-                                  () async {
-                                    await ref
-                                        .read(cardRepositoryProvider)
-                                        .payFull(
-                                          hid: household.id,
-                                          cardId: cardId,
-                                        );
-                                  },
-                                ),
-                          icon: const Icon(Icons.check),
-                          label: Text('Lunasi ${Money.format(card.used)}'),
-                        ),
-                      ),
-                    ],
+                  FilledButton.icon(
+                    onPressed: card.used == 0
+                        ? null
+                        : () => PayCardSheet.show(
+                              context: context,
+                              hid: household.id,
+                              card: card,
+                            ),
+                    icon: const Icon(Icons.payments_outlined),
+                    label: const Text('Bayar tagihan'),
                   ),
                   const SizedBox(height: 24),
                   const FtSectionHeader(title: 'Cicilan aktif'),
@@ -250,25 +211,12 @@ class CardDetailScreen extends ConsumerWidget {
                           .map(
                             (i) => CardInstallmentTile(
                               inst: i,
-                              onPaidOne: () async {
-                                try {
-                                  await ref
-                                      .read(cardRepositoryProvider)
-                                      .incrementInstallment(
-                                        hid: household.id,
-                                        cardId: cardId,
-                                        installmentId: i.id,
-                                      );
-                                } catch (e) {
-                                  if (context.mounted) {
-                                    showFtErrorSnack(
-                                      context,
-                                      e,
-                                      prefix: 'Gagal mencatat cicilan',
-                                    );
-                                  }
-                                }
-                              },
+                              onPaidOne: () => PayInstallmentSheet.show(
+                                context: context,
+                                hid: household.id,
+                                cardId: cardId,
+                                installment: i,
+                              ),
                               onEdit: canEdit
                                   ? () => _editInstallment(
                                         context,
@@ -426,37 +374,6 @@ class CardDetailScreen extends ConsumerWidget {
     }
   }
 
-  Future<void> _confirm(
-    BuildContext context,
-    String title,
-    Future<void> Function() action,
-  ) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text(title),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Batal'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Lanjut'),
-          ),
-        ],
-      ),
-    );
-    if (ok == true) {
-      try {
-        await action();
-      } catch (e) {
-        if (context.mounted) {
-          showFtErrorSnack(context, e, prefix: 'Gagal membayar kartu');
-        }
-      }
-    }
-  }
 }
 
 class _CardExpensesList extends ConsumerWidget {
@@ -610,7 +527,7 @@ String _deleteErrorMessage(String? code) {
   switch (code) {
     case 'card_has_balance':
       return 'Tidak bisa hapus: kartu masih punya saldo terpakai. '
-          'Lunasi dulu lewat tombol "Lunasi".';
+          'Bayar dulu lewat tombol "Bayar tagihan".';
     case 'card_has_active_installments':
       return 'Tidak bisa hapus: ada cicilan yang belum selesai.';
     case 'card_missing':

@@ -620,7 +620,7 @@ class ExpenseRepository {
   ///   (clamped at zero in case of stale data)
   /// - cicilan expense: deletes the linked installment doc AND reverses
   ///   `card.used` by the **remaining** debt
-  ///   (`(monthsTotal - monthsPaid) * monthly`). Each "Tandai dibayar" tap
+  ///   (`(monthsTotal - monthsPaid) * monthly`). Each "Bayar bulan ini" tap
   ///   already debits one month's `monthly` from `card.used`, so on delete
   ///   we only reverse what's left.
   Future<void> delete({
