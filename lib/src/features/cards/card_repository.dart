@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/cicilan.dart';
 import '../../core/providers.dart';
+import '../expenses/expense.dart';
 import 'credit_card.dart';
 
 class CardRepository {
@@ -168,6 +169,49 @@ class CardRepository {
       tx.update(ref, {'used': 0});
       return card.used;
     });
+  }
+
+  /// Recomputes `card.used` from the source of truth: every expense charged
+  /// to this card. Plain CC expenses contribute their full `amount`; cicilan
+  /// expenses contribute the linked installment's `remainingAmount`
+  /// (`(monthsTotal - monthsPaid) * monthly`). Returns the new total.
+  ///
+  /// Use this to heal drift from legacy data (e.g. cicilans that completed
+  /// under the old "Tandai dibayar" logic that never decremented `card.used`).
+  /// Not transactional across the expense query — Firestore transactions
+  /// can't run queries — so a write racing with this read can land on top of
+  /// the new total. Acceptable for a 2–5 user household.
+  Future<int> recalcUsed({
+    required String hid,
+    required String cardId,
+  }) async {
+    final expensesSnap = await _db
+        .collection('households')
+        .doc(hid)
+        .collection('expenses')
+        .where('cardId', isEqualTo: cardId)
+        .get();
+    final installmentsSnap = await _installments(hid, cardId).get();
+    final installments = {
+      for (final d in installmentsSnap.docs)
+        d.id: Installment.fromSnapshot(d, cardId),
+    };
+
+    var total = 0;
+    for (final d in expensesSnap.docs) {
+      final exp = Expense.fromSnapshot(d);
+      final planId = exp.installmentPlanId;
+      if (planId != null) {
+        // Cicilan: count remaining debt. Orphaned plans (no installment doc)
+        // contribute nothing — same direction as delete(): they're gone.
+        final plan = installments[planId];
+        if (plan != null) total += plan.remainingAmount;
+      } else {
+        total += exp.amount;
+      }
+    }
+    await _cards(hid).doc(cardId).update({'used': total});
+    return total;
   }
 
   /// Increments `monthsPaid` on an installment (manual progression) AND

@@ -157,6 +157,12 @@ class CardDetailScreen extends ConsumerWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton.filledTonal(
+                          tooltip: 'Hitung ulang terpakai',
+                          onPressed: () => _recalcUsed(context, ref, household.id, card),
+                          icon: const Icon(Icons.sync, size: 18),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton.filledTonal(
                           tooltip: 'Edit',
                           onPressed: () => editCard(card),
                           icon: const Icon(Icons.edit_outlined, size: 18),
@@ -301,6 +307,54 @@ class CardDetailScreen extends ConsumerWidget {
         },
       ),
     );
+  }
+
+  Future<void> _recalcUsed(
+    BuildContext context,
+    WidgetRef ref,
+    String hid,
+    CreditCard card,
+  ) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Hitung ulang terpakai?'),
+        content: const Text(
+          'Saldo "Terpakai" akan dihitung ulang dari semua pengeluaran '
+          'kartu dan sisa cicilan. Berguna kalau angkanya kelihatan tidak sinkron.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Hitung ulang'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      final newUsed = await ref
+          .read(cardRepositoryProvider)
+          .recalcUsed(hid: hid, cardId: card.id);
+      if (context.mounted) {
+        final delta = newUsed - card.used;
+        final msg = delta == 0
+            ? 'Sudah sinkron. Terpakai tetap ${Money.format(newUsed)}.'
+            : 'Terpakai diperbarui: ${Money.format(card.used)} → ${Money.format(newUsed)} '
+                '(${delta > 0 ? '+' : ''}${Money.format(delta)})';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(msg)),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        showFtErrorSnack(context, e, prefix: 'Gagal menghitung ulang');
+      }
+    }
   }
 
   Future<void> _editInstallment(
