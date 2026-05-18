@@ -45,9 +45,13 @@ class ExpenseRepository {
   }
 
   /// Watches the most recent **non-cicilan** expenses for a single card.
-  /// Filters `installmentPlanId == null` client-side because Firestore can't
-  /// combine `where(cardId)` + `where(installmentPlanId == null)` + `orderBy`
-  /// without an extra composite index for so few rows.
+  ///
+  /// Server-side query is just `where('cardId', isEqualTo: cardId)` so we
+  /// only need Firestore's auto-created single-field index — combining it
+  /// with `orderBy('date')` would require a deployed composite index and
+  /// the stream silently stalls until the index is built. Sort + slice
+  /// happen client-side; for a 2–5 person household the per-card row count
+  /// is small enough that this is cheap.
   Stream<List<Expense>> watchByCard({
     required String householdId,
     required String cardId,
@@ -55,13 +59,15 @@ class ExpenseRepository {
   }) {
     return _col(householdId)
         .where('cardId', isEqualTo: cardId)
-        .orderBy('date', descending: true)
-        .limit(limit)
         .snapshots()
-        .map((s) => s.docs
-            .map(Expense.fromSnapshot)
-            .where((e) => e.installmentPlanId == null)
-            .toList());
+        .map((s) {
+          final rows = s.docs
+              .map(Expense.fromSnapshot)
+              .where((e) => e.installmentPlanId == null)
+              .toList()
+            ..sort((a, b) => b.date.compareTo(a.date));
+          return rows.length > limit ? rows.sublist(0, limit) : rows;
+        });
   }
 
   Stream<List<Expense>> watchByCategory({
