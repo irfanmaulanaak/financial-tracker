@@ -36,9 +36,7 @@ class BudgetEditSheet extends ConsumerStatefulWidget {
 
 class _BudgetEditSheetState extends ConsumerState<BudgetEditSheet> {
   late final TextEditingController _budget = TextEditingController(
-    text: widget.category.monthlyBudget > 0
-        ? widget.category.monthlyBudget.toString()
-        : '',
+    text: Money.displayDigits(widget.category.monthlyBudget),
   );
   bool _busy = false;
 
@@ -106,7 +104,10 @@ class _BudgetEditSheetState extends ConsumerState<BudgetEditSheet> {
               autofocus: true,
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: false),
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                ThousandsSeparatorFormatter(),
+              ],
               decoration: const InputDecoration(
                 labelText: 'Anggaran bulanan',
                 prefixText: 'Rp ',

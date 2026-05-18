@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 
 import '../../../core/formatters.dart';
 import '../../../theme.dart';
-import '../../record_common/money_field.dart' show ThousandsSeparatorFormatter;
 
 /// Two stacked editable fields — Target (required) + Sudah Terkumpul
 /// (optional). Each tap focuses a native numeric keyboard input. Mirrors

@@ -132,6 +132,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen>
           label: draft.label,
           hint: draft.hint,
           value: draft.value,
+          subKind: draft.subKind,
         );
   }
 

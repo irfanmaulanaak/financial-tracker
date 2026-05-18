@@ -10,11 +10,14 @@ import '../account.dart';
 import '../accounts_repository.dart';
 import 'account_edit_sheet.dart';
 
+/// Filter for the Tunai (cash) tab. Tabungan ignores this.
+enum CashFilter { all, bank, ewallet }
+
 /// Tab body shared by `Tunai` and `Tabungan`. Renders an empty-state
 /// placeholder + dashed-add button when the account list is empty,
 /// otherwise a labeled count row → grouped card with each account row →
 /// dashed-add button. Long-press a row to delete.
-class AccountTab extends ConsumerWidget {
+class AccountTab extends ConsumerStatefulWidget {
   const AccountTab({
     super.key,
     required this.household,
@@ -32,18 +35,61 @@ class AccountTab extends ConsumerWidget {
   final String subtitle;
   final VoidCallback onAdd;
 
-  List<Account> _items() => kind == AccountKind.cash
-      ? household.cashAccounts.toList()
-      : household.savingsAccounts.toList();
+  @override
+  ConsumerState<AccountTab> createState() => _AccountTabState();
+}
 
-  String get _addLabel => kind == AccountKind.cash
+class _AccountTabState extends ConsumerState<AccountTab> {
+  CashFilter _filter = CashFilter.all;
+
+  List<Account> _items() {
+    final base = widget.kind == AccountKind.cash
+        ? widget.household.cashAccounts.toList()
+        : widget.household.savingsAccounts.toList();
+    if (widget.kind != AccountKind.cash) return base;
+    return switch (_filter) {
+      CashFilter.all => base,
+      CashFilter.bank =>
+        base.where((a) => a.subKind == AccountSubKind.bank).toList(),
+      CashFilter.ewallet =>
+        base.where((a) => a.subKind == AccountSubKind.ewallet).toList(),
+    };
+  }
+
+  String get _addLabel => widget.kind == AccountKind.cash
       ? 'Tambah rekening tunai'
       : 'Tambah tabungan';
 
+  Widget _filterBar() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: SegmentedButton<CashFilter>(
+        showSelectedIcon: false,
+        style: ButtonStyle(
+          visualDensity: VisualDensity.compact,
+          textStyle: WidgetStatePropertyAll(
+            TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+          ),
+        ),
+        segments: const [
+          ButtonSegment(value: CashFilter.all, label: Text('Semua')),
+          ButtonSegment(value: CashFilter.bank, label: Text('Bank')),
+          ButtonSegment(value: CashFilter.ewallet, label: Text('E-wallet')),
+        ],
+        selected: {_filter},
+        onSelectionChanged: (s) => setState(() => _filter = s.first),
+      ),
+    );
+  }
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
+    final hasAny = (widget.kind == AccountKind.cash
+            ? widget.household.cashAccounts
+            : widget.household.savingsAccounts)
+        .isNotEmpty;
     final items = _items()..sort((a, b) => b.value.compareTo(a.value));
-    if (items.isEmpty) {
+    if (!hasAny) {
       return ListView(
         padding: const EdgeInsets.fromLTRB(22, 28, 22, 120),
         children: [
@@ -52,7 +98,7 @@ class AccountTab extends ConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
-                  kind == AccountKind.cash
+                  widget.kind == AccountKind.cash
                       ? Icons.account_balance_wallet_outlined
                       : Icons.savings_outlined,
                   size: 40,
@@ -60,7 +106,7 @@ class AccountTab extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  kind == AccountKind.cash
+                  widget.kind == AccountKind.cash
                       ? 'Belum ada rekening tunai.'
                       : 'Belum ada tabungan.',
                   textAlign: TextAlign.center,
@@ -70,7 +116,7 @@ class AccountTab extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 20),
-          FtDashedAdd(label: _addLabel, onTap: onAdd),
+          FtDashedAdd(label: _addLabel, onTap: widget.onAdd),
         ],
       );
     }
@@ -82,7 +128,7 @@ class AccountTab extends ConsumerWidget {
           children: [
             Eyebrow('${items.length} rekening'),
             Text(
-              compactMoney(total),
+              compactMoney(widget.total),
               style: TextStyle(
                 color: FtColors.ink,
                 fontSize: 12,
@@ -94,7 +140,7 @@ class AccountTab extends ConsumerWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          subtitle,
+          widget.subtitle,
           style: TextStyle(
             color: FtColors.ink3,
             fontSize: 11,
@@ -102,24 +148,36 @@ class AccountTab extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 10),
-        FtCard(
-          padding: EdgeInsets.zero,
-          child: Column(
-            children: [
-              for (var i = 0; i < items.length; i++) ...[
-                if (i > 0) const Divider(),
-                _AccountRow(
-                  account: items[i],
-                  accent: accent,
-                  onTap: () => _openEdit(context, ref, items[i]),
-                  onLongPress: () => _confirmDelete(context, ref, items[i]),
-                ),
+        if (widget.kind == AccountKind.cash) _filterBar(),
+        if (items.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: Center(
+              child: Text(
+                'Tidak ada rekening di filter ini.',
+                style: TextStyle(color: FtColors.ink3, fontSize: 12),
+              ),
+            ),
+          )
+        else
+          FtCard(
+            padding: EdgeInsets.zero,
+            child: Column(
+              children: [
+                for (var i = 0; i < items.length; i++) ...[
+                  if (i > 0) const Divider(),
+                  _AccountRow(
+                    account: items[i],
+                    accent: widget.accent,
+                    onTap: () => _openEdit(context, ref, items[i]),
+                    onLongPress: () => _confirmDelete(context, ref, items[i]),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
-        ),
         const SizedBox(height: 12),
-        FtDashedAdd(label: _addLabel, onTap: onAdd),
+        FtDashedAdd(label: _addLabel, onTap: widget.onAdd),
       ],
     );
   }
@@ -137,19 +195,21 @@ class AccountTab extends ConsumerWidget {
     if (result == null) return;
     if (result.deltaMode) {
       await ref.read(accountsRepositoryProvider).applyDelta(
-            householdId: household.id,
+            householdId: widget.household.id,
             kind: a.kind,
             accountId: a.id,
             delta: result.value,
           );
     } else {
       await ref.read(accountsRepositoryProvider).updateAccount(
-            householdId: household.id,
+            householdId: widget.household.id,
             kind: a.kind,
             accountId: a.id,
             label: result.label,
             hint: result.hint,
             value: result.value,
+            subKind: result.kind == AccountKind.cash ? result.subKind : null,
+            newKind: result.kind != a.kind ? result.kind : null,
           );
     }
   }
@@ -178,7 +238,7 @@ class AccountTab extends ConsumerWidget {
     );
     if (ok != true) return;
     await ref.read(accountsRepositoryProvider).delete(
-          householdId: household.id,
+          householdId: widget.household.id,
           kind: a.kind,
           accountId: a.id,
         );
@@ -199,6 +259,10 @@ class _AccountRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final iconData = account.kind == AccountKind.cash &&
+            account.subKind == AccountSubKind.ewallet
+        ? Icons.account_balance_wallet_rounded
+        : Icons.account_balance_rounded;
     return FtTapScale(
       scale: 0.98,
       onTap: onTap,
@@ -217,7 +281,7 @@ class _AccountRow extends StatelessWidget {
                     color: accent.withValues(alpha: 0.24), width: 0.5),
               ),
               child: Icon(
-                Icons.account_balance_rounded,
+                iconData,
                 size: 16,
                 color: accent,
               ),

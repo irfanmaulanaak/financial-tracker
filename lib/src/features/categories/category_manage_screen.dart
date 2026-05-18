@@ -210,8 +210,8 @@ class _CategoryEditSheetState extends State<_CategoryEditSheet> {
     text: widget.initial?.label ?? '',
   );
   late final TextEditingController _budget = TextEditingController(
-    text: widget.initial != null && widget.initial!.monthlyBudget > 0
-        ? widget.initial!.monthlyBudget.toString()
+    text: widget.initial != null
+        ? Money.displayDigits(widget.initial!.monthlyBudget)
         : '',
   );
   String _color = '#3B82F6';
@@ -288,7 +288,10 @@ class _CategoryEditSheetState extends State<_CategoryEditSheet> {
             TextField(
               controller: _budget,
               keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                ThousandsSeparatorFormatter(),
+              ],
               decoration: const InputDecoration(
                 labelText: 'Budget bulanan',
                 prefixText: 'Rp ',

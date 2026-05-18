@@ -145,7 +145,10 @@ class GoalsScreen extends ConsumerWidget {
             TextField(
               controller: ctrl,
               keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                ThousandsSeparatorFormatter(),
+              ],
               decoration: const InputDecoration(
                 labelText: 'Jumlah',
                 prefixText: 'Rp ',
@@ -154,8 +157,8 @@ class GoalsScreen extends ConsumerWidget {
             const SizedBox(height: 16),
             FilledButton(
               onPressed: () {
-                final v = int.tryParse(ctrl.text);
-                if (v == null || v <= 0) return;
+                final v = Money.parse(ctrl.text) ?? 0;
+                if (v <= 0) return;
                 Navigator.pop(context, v);
               },
               child: const Text('Simpan'),

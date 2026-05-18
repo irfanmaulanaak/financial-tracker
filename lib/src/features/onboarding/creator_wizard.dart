@@ -192,10 +192,13 @@ class _CreatorWizardScreenState extends ConsumerState<CreatorWizardScreen> {
         TextField(
           controller: _budgetCtrl,
           keyboardType: TextInputType.number,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            ThousandsSeparatorFormatter(),
+          ],
           decoration: const InputDecoration(
             labelText: 'Total budget per siklus (Rp)',
-            hintText: '9000000',
+            hintText: '9.000.000',
           ),
         ),
         const SizedBox(height: 24),
@@ -262,7 +265,10 @@ class _CreatorWizardScreenState extends ConsumerState<CreatorWizardScreen> {
               return TextField(
                 controller: _catBudgets[c.id],
                 keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  ThousandsSeparatorFormatter(),
+                ],
                 decoration: InputDecoration(
                   labelText: c.label,
                   prefixText: 'Rp ',

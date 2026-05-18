@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/formatters.dart';
@@ -115,7 +116,7 @@ class HouseholdSection extends StatelessWidget {
 
   Future<void> _editBudget(BuildContext context) async {
     final ctrl = TextEditingController(
-      text: household.monthlyBudgetTotal.toString(),
+      text: Money.displayDigits(household.monthlyBudgetTotal),
     );
     final ok = await showDialog<bool>(
       context: context,
@@ -124,9 +125,13 @@ class HouseholdSection extends StatelessWidget {
         content: TextField(
           controller: ctrl,
           keyboardType: TextInputType.number,
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            ThousandsSeparatorFormatter(),
+          ],
           decoration: const InputDecoration(
             prefixText: 'Rp ',
-            hintText: '5000000',
+            hintText: '5.000.000',
           ),
         ),
         actions: [
@@ -142,7 +147,7 @@ class HouseholdSection extends StatelessWidget {
       ),
     );
     if (ok == true) {
-      final v = int.tryParse(ctrl.text.replaceAll(RegExp(r'\D'), ''));
+      final v = Money.parse(ctrl.text);
       if (v != null) {
         await ref
             .read(firestoreProvider)

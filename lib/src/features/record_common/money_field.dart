@@ -4,6 +4,10 @@ import 'package:flutter/services.dart';
 import '../../core/formatters.dart';
 import '../../theme.dart';
 
+/// Backwards-compatible re-export. The canonical formatter now lives in
+/// `lib/src/core/formatters.dart`.
+export '../../core/formatters.dart' show ThousandsSeparatorFormatter;
+
 /// Big serif amount input backed by the system **numeric** keyboard (no
 /// QWERTY). Drops the custom in-app numpad while keeping the editorial
 /// look of [RecordAmountDisplay]: eyebrow label + Rp prefix + large
@@ -69,8 +73,7 @@ class _MoneyFieldState extends State<MoneyField> {
     super.dispose();
   }
 
-  static String _displayFor(int amount) =>
-      amount == 0 ? '' : Money.format(amount).replaceFirst(RegExp(r'^Rp\s*'), '');
+  static String _displayFor(int amount) => Money.displayDigits(amount);
 
   @override
   Widget build(BuildContext context) {
@@ -150,26 +153,3 @@ class _MoneyFieldState extends State<MoneyField> {
   }
 }
 
-/// Input formatter that re-groups digits into id-ID style (`1.000.000`).
-/// Cursor always settles at end-of-text after reformatting.
-class ThousandsSeparatorFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    final digits = newValue.text.replaceAll(RegExp(r'\D'), '');
-    if (digits.isEmpty) {
-      return const TextEditingValue(
-        text: '',
-        selection: TextSelection.collapsed(offset: 0),
-      );
-    }
-    final n = int.parse(digits);
-    final grouped = Money.format(n).replaceFirst(RegExp(r'^Rp\s*'), '');
-    return TextEditingValue(
-      text: grouped,
-      selection: TextSelection.collapsed(offset: grouped.length),
-    );
-  }
-}

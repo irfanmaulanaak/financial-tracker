@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/formatters.dart';
@@ -283,6 +284,10 @@ class _Body extends ConsumerWidget {
             TextField(
               controller: ctrl,
               keyboardType: TextInputType.number,
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                ThousandsSeparatorFormatter(),
+              ],
               decoration: const InputDecoration(
                 labelText: 'Jumlah',
                 prefixText: 'Rp ',
@@ -291,8 +296,8 @@ class _Body extends ConsumerWidget {
             const SizedBox(height: 16),
             FilledButton(
               onPressed: () {
-                final v = int.tryParse(ctrl.text);
-                if (v == null || v <= 0) return;
+                final v = Money.parse(ctrl.text) ?? 0;
+                if (v <= 0) return;
                 Navigator.pop(context, v);
               },
               child: const Text('Simpan'),

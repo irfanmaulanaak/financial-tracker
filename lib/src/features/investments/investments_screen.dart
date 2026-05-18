@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/formatters.dart';
 import '../../theme.dart';
 import '../../ui/ft_ui.dart';
+import '../accounts/widgets/investasi_list.dart' show UpdateInvestmentValueSheet;
 import '../household/household_providers.dart';
 import 'investment.dart';
 import 'investments_repository.dart';
@@ -111,46 +112,10 @@ class InvestmentsScreen extends ConsumerWidget {
     String hid,
     Investment i,
   ) async {
-    final ctrl = TextEditingController(text: i.currentValue.toString());
     final v = await showModalBottomSheet<int>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => Padding(
-        padding: EdgeInsets.only(
-          left: 16,
-          right: 16,
-          top: 16,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Update ${i.label}',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: ctrl,
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration: const InputDecoration(
-                labelText: 'Nilai sekarang',
-                prefixText: 'Rp ',
-              ),
-            ),
-            const SizedBox(height: 16),
-            FilledButton(
-              onPressed: () {
-                final v = int.tryParse(ctrl.text);
-                if (v == null) return;
-                Navigator.pop(context, v);
-              },
-              child: const Text('Simpan'),
-            ),
-          ],
-        ),
-      ),
+      builder: (_) => UpdateInvestmentValueSheet(investment: i),
     );
     if (v != null) {
       await ref
@@ -379,7 +344,10 @@ class _InvestmentEditSheetState extends State<_InvestmentEditSheet> {
             TextField(
               controller: _cost,
               keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                ThousandsSeparatorFormatter(),
+              ],
               decoration: const InputDecoration(
                 labelText: 'Modal (cost basis)',
                 prefixText: 'Rp ',
@@ -389,7 +357,10 @@ class _InvestmentEditSheetState extends State<_InvestmentEditSheet> {
             TextField(
               controller: _current,
               keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                ThousandsSeparatorFormatter(),
+              ],
               decoration: const InputDecoration(
                 labelText: 'Nilai saat ini',
                 prefixText: 'Rp ',
@@ -399,8 +370,8 @@ class _InvestmentEditSheetState extends State<_InvestmentEditSheet> {
             FilledButton(
               onPressed: () {
                 final label = _label.text.trim();
-                final cv = int.tryParse(_current.text) ?? 0;
-                final cb = int.tryParse(_cost.text) ?? 0;
+                final cv = Money.parse(_current.text) ?? 0;
+                final cb = Money.parse(_cost.text) ?? 0;
                 if (label.isEmpty || cv < 0 || cb < 0) return;
                 Navigator.pop(context, _Draft(label, _type, cv, cb));
               },

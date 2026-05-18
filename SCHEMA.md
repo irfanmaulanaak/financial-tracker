@@ -64,7 +64,9 @@ categories: [{
 // credit flow uses cardId → cards subcollection. New households don't
 // write this field. Old data is silently ignored on read.
 
-cashAccounts: [{ id, label, hint, value, sortOrder }]
+cashAccounts: [{ id, label, hint, value, sortOrder, subKind }]
+// subKind: 'bank'|'ewallet' — UI sub-classification for cash accounts.
+// Missing/null reads default to 'bank'.
 savingsAccounts: [{ id, label, hint, value, interestRate?, maturity?, sortOrder }]
 ```
 

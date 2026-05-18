@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../core/formatters.dart';
 import '../account.dart';
 
 class AccountDraft {
   final AccountKind kind;
+  final AccountSubKind subKind;
   final String label;
   final String? hint;
   final int value;
@@ -14,8 +16,37 @@ class AccountDraft {
     required this.label,
     required this.hint,
     required this.value,
+    this.subKind = AccountSubKind.bank,
     this.deltaMode = false,
   });
+}
+
+/// Variant of `ThousandsSeparatorFormatter` that keeps a leading minus sign
+/// so the delta input can express "kurang" amounts.
+class _SignedThousandsFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final raw = newValue.text;
+    final negative = raw.startsWith('-');
+    final digits = raw.replaceAll(RegExp(r'\D'), '');
+    if (digits.isEmpty) {
+      final text = negative ? '-' : '';
+      return TextEditingValue(
+        text: text,
+        selection: TextSelection.collapsed(offset: text.length),
+      );
+    }
+    final grouped = Money.format(int.parse(digits))
+        .replaceFirst(RegExp(r'^Rp\s*'), '');
+    final text = negative ? '-$grouped' : grouped;
+    return TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+  }
 }
 
 class AccountEditSheet extends StatefulWidget {
@@ -31,16 +62,20 @@ class _AccountEditSheetState extends State<AccountEditSheet> {
   late final _label = TextEditingController(text: widget.initial?.label ?? '');
   late final _hint = TextEditingController(text: widget.initial?.hint ?? '');
   late final _value = TextEditingController(
-    text: widget.initial != null ? widget.initial!.value.toString() : '',
+    text: widget.initial != null
+        ? Money.displayDigits(widget.initial!.value)
+        : '',
   );
   late final _delta = TextEditingController();
   AccountKind _kind = AccountKind.cash;
+  AccountSubKind _subKind = AccountSubKind.bank;
   bool _deltaMode = false;
 
   @override
   void initState() {
     super.initState();
     _kind = widget.initial?.kind ?? widget.initialKind ?? AccountKind.cash;
+    _subKind = widget.initial?.subKind ?? AccountSubKind.bank;
   }
 
   @override
@@ -60,12 +95,15 @@ class _AccountEditSheetState extends State<AccountEditSheet> {
     if (_deltaMode) {
       final raw = _delta.text.trim();
       if (raw.isEmpty) return;
-      final delta = int.tryParse(raw);
-      if (delta == null) return;
+      final negative = raw.startsWith('-');
+      final magnitude = Money.parse(raw) ?? 0;
+      final delta = negative ? -magnitude : magnitude;
+      if (delta == 0) return;
       Navigator.pop(
         context,
         AccountDraft(
           kind: _kind,
+          subKind: _subKind,
           label: label,
           hint: hint,
           value: delta,
@@ -73,11 +111,16 @@ class _AccountEditSheetState extends State<AccountEditSheet> {
         ),
       );
     } else {
-      final value =
-          int.tryParse(_value.text.replaceAll(RegExp(r'\D'), '')) ?? 0;
+      final value = Money.parse(_value.text) ?? 0;
       Navigator.pop(
         context,
-        AccountDraft(kind: _kind, label: label, hint: hint, value: value),
+        AccountDraft(
+          kind: _kind,
+          subKind: _subKind,
+          label: label,
+          hint: hint,
+          value: value,
+        ),
       );
     }
   }
@@ -106,20 +149,35 @@ class _AccountEditSheetState extends State<AccountEditSheet> {
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 16),
-            if (!isEdit) ...[
-              SegmentedButton<AccountKind>(
+            SegmentedButton<AccountKind>(
+              segments: const [
+                ButtonSegment(
+                  value: AccountKind.cash,
+                  label: Text('Tunai/Debit'),
+                ),
+                ButtonSegment(
+                  value: AccountKind.savings,
+                  label: Text('Tabungan'),
+                ),
+              ],
+              selected: {_kind},
+              onSelectionChanged: (s) => setState(() => _kind = s.first),
+            ),
+            const SizedBox(height: 12),
+            if (_kind == AccountKind.cash) ...[
+              SegmentedButton<AccountSubKind>(
                 segments: const [
                   ButtonSegment(
-                    value: AccountKind.cash,
-                    label: Text('Tunai/Debit'),
+                    value: AccountSubKind.bank,
+                    label: Text('Bank'),
                   ),
                   ButtonSegment(
-                    value: AccountKind.savings,
-                    label: Text('Tabungan'),
+                    value: AccountSubKind.ewallet,
+                    label: Text('E-wallet'),
                   ),
                 ],
-                selected: {_kind},
-                onSelectionChanged: (s) => setState(() => _kind = s.first),
+                selected: {_subKind},
+                onSelectionChanged: (s) => setState(() => _subKind = s.first),
               ),
               const SizedBox(height: 12),
             ],
@@ -150,9 +208,11 @@ class _AccountEditSheetState extends State<AccountEditSheet> {
             if (_deltaMode)
               TextField(
                 controller: _delta,
-                keyboardType: const TextInputType.numberWithOptions(signed: true),
+                keyboardType:
+                    const TextInputType.numberWithOptions(signed: true),
                 inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'-?\d*')),
+                  FilteringTextInputFormatter.allow(RegExp(r'[\-\d.]')),
+                  _SignedThousandsFormatter(),
                 ],
                 decoration: const InputDecoration(
                   labelText: 'Delta',
@@ -164,7 +224,10 @@ class _AccountEditSheetState extends State<AccountEditSheet> {
               TextField(
                 controller: _value,
                 keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  ThousandsSeparatorFormatter(),
+                ],
                 decoration: const InputDecoration(
                   labelText: 'Saldo',
                   prefixText: 'Rp ',

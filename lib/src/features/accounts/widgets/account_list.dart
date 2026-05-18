@@ -131,6 +131,8 @@ class AccountList extends ConsumerWidget {
             label: result.label,
             hint: result.hint,
             value: result.value,
+            subKind: result.kind == AccountKind.cash ? result.subKind : null,
+            newKind: result.kind != a.kind ? result.kind : null,
           );
     }
   }
