@@ -13,11 +13,10 @@ import 'goal_repository.dart';
 import 'widgets/goal_amount_fields.dart';
 import 'widgets/goal_form_parts.dart';
 import 'widgets/goal_preset_grid.dart';
-import 'widgets/goal_source_picker.dart';
 
 /// Full add-goal flow: preset → name + color → target + current with keypad
-/// → duration → projection → source account → auto-debit toggle. Mirrors
-/// `AddGoalScreen` in `claude-design/screens-extras.jsx`.
+/// → duration → projection. Mirrors `AddGoalScreen` in
+/// `claude-design/screens-extras.jsx`.
 class AddGoalScreen extends ConsumerStatefulWidget {
   const AddGoalScreen({super.key});
 
@@ -33,12 +32,10 @@ class _AddGoalScreenState extends ConsumerState<AddGoalScreen> {
   int _target = 0;
   int _current = 0;
   int _monthsTo = 12;
-  String? _sourceAccountId;
-  bool _autoDebit = true;
   bool _busy = false;
   String? _error;
 
-  static const _monthsList = [3, 6, 12, 18, 24, 36, 60];
+  static const _monthsList = [3, 6, 12, 24, 36, 60, 120, 180, 240];
 
   @override
   void dispose() {
@@ -78,9 +75,6 @@ class _AddGoalScreenState extends ConsumerState<AddGoalScreen> {
         DateTime.now().month + _monthsTo,
         1,
       );
-      final autoDebit = _autoDebit &&
-          _sourceAccountId != null &&
-          monthly > 0;
       final label = _label.text.trim().isEmpty
           ? 'Tujuan Baru'
           : _label.text.trim();
@@ -95,9 +89,6 @@ class _AddGoalScreenState extends ConsumerState<AddGoalScreen> {
             icon: _icon,
             scope: GoalScope.shared,
             ownerId: user.uid,
-            autoDebit: autoDebit,
-            autoDebitDay: 1,
-            sourceAccountId: _sourceAccountId,
             presetId: _presetId,
           );
       if (!mounted) return;
@@ -115,10 +106,6 @@ class _AddGoalScreenState extends ConsumerState<AddGoalScreen> {
     final household = ref.watch(currentHouseholdProvider).value;
     if (household == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-    final cashAccounts = household.cashAccounts;
-    if (_sourceAccountId == null && cashAccounts.isNotEmpty) {
-      _sourceAccountId = cashAccounts.first.id;
     }
     final remaining = (_target - _current).clamp(0, _target);
     final monthly = _monthsTo > 0 ? (remaining / _monthsTo).ceil() : 0;
@@ -206,27 +193,6 @@ class _AddGoalScreenState extends ConsumerState<AddGoalScreen> {
                     current: _current,
                   ),
                 ],
-                const SizedBox(height: 14),
-                const Eyebrow('Sumber Dana Bulanan'),
-                const SizedBox(height: 8),
-                GoalSourceAccounts(
-                  accounts: cashAccounts,
-                  selectedId: _sourceAccountId,
-                  tone: _tone,
-                  onSelect: (id) {
-                    FtHaptics.select();
-                    setState(() => _sourceAccountId = id);
-                  },
-                ),
-                const SizedBox(height: 8),
-                GoalAutoDebitToggle(
-                  value: _autoDebit,
-                  tone: _tone,
-                  onChange: (v) {
-                    FtHaptics.select();
-                    setState(() => _autoDebit = v);
-                  },
-                ),
                 if (_error != null) ...[
                   const SizedBox(height: 12),
                   Text(

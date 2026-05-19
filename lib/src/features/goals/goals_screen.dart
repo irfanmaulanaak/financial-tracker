@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/formatters.dart';
 import '../../core/providers.dart';
 import '../../theme.dart';
+import '../../ui/ft_haptics.dart';
 import '../../ui/ft_refresh.dart';
 import '../../ui/ft_ui.dart';
 import '../household/household_providers.dart';
@@ -103,23 +104,38 @@ class GoalsScreen extends ConsumerWidget {
                     ),
                   )
                 else
-                  for (var i = 0; i < goals.length; i++)
-                    FtListReveal(
-                      index: i,
-                      child: GoalCard(
-                        goal: goals[i],
-                        ownerLabel: goals[i].ownerId != null
-                            ? prettyName(household
-                                    .memberOf(goals[i].ownerId!)
-                                    ?.displayName ??
-                                '-')
-                            : 'Bersama',
-                        onContribute: () => _openContributeSheet(
-                            context, ref, household.id, goals[i]),
-                        onDelete: () =>
-                            _confirmDelete(context, ref, household.id, goals[i]),
-                      ),
+                  ReorderableListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    buildDefaultDragHandles: false,
+                    itemCount: goals.length,
+                    onReorder: (oldIndex, newIndex) =>
+                        _onReorder(ref, household.id, goals, oldIndex, newIndex),
+                    proxyDecorator: (child, _, _) => Material(
+                      color: Colors.transparent,
+                      child: child,
                     ),
+                    itemBuilder: (context, i) {
+                      final g = goals[i];
+                      return ReorderableDragStartListener(
+                        key: ValueKey(g.id),
+                        index: i,
+                        child: GoalCard(
+                          goal: g,
+                          ownerLabel: g.ownerId != null
+                              ? prettyName(household
+                                      .memberOf(g.ownerId!)
+                                      ?.displayName ??
+                                  '-')
+                              : 'Bersama',
+                          onContribute: () => _openContributeSheet(
+                              context, ref, household.id, g),
+                          onDelete: () =>
+                              _confirmDelete(context, ref, household.id, g),
+                        ),
+                      );
+                    },
+                  ),
                 FtDashedAdd(
                   margin: const EdgeInsets.fromLTRB(22, 8, 22, 4),
                   label: 'Tambah tujuan',
@@ -132,6 +148,27 @@ class GoalsScreen extends ConsumerWidget {
         },
       ),
     );
+  }
+
+  void _onReorder(
+    WidgetRef ref,
+    String hid,
+    List<Goal> goals,
+    int oldIndex,
+    int newIndex,
+  ) {
+    FtHaptics.tap();
+    // Flutter quirk: when moving down, newIndex is reported after removal.
+    var ni = newIndex;
+    if (ni > oldIndex) ni -= 1;
+    final ids = goals.map((g) => g.id).toList();
+    final moved = ids.removeAt(oldIndex);
+    ids.insert(ni, moved);
+    // ignore: discarded_futures
+    ref.read(goalRepositoryProvider).reorderGoals(
+          hid: hid,
+          orderedIds: ids,
+        );
   }
 
   Future<void> _openContributeSheet(

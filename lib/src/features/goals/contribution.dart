@@ -1,9 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-/// One deposit toward a goal — manual ("Setor Sekarang") or auto-debit.
+/// One deposit toward a goal — manual ("Setor Sekarang").
 /// Append-only by design: rules disallow update/delete so the bar chart
 /// is a stable audit log.
-enum GoalContributionSource { manual, autoDebit }
+enum GoalContributionSource { manual }
 
 class GoalContribution {
   const GoalContribution({
@@ -41,9 +41,7 @@ class GoalContribution {
   }
 }
 
-GoalContributionSource _sourceFrom(String? s) =>
-    s == 'autoDebit' ? GoalContributionSource.autoDebit
-        : GoalContributionSource.manual;
+GoalContributionSource _sourceFrom(String? s) => GoalContributionSource.manual;
 
 /// Bucket [contribs] into the last [monthsBack] (oldest-first) months
 /// ending at the calendar month of [now]. Empty months map to 0.

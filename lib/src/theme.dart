@@ -32,6 +32,7 @@ class FtColors {
   static Color get ochre => _dark ? const Color(0xFFd4ab55) : const Color(0xFFB89030);
   static Color get danger => _dark ? const Color(0xFFd56a6a) : const Color(0xFF9A2F2F);
   static Color get sky => _dark ? const Color(0xFF7aa3bd) : const Color(0xFF3A6075);
+  static Color get blush => _dark ? const Color(0xFFE8A8B8) : const Color(0xFFE8B4C0);
 
   // Health
   static Color get healthOk => _dark ? const Color(0xFF8aab92) : const Color(0xFF5E7A64);

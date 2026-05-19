@@ -17,7 +17,6 @@ import '../cards/cards_screen.dart';
 import '../household/name_format.dart';
 import '../expenses/expense.dart';
 import '../expenses/expense_providers.dart';
-import '../goals/auto_debit_runner.dart';
 import '../goals/goal.dart';
 import '../goals/goals_screen.dart';
 import '../household/household_providers.dart';
@@ -57,8 +56,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       // Fire-and-forget; failures are non-fatal (next session retries).
       // ignore: discarded_futures
       ref.read(recurringRunnerProvider).run(householdId: loadedHid);
-      // ignore: discarded_futures
-      ref.read(autoDebitRunnerProvider).run(householdId: loadedHid);
     }
     final cycleAsync = ref.watch(cycleExpensesProvider);
     final recentAsync = ref.watch(recentExpensesProvider(5));

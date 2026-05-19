@@ -174,10 +174,11 @@ class _PayInstallmentSheetState extends ConsumerState<PayInstallmentSheet> {
               const SizedBox(height: 18),
               const Eyebrow('Bayar dari'),
               const SizedBox(height: 10),
-              RecordAccountPicker(
+              RecordAccountDropdownField(
                 accounts: accounts,
                 selectedId: _sourceAccountId,
                 accent: FtColors.plum,
+                sheetTitle: 'Pilih rekening',
                 onSelect: (id) {
                   FtHaptics.select();
                   setState(() => _sourceAccountId = id);

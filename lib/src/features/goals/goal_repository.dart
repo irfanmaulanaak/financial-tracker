@@ -31,11 +31,9 @@ class GoalRepository {
     return _col(hid).snapshots().map(
           (s) => s.docs.map(Goal.fromSnapshot).toList()
             ..sort((a, b) {
-              // Personal goals show after shared; alphabetical within group.
-              if (a.scope != b.scope) {
-                return a.scope == GoalScope.shared ? -1 : 1;
-              }
-              return a.label.compareTo(b.label);
+              final ai = a.sortIndex ?? a.createdAt.millisecondsSinceEpoch;
+              final bi = b.sortIndex ?? b.createdAt.millisecondsSinceEpoch;
+              return ai.compareTo(bi);
             }),
         );
   }
@@ -57,13 +55,11 @@ class GoalRepository {
     String color = '#10B981',
     required GoalScope scope,
     String? ownerId,
-    bool autoDebit = false,
-    int autoDebitDay = 1,
-    String? sourceAccountId,
     String? presetId,
     DateTime? now,
   }) async {
     final ref = _col(hid).doc();
+    final createdAt = now ?? DateTime.now();
     final goal = Goal(
       id: ref.id,
       label: label,
@@ -75,14 +71,28 @@ class GoalRepository {
       color: color,
       scope: scope,
       ownerId: scope == GoalScope.personal ? ownerId : null,
-      createdAt: now ?? DateTime.now(),
-      autoDebit: autoDebit && sourceAccountId != null && monthlyContrib > 0,
-      autoDebitDay: autoDebitDay.clamp(1, 28),
-      sourceAccountId: sourceAccountId,
+      createdAt: createdAt,
       presetId: presetId,
+      // Newest goals append to the bottom by default; user can drag to
+      // reorder. Epoch ms is large enough to stay below legacy goals'
+      // `createdAt`-based fallback only when their createdAt is also recent.
+      sortIndex: createdAt.millisecondsSinceEpoch,
     );
     await ref.set(goal.toMap());
     return ref.id;
+  }
+
+  /// Rewrites `sortIndex` on every goal in [orderedIds] so they sort in the
+  /// given order. Uses a stride of 1000 to leave room for future inserts.
+  Future<void> reorderGoals({
+    required String hid,
+    required List<String> orderedIds,
+  }) async {
+    final batch = _db.batch();
+    for (var i = 0; i < orderedIds.length; i++) {
+      batch.update(_col(hid).doc(orderedIds[i]), {'sortIndex': (i + 1) * 1000});
+    }
+    await batch.commit();
   }
 
   /// Records a deposit toward [goalId]: bumps `goal.current` (clamped at
@@ -125,9 +135,6 @@ class GoalRepository {
     int? monthlyContrib,
     String? icon,
     String? color,
-    bool? autoDebit,
-    int? autoDebitDay,
-    String? sourceAccountId,
   }) async {
     await _col(hid).doc(goalId).update({
       'label': ?label,
@@ -136,20 +143,7 @@ class GoalRepository {
       'monthlyContrib': ?monthlyContrib,
       'icon': ?icon,
       'color': ?color,
-      'autoDebit': ?autoDebit,
-      'autoDebitDay': ?autoDebitDay,
-      'sourceAccountId': ?sourceAccountId,
     });
-  }
-
-  /// Marks an auto-debit run done for [yyyymm] (format `YYYY-MM`). Used by
-  /// [AutoDebitRunner] in a transaction together with the contribution.
-  Future<void> markAutoDebitDone({
-    required String hid,
-    required String goalId,
-    required String yyyymm,
-  }) async {
-    await _col(hid).doc(goalId).update({'lastAutoDebitMonth': yyyymm});
   }
 
   Future<void> delete({required String hid, required String goalId}) async {

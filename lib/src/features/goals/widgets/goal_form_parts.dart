@@ -116,6 +116,7 @@ class GoalToneRow extends StatelessWidget {
     FtColors.plum,
     FtColors.ochre,
     FtColors.moss,
+    FtColors.blush,
   ];
 
   @override

@@ -156,10 +156,11 @@ class _RecordIncomeScreenState extends ConsumerState<RecordIncomeScreen> {
                     const SizedBox(height: 22),
                     const Eyebrow('Masuk ke'),
                     const SizedBox(height: 10),
-                    RecordAccountPicker(
+                    RecordAccountDropdownField(
                       accounts: accounts,
                       selectedId: _destinationAccountId,
                       accent: FtColors.moss,
+                      sheetTitle: 'Pilih rekening tujuan',
                       onSelect: (id) {
                         FtHaptics.select();
                         setState(() => _destinationAccountId = id);

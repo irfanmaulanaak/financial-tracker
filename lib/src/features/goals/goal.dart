@@ -20,20 +20,15 @@ class Goal {
   final String? ownerId; // null for shared
   final DateTime createdAt;
 
-  // Auto-debit (Phase 4): when true, [autoDebitRunnerProvider] materialises
-  // a monthly transfer from [sourceAccountId] of [monthlyContrib] IDR.
-  final bool autoDebit;
-  final int autoDebitDay; // 1..28 (clamped to month length at run time)
-  final String? sourceAccountId;
-
   /// Optional preset id from the add-goal flow (`emergency`, `vacation`,
   /// `house`, `gadget`, `wedding`, `other`). Decorative only; doesn't drive
   /// behavior.
   final String? presetId;
 
-  /// Last `YYYY-MM` we materialised an auto-debit transfer for. Used by
-  /// [AutoDebitRunner] to dedupe across devices/sessions.
-  final String? lastAutoDebitMonth;
+  /// Manual sort key for drag-to-reorder on the Tujuan list. Lower comes
+  /// first. Null = legacy goal; sorts by `createdAt.millisecondsSinceEpoch`
+  /// as fallback so the list stays stable until the user reorders.
+  final int? sortIndex;
 
   const Goal({
     required this.id,
@@ -47,11 +42,8 @@ class Goal {
     required this.scope,
     required this.ownerId,
     required this.createdAt,
-    this.autoDebit = false,
-    this.autoDebitDay = 1,
-    this.sourceAccountId,
     this.presetId,
-    this.lastAutoDebitMonth,
+    this.sortIndex,
   });
 
   double get progress => target == 0 ? 0 : (current / target).clamp(0, 1);
@@ -69,11 +61,8 @@ class Goal {
         'scope': scope.name,
         if (ownerId != null) 'ownerId': ownerId,
         'createdAt': Timestamp.fromDate(createdAt),
-        'autoDebit': autoDebit,
-        'autoDebitDay': autoDebitDay,
-        if (sourceAccountId != null) 'sourceAccountId': sourceAccountId,
         if (presetId != null) 'presetId': presetId,
-        if (lastAutoDebitMonth != null) 'lastAutoDebitMonth': lastAutoDebitMonth,
+        if (sortIndex != null) 'sortIndex': sortIndex,
       };
 
   static Goal fromSnapshot(DocumentSnapshot snap) {
@@ -90,11 +79,8 @@ class Goal {
       scope: goalScopeFromString(m['scope'] as String?),
       ownerId: m['ownerId'] as String?,
       createdAt: (m['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      autoDebit: m['autoDebit'] as bool? ?? false,
-      autoDebitDay: (m['autoDebitDay'] as num?)?.toInt() ?? 1,
-      sourceAccountId: m['sourceAccountId'] as String?,
       presetId: m['presetId'] as String?,
-      lastAutoDebitMonth: m['lastAutoDebitMonth'] as String?,
+      sortIndex: (m['sortIndex'] as num?)?.toInt(),
     );
   }
 }

@@ -293,10 +293,11 @@ class _RecordExpenseScreenState extends ConsumerState<RecordExpenseScreen> {
                             ),
                             const SizedBox(height: 14),
                             if (_payType == 'cash')
-                              RecordAccountPicker(
+                              RecordAccountDropdownField(
                                 accounts: sourceAccounts,
                                 selectedId: _sourceAccountId,
                                 accent: FtColors.ink,
+                                sheetTitle: 'Pilih rekening',
                                 onSelect: (id) {
                                   FtHaptics.select();
                                   setState(() => _sourceAccountId = id);
