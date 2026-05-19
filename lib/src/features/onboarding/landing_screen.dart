@@ -14,6 +14,7 @@ class LandingScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: FtColors.bg,
       body: SafeArea(
+        child: FtPageContainer(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
           child: Column(
@@ -86,6 +87,7 @@ class LandingScreen extends ConsumerWidget {
               const Spacer(),
             ],
           ),
+        ),
         ),
       ),
     );

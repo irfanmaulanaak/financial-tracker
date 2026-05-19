@@ -77,7 +77,10 @@ class _CardsScreenState extends ConsumerState<CardsScreen> {
   Widget build(BuildContext context) {
     final household = ref.watch(currentHouseholdProvider).value;
     if (household == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return Scaffold(
+        backgroundColor: FtColors.bg,
+        body: const FtSkeletonListView(count: 4, tileHeight: 96),
+      );
     }
     final cards = ref.watch(cardsProvider(household.id));
     return Scaffold(
@@ -166,6 +169,7 @@ class _CardsScreenState extends ConsumerState<CardsScreen> {
                   ),
                 ),
                 FtCard(
+                  heroTag: 'ft-kartu-hero',
                   margin: const EdgeInsets.fromLTRB(22, 4, 22, 18),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

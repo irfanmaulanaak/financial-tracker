@@ -99,6 +99,7 @@ class HealthScreen extends ConsumerWidget {
             child: Eyebrow('Komponen Skor'),
           ),
           FtCard(
+            heroTag: 'ft-kesehatan-hero',
             margin: const EdgeInsets.fromLTRB(22, 0, 22, 18),
             padding: EdgeInsets.zero,
             child: Column(

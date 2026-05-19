@@ -78,25 +78,49 @@ class _HomeHeroCarouselState extends State<HomeHeroCarousel> {
         children: [
           SizedBox(
             height: 240,
-            child: PageView(
+            child: PageView.builder(
               controller: _controller,
+              itemCount: 4,
               onPageChanged: (i) {
                 FtHaptics.select();
                 setState(() => _page = i);
               },
-              children: [
-                _AsetSlide(
-                  nw: widget.nw,
-                  trend: widget.trend,
-                  cycleNet: widget.cycleNet,
-                ),
-                _RatioSlide(
-                  spend: widget.spend,
-                  gajiIncome: widget.gajiIncome,
-                ),
-                _KartuSlide(cards: widget.cards),
-                _KesehatanSlide(score: widget.health),
-              ],
+              itemBuilder: (_, index) {
+                final slide = switch (index) {
+                  0 => _AsetSlide(
+                      nw: widget.nw,
+                      trend: widget.trend,
+                      cycleNet: widget.cycleNet,
+                    ),
+                  1 => _RatioSlide(
+                      spend: widget.spend,
+                      gajiIncome: widget.gajiIncome,
+                    ),
+                  2 => _KartuSlide(cards: widget.cards),
+                  _ => _KesehatanSlide(score: widget.health),
+                };
+                return AnimatedBuilder(
+                  animation: _controller,
+                  builder: (_, child) {
+                    // PageController.page may be null until first scroll.
+                    final page = _controller.hasClients &&
+                            _controller.position.hasContentDimensions
+                        ? (_controller.page ?? _controller.initialPage.toDouble())
+                        : index.toDouble();
+                    final offset = (page - index).abs().clamp(0.0, 1.0);
+                    final scale = 1 - 0.06 * offset;
+                    final opacity = 1 - 0.35 * offset;
+                    return Opacity(
+                      opacity: opacity,
+                      child: Transform.scale(
+                        scale: scale,
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: slide,
+                );
+              },
             ),
           ),
           const SizedBox(height: 10),
@@ -161,6 +185,7 @@ class _AsetSlide extends ConsumerWidget {
         FtDonutSegment(value: nw.investments.toDouble(), color: FtColors.clay),
     ];
     return FtCard(
+      heroTag: 'ft-aset-hero',
       onTap: () => context.push('/accounts'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -617,6 +642,7 @@ class _KartuSlide extends StatelessWidget {
     }
 
     return FtCard(
+      heroTag: 'ft-kartu-hero',
       onTap: () => context.push('/cards'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -838,6 +864,7 @@ class _KesehatanSlide extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = _stateColor();
     return FtCard(
+      heroTag: 'ft-kesehatan-hero',
       onTap: () => context.push('/health'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

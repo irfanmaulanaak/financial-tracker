@@ -231,6 +231,7 @@ class _RecordExpenseScreenState extends ConsumerState<RecordExpenseScreen> {
       resizeToAvoidBottomInset: true,
       body: SafeArea(
         bottom: false,
+        child: FtPageContainer(
         child: Column(
           children: [
             FtSubHeader(
@@ -381,6 +382,7 @@ class _RecordExpenseScreenState extends ConsumerState<RecordExpenseScreen> {
               ),
             ),
           ],
+        ),
         ),
       ),
     );

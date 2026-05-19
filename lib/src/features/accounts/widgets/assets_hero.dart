@@ -25,6 +25,7 @@ class AssetsHero extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final hidden = ref.watch(hideAssetsProvider);
     return FtCard(
+      heroTag: 'ft-aset-hero',
       margin: const EdgeInsets.fromLTRB(22, 4, 22, 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

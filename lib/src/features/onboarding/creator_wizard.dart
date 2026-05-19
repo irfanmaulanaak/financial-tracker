@@ -111,6 +111,7 @@ class _CreatorWizardScreenState extends ConsumerState<CreatorWizardScreen> {
     return Scaffold(
       backgroundColor: FtColors.bg,
       body: SafeArea(
+        child: FtPageContainer(
         child: Column(
           children: [
             FtSubHeader(
@@ -131,6 +132,7 @@ class _CreatorWizardScreenState extends ConsumerState<CreatorWizardScreen> {
               ),
             ),
           ],
+        ),
         ),
       ),
     );

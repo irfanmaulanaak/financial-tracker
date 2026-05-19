@@ -118,6 +118,7 @@ class _RecordIncomeScreenState extends ConsumerState<RecordIncomeScreen> {
       resizeToAvoidBottomInset: true,
       body: SafeArea(
         bottom: false,
+        child: FtPageContainer(
         child: Column(
           children: [
             FtSubHeader(
@@ -193,6 +194,7 @@ class _RecordIncomeScreenState extends ConsumerState<RecordIncomeScreen> {
               ),
             ),
           ],
+        ),
         ),
       ),
     );

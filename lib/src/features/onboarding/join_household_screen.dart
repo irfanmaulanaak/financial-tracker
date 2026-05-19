@@ -67,6 +67,7 @@ class _JoinHouseholdScreenState extends ConsumerState<JoinHouseholdScreen> {
     return Scaffold(
       backgroundColor: FtColors.bg,
       body: SafeArea(
+        child: FtPageContainer(
         child: Column(
           children: [
             FtSubHeader(
@@ -142,6 +143,7 @@ class _JoinHouseholdScreenState extends ConsumerState<JoinHouseholdScreen> {
               ),
             ),
           ],
+        ),
         ),
       ),
     );

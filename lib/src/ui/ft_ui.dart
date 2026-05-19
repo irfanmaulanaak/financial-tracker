@@ -16,6 +16,7 @@ import 'ft_side_nav.dart';
 export 'ft_breakpoints.dart';
 export 'ft_motion.dart';
 export 'ft_page_container.dart';
+export 'ft_skeleton.dart';
 export 'ft_snackbar.dart';
 
 class FtCard extends StatelessWidget {
@@ -133,6 +134,7 @@ class FtProgressBar extends StatelessWidget {
     this.height = 4,
     this.trackColor,
     this.overflowColor,
+    this.animationDuration = const Duration(milliseconds: 360),
   });
 
   final num value;
@@ -145,6 +147,10 @@ class FtProgressBar extends StatelessWidget {
   /// remaining = overflowColor (typically `FtColors.danger`). Matches design's
   /// `Bar overflowColor={theme.danger}` from `screens-home.jsx`.
   final Color? overflowColor;
+
+  /// How long to animate when [value] or [max] changes. Set to `Duration.zero`
+  /// to disable. Honors `MediaQuery.disableAnimations` automatically.
+  final Duration animationDuration;
 
   @override
   Widget build(BuildContext context) {
@@ -160,39 +166,53 @@ class FtProgressBar extends StatelessWidget {
       );
     }
     final raw = (value / max).toDouble();
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    final duration = reduceMotion ? Duration.zero : animationDuration;
+
     final over = overflowColor != null && raw > 1.0;
     if (!over) {
-      final pct = raw.clamp(0.0, 1.0);
+      final target = raw.clamp(0.0, 1.0);
       return ClipRRect(
         borderRadius: BorderRadius.circular(999),
-        child: LinearProgressIndicator(
-          value: pct,
-          minHeight: height,
-          backgroundColor: trackColor ?? FtColors.line,
-          valueColor: AlwaysStoppedAnimation(color),
+        child: TweenAnimationBuilder<double>(
+          tween: Tween(begin: target, end: target),
+          duration: duration,
+          curve: Curves.easeOutCubic,
+          builder: (_, v, _) {
+            return LinearProgressIndicator(
+              value: v,
+              minHeight: height,
+              backgroundColor: trackColor ?? FtColors.line,
+              valueColor: AlwaysStoppedAnimation(color),
+            );
+          },
         ),
       );
     }
-    // Two-segment fill: first part full of base color (representing the
-    // budgeted spend), then a small wedge of overflowColor for the excess.
-    // Total filled = 1.0 because spend is over-max; sized by the over-amount.
     final overFraction = ((raw - 1.0) / raw).clamp(0.0, 1.0);
-    final baseFraction = 1.0 - overFraction;
     return ClipRRect(
       borderRadius: BorderRadius.circular(999),
       child: SizedBox(
         height: height,
-        child: Row(
-          children: [
-            Expanded(
-              flex: (baseFraction * 1000).round().clamp(1, 1000),
-              child: Container(color: color),
-            ),
-            Expanded(
-              flex: (overFraction * 1000).round().clamp(1, 1000),
-              child: Container(color: overflowColor),
-            ),
-          ],
+        child: TweenAnimationBuilder<double>(
+          tween: Tween(begin: overFraction, end: overFraction),
+          duration: duration,
+          curve: Curves.easeOutCubic,
+          builder: (_, of, _) {
+            final base = 1.0 - of;
+            return Row(
+              children: [
+                Expanded(
+                  flex: (base * 1000).round().clamp(1, 1000),
+                  child: Container(color: color),
+                ),
+                Expanded(
+                  flex: (of * 1000).round().clamp(1, 1000),
+                  child: Container(color: overflowColor),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -395,6 +415,12 @@ enum FtTab { home, spend, assets, goals, cards }
 
 /// Floating glass-pill bottom nav with 5 evenly-spaced tabs. Mirrors the
 /// design's `TabBar` in `claude-design/app.jsx` — no central action button.
+/// Floating glass-pill bottom nav with 5 evenly-spaced tabs. Mirrors the
+/// design's `TabBar` in `claude-design/app.jsx` — no central action button.
+///
+/// The active state is a single floating pill that slides horizontally
+/// between tabs (280ms easeOutCubic) instead of each button toggling its
+/// own background, so tab switches read as a continuous flow.
 class FtBottomNav extends StatelessWidget {
   const FtBottomNav({super.key, required this.current});
 
@@ -420,19 +446,12 @@ class FtBottomNav extends StatelessWidget {
           Icons.credit_card_outlined, 'Utang', '/cards'),
     ];
 
-    final nav = Row(
-      children: [
-        for (final item in items)
-          Expanded(
-            child: _FtNavButton(
-              item: item,
-              active: current == item.tab,
-              labelSize: labelSize,
-              iconSize: iconSize,
-            ),
-          ),
-      ],
-    );
+    final activeIndex = items.indexWhere((it) => it.tab == current);
+    // AnimatedAlign maps the active index to a -1..1 range over `tabCount-1`
+    // cells, so the pill lands exactly under the active cell at every step.
+    final align = items.length <= 1
+        ? -1.0
+        : (activeIndex / (items.length - 1)) * 2 - 1;
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(28),
@@ -452,7 +471,46 @@ class FtBottomNav extends StatelessWidget {
               ),
             ],
           ),
-          child: nav,
+          child: LayoutBuilder(
+            builder: (_, constraints) {
+              final cellWidth = constraints.maxWidth / items.length;
+              return Stack(
+                children: [
+                  // Floating pill that slides between active cells.
+                  AnimatedAlign(
+                    duration: const Duration(milliseconds: 280),
+                    curve: Curves.easeOutCubic,
+                    alignment: Alignment(align, 0),
+                    child: SizedBox(
+                      width: cellWidth,
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 2),
+                        decoration: BoxDecoration(
+                          color: FtColors.bg,
+                          borderRadius: BorderRadius.circular(22),
+                        ),
+                        // Height equals the row height (icon + 3 + label + 16 vertical padding).
+                        child: const SizedBox(height: double.infinity),
+                      ),
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      for (final item in items)
+                        Expanded(
+                          child: _FtNavButton(
+                            item: item,
+                            active: current == item.tab,
+                            labelSize: labelSize,
+                            iconSize: iconSize,
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              );
+            },
+          ),
         ),
       ),
     );
@@ -487,32 +545,41 @@ class _FtNavButton extends StatelessWidget {
         duration: const Duration(milliseconds: 220),
         curve: Curves.easeOutCubic,
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
-        decoration: BoxDecoration(
-          color: active ? FtColors.bg : Colors.transparent,
-          borderRadius: BorderRadius.circular(22),
-        ),
+        // The active pill is now drawn by the parent Stack — leave the button
+        // background transparent so the slide animation isn't double-drawn.
+        decoration: const BoxDecoration(color: Colors.transparent),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              active ? item.iconActive : item.icon,
-              size: iconSize,
-              color: active ? FtColors.ink : FtColors.ink3,
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              transitionBuilder: (child, anim) =>
+                  FadeTransition(opacity: anim, child: child),
+              child: Icon(
+                active ? item.iconActive : item.icon,
+                key: ValueKey(active),
+                size: iconSize,
+                color: active ? FtColors.ink : FtColors.ink3,
+              ),
             ),
             const SizedBox(height: 3),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 2),
               child: FittedBox(
                 fit: BoxFit.scaleDown,
-                child: Text(
-                  item.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                child: AnimatedDefaultTextStyle(
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOutCubic,
                   style: TextStyle(
                     color: active ? FtColors.ink : FtColors.ink3,
                     fontSize: labelSize,
                     fontWeight: active ? FontWeight.w600 : FontWeight.w500,
                     letterSpacing: 0.2,
+                  ),
+                  child: Text(
+                    item.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ),

@@ -46,7 +46,10 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen>
   Widget build(BuildContext context) {
     final household = ref.watch(currentHouseholdProvider).value;
     if (household == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return Scaffold(
+        backgroundColor: FtColors.bg,
+        body: const FtSkeletonListView(count: 4, tileHeight: 84),
+      );
     }
     final investmentsAsync = ref.watch(investmentsProvider(household.id));
     final investments = investmentsAsync.value ?? const <Investment>[];

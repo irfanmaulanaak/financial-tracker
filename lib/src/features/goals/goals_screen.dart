@@ -26,14 +26,17 @@ class GoalsScreen extends ConsumerWidget {
     final household = ref.watch(currentHouseholdProvider).value;
     final user = ref.watch(authStateProvider).value;
     if (household == null || user == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return Scaffold(
+        backgroundColor: FtColors.bg,
+        body: const FtSkeletonListView(count: 4, tileHeight: 110),
+      );
     }
     final goalsAsync = ref.watch(goalsProvider(household.id));
 
     return Scaffold(
       backgroundColor: FtColors.bg,
       body: goalsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const FtSkeletonListView(count: 4, tileHeight: 110),
         error: (e, _) => Center(child: Text('Gagal: $e')),
         data: (goals) {
           final totalTarget = goals.fold<int>(0, (a, b) => a + b.target);

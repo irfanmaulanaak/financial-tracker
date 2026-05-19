@@ -24,7 +24,10 @@ class IncomeLogScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final household = ref.watch(currentHouseholdProvider).value;
     if (household == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return Scaffold(
+        backgroundColor: FtColors.bg,
+        body: const FtSkeletonListView(count: 6),
+      );
     }
     final incomes = ref.watch(_incomesProvider(household.id));
     return Scaffold(
@@ -42,8 +45,7 @@ class IncomeLogScreen extends ConsumerWidget {
                     await ftRefreshDelay();
                   },
                   child: incomes.when(
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
+                  loading: () => const FtSkeletonListView(count: 6),
                   error: (e, _) => Center(child: Text('Gagal: $e')),
                   data: (items) {
                     if (items.isEmpty) {

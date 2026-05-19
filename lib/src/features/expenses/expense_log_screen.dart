@@ -31,7 +31,10 @@ class _ExpenseLogScreenState extends ConsumerState<ExpenseLogScreen> {
   Widget build(BuildContext context) {
     final household = ref.watch(currentHouseholdProvider).value;
     if (household == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return Scaffold(
+        backgroundColor: FtColors.bg,
+        body: const FtSkeletonListView(count: 6),
+      );
     }
     final cycle = currentCycle(DateTime.now(), payday: household.payday);
     final expensesStream = ref.watch(_expensesProvider(household.id));
@@ -100,8 +103,7 @@ class _ExpenseLogScreenState extends ConsumerState<ExpenseLogScreen> {
                   await ftRefreshDelay();
                 },
                 child: expensesStream.when(
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
+                  loading: () => const FtSkeletonListView(count: 6),
                   error: (e, _) => Center(child: Text('Gagal: $e')),
                   data: (all) {
                     final filtered = all.where((e) {
@@ -152,7 +154,13 @@ class _ExpenseLogScreenState extends ConsumerState<ExpenseLogScreen> {
                     final days = grouped.keys.toList()
                       ..sort((a, b) => b.compareTo(a));
 
-                    return ListView.builder(
+                    return AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 220),
+                      switchInCurve: Curves.easeOutCubic,
+                      switchOutCurve: Curves.easeInCubic,
+                      child: ListView.builder(
+                      key: ValueKey(
+                          '${_filterMemberId ?? ''}|${_filterCategoryId ?? ''}|${filtered.length}'),
                       padding: const EdgeInsets.only(top: 2, bottom: 120),
                       physics: const BouncingScrollPhysics(
                         parent: AlwaysScrollableScrollPhysics(),
@@ -165,48 +173,60 @@ class _ExpenseLogScreenState extends ConsumerState<ExpenseLogScreen> {
                           0,
                           (a, e) => a + e.amount.toInt(),
                         );
-                        return FtListReveal(
-                          index: dayIdx,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(22, 16, 22, 8),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      Dates.grouped(day),
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
+                        // Flat tile index across all previous day groups so
+                        // the reveal cascades continuously down the list
+                        // instead of restarting per day.
+                        var flatIndex = 0;
+                        for (var i = 0; i < dayIdx; i++) {
+                          flatIndex += grouped[days[i]]!.length + 1;
+                        }
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            FtListReveal(
+                              index: flatIndex,
+                              child: Padding(
+                                padding: const EdgeInsets.fromLTRB(22, 16, 22, 8),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        Dates.grouped(day),
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                  Text(
-                                    Money.format(dayTotal),
-                                    style: TextStyle(
-                                      color: FtColors.ink3,
+                                    Text(
+                                      Money.format(dayTotal),
+                                      style: TextStyle(
+                                        color: FtColors.ink3,
+                                      ),
                                     ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            ...items.map(
-                              (e) => _ExpenseTile(
-                                expense: e,
-                                category: household.categoryOf(e.categoryId),
-                                spender: household.memberOf(e.spentBy),
-                                onTap: () => ExpenseDetailSheet.show(
-                                  context: context,
-                                  expense: e,
+                                  ],
                                 ),
-                                onDelete: () => _confirmDelete(household, e),
                               ),
                             ),
-                            ],
-                          ),
+                            for (var i = 0; i < items.length; i++)
+                              FtListReveal(
+                                index: flatIndex + 1 + i,
+                                child: _ExpenseTile(
+                                  expense: items[i],
+                                  category:
+                                      household.categoryOf(items[i].categoryId),
+                                  spender: household.memberOf(items[i].spentBy),
+                                  onTap: () => ExpenseDetailSheet.show(
+                                    context: context,
+                                    expense: items[i],
+                                  ),
+                                  onDelete: () =>
+                                      _confirmDelete(household, items[i]),
+                                ),
+                              ),
+                          ],
                         );
                       },
+                    ),
                     );
                   },
                 ),

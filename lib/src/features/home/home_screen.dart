@@ -77,7 +77,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return Scaffold(
       backgroundColor: FtColors.bg,
       body: householdAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const FtSkeletonListView(count: 5, tileHeight: 90),
         error: (e, _) => Center(child: Text('Gagal: $e')),
         data: (household) {
           if (household == null) {
