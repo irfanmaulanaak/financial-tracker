@@ -421,6 +421,12 @@ enum FtTab { home, spend, assets, goals, cards }
 /// The active state is a single floating pill that slides horizontally
 /// between tabs (280ms easeOutCubic) instead of each button toggling its
 /// own background, so tab switches read as a continuous flow.
+/// Floating glass-pill bottom nav with 5 evenly-spaced tabs. Mirrors the
+/// design's `TabBar` in `claude-design/app.jsx` — no central action button.
+///
+/// The active state is a single floating pill that slides horizontally
+/// between tabs (280ms easeOutCubic) instead of each button toggling its
+/// own background, so tab switches read as a continuous flow.
 class FtBottomNav extends StatelessWidget {
   const FtBottomNav({super.key, required this.current});
 
@@ -447,8 +453,8 @@ class FtBottomNav extends StatelessWidget {
     ];
 
     final activeIndex = items.indexWhere((it) => it.tab == current);
-    // AnimatedAlign maps the active index to a -1..1 range over `tabCount-1`
-    // cells, so the pill lands exactly under the active cell at every step.
+    // Maps the active index to a -1..1 range over `tabCount-1` cells, so the
+    // pill lands exactly under the active cell at every step.
     final align = items.length <= 1
         ? -1.0
         : (activeIndex / (items.length - 1)) * 2 - 1;
@@ -471,45 +477,49 @@ class FtBottomNav extends StatelessWidget {
               ),
             ],
           ),
-          child: LayoutBuilder(
-            builder: (_, constraints) {
-              final cellWidth = constraints.maxWidth / items.length;
-              return Stack(
-                children: [
-                  // Floating pill that slides between active cells.
-                  AnimatedAlign(
+          // IntrinsicHeight forces the Stack to size to the Row's natural
+          // height (icon + label + padding ≈ 48). Without it the Stack would
+          // try to be 0 high because the AnimatedAlign pill has no intrinsic
+          // height of its own.
+          child: IntrinsicHeight(
+            child: Stack(
+              children: [
+                // Floating pill — fractionally 1/N wide so it lands under one
+                // cell regardless of available width. Positioned.fill gives
+                // it the full Stack to align within.
+                Positioned.fill(
+                  child: AnimatedAlign(
                     duration: const Duration(milliseconds: 280),
                     curve: Curves.easeOutCubic,
                     alignment: Alignment(align, 0),
-                    child: SizedBox(
-                      width: cellWidth,
+                    child: FractionallySizedBox(
+                      widthFactor: 1.0 / items.length,
+                      heightFactor: 1.0,
                       child: Container(
                         margin: const EdgeInsets.symmetric(horizontal: 2),
                         decoration: BoxDecoration(
                           color: FtColors.bg,
                           borderRadius: BorderRadius.circular(22),
                         ),
-                        // Height equals the row height (icon + 3 + label + 16 vertical padding).
-                        child: const SizedBox(height: double.infinity),
                       ),
                     ),
                   ),
-                  Row(
-                    children: [
-                      for (final item in items)
-                        Expanded(
-                          child: _FtNavButton(
-                            item: item,
-                            active: current == item.tab,
-                            labelSize: labelSize,
-                            iconSize: iconSize,
-                          ),
+                ),
+                Row(
+                  children: [
+                    for (final item in items)
+                      Expanded(
+                        child: _FtNavButton(
+                          item: item,
+                          active: current == item.tab,
+                          labelSize: labelSize,
+                          iconSize: iconSize,
                         ),
-                    ],
-                  ),
-                ],
-              );
-            },
+                      ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
