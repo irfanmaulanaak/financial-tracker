@@ -134,6 +134,18 @@ service cloud.firestore {
         allow write: if isMember() && canTxn();
       }
 
+      // Recurring tombstones: per-doc suppression markers written when a
+      // user deletes an auto-materialised recurring expense. The runner
+      // reads them to skip resurrecting that date. Create-only from the
+      // client; no updates. Delete reserved for `full` access so a user
+      // can revive a schedule if they need to.
+      match /recurring_tombstones/{document=**} {
+        allow read: if isMember();
+        allow create: if isMember() && canTxn();
+        allow update: if false;
+        allow delete: if isMember() && canFull();
+      }
+
       // cards + goals + investments: full only.
       match /cards/{document=**} {
         allow read: if isMember();

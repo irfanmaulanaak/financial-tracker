@@ -66,6 +66,17 @@ class RecurringRunner {
         .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(since))
         .get();
     final all = snap.docs.map(Expense.fromSnapshot).toList();
+    // Tombstones: doc IDs the user explicitly deleted. The deterministic
+    // recurring doc-id scheme means a deleted instance would otherwise be
+    // re-materialised next month — the eSnap.exists check inside `add` only
+    // detects a CURRENT-tx duplicate, not a past-tx deletion. The tombstone
+    // collection is the persistent suppression list.
+    final tombstoneSnap = await _db
+        .collection('households')
+        .doc(householdId)
+        .collection('recurring_tombstones')
+        .get();
+    final tombstoned = {for (final d in tombstoneSnap.docs) d.id};
     final latest = latestPerKey<Expense>(
       all,
       keyOf: _expenseKey,
@@ -88,6 +99,7 @@ class RecurringRunner {
         // no-op (skipped inside the repo's transaction). Prevents double
         // expenses + double balance debits / double card charges.
         final docId = recurringDocId(key, d);
+        if (tombstoned.contains(docId)) continue;
         if (template.cardId != null) {
           await _expenses.addCardExpense(
             householdId: householdId,

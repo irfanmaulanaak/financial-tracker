@@ -37,6 +37,39 @@ class TransferRepository {
         .map((s) => s.docs.map(Transfer.fromSnapshot).toList());
   }
 
+  /// Recent transfers leaving [accountId] (this account was the source).
+  /// Single-field `where` to dodge composite indexes; sort/slice client-side.
+  Stream<List<Transfer>> watchBySourceAccount({
+    required String householdId,
+    required String accountId,
+    int limit = 100,
+  }) {
+    return _col(householdId)
+        .where('sourceAccountId', isEqualTo: accountId)
+        .snapshots()
+        .map((s) {
+      final rows = s.docs.map(Transfer.fromSnapshot).toList()
+        ..sort((a, b) => b.date.compareTo(a.date));
+      return rows.length > limit ? rows.sublist(0, limit) : rows;
+    });
+  }
+
+  /// Recent transfers landing in [accountId] (this account was the destination).
+  Stream<List<Transfer>> watchByDestinationAccount({
+    required String householdId,
+    required String accountId,
+    int limit = 100,
+  }) {
+    return _col(householdId)
+        .where('destinationAccountId', isEqualTo: accountId)
+        .snapshots()
+        .map((s) {
+      final rows = s.docs.map(Transfer.fromSnapshot).toList()
+        ..sort((a, b) => b.date.compareTo(a.date));
+      return rows.length > limit ? rows.sublist(0, limit) : rows;
+    });
+  }
+
   Future<String> add({
     required String householdId,
     required int amount,

@@ -12,6 +12,7 @@ import '../household/household.dart';
 import '../household/household_providers.dart';
 import '../household/name_format.dart';
 import '../incomes/income.dart';
+import '../transfers/transfer.dart';
 import 'account.dart';
 import 'account_history_providers.dart';
 
@@ -36,12 +37,24 @@ class AccountDetailScreen extends ConsumerWidget {
     final incomesAsync = ref.watch(
       accountIncomesProvider((hid: household.id, accountId: accountId)),
     );
+    final outgoingAsync = ref.watch(
+      accountOutgoingTransfersProvider(
+          (hid: household.id, accountId: accountId)),
+    );
+    final incomingAsync = ref.watch(
+      accountIncomingTransfersProvider(
+          (hid: household.id, accountId: accountId)),
+    );
 
     final expenses = expensesAsync.value ?? const <Expense>[];
     final incomes = incomesAsync.value ?? const <Income>[];
+    final outgoing = outgoingAsync.value ?? const <Transfer>[];
+    final incoming = incomingAsync.value ?? const <Transfer>[];
     final entries = <_TxnEntry>[
       for (final e in expenses) _TxnEntry.expense(e),
       for (final i in incomes) _TxnEntry.income(i),
+      for (final t in outgoing) _TxnEntry.transferOut(t),
+      for (final t in incoming) _TxnEntry.transferIn(t),
     ]..sort((a, b) => b.date.compareTo(a.date));
 
     return Scaffold(
@@ -54,6 +67,10 @@ class AccountDetailScreen extends ConsumerWidget {
             ref.invalidate(accountExpensesProvider(
                 (hid: household.id, accountId: accountId)));
             ref.invalidate(accountIncomesProvider(
+                (hid: household.id, accountId: accountId)));
+            ref.invalidate(accountOutgoingTransfersProvider(
+                (hid: household.id, accountId: accountId)));
+            ref.invalidate(accountIncomingTransfersProvider(
                 (hid: household.id, accountId: accountId)));
             await ftRefreshDelay();
           },
@@ -155,16 +172,35 @@ class _TxnEntry {
   _TxnEntry.expense(Expense e)
       : expense = e,
         income = null,
+        transfer = null,
+        transferOutgoing = false,
         date = e.date;
   _TxnEntry.income(Income i)
       : expense = null,
         income = i,
+        transfer = null,
+        transferOutgoing = false,
         date = i.date;
+  _TxnEntry.transferOut(Transfer t)
+      : expense = null,
+        income = null,
+        transfer = t,
+        transferOutgoing = true,
+        date = t.date;
+  _TxnEntry.transferIn(Transfer t)
+      : expense = null,
+        income = null,
+        transfer = t,
+        transferOutgoing = false,
+        date = t.date;
   final Expense? expense;
   final Income? income;
+  final Transfer? transfer;
+  final bool transferOutgoing;
   final DateTime date;
 
   bool get isExpense => expense != null;
+  bool get isTransfer => transfer != null;
 }
 
 class _TxnTile extends StatelessWidget {
@@ -174,6 +210,71 @@ class _TxnTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (entry.isTransfer) {
+      final t = entry.transfer!;
+      final outgoing = entry.transferOutgoing;
+      final counterpartyId =
+          outgoing ? t.destinationAccountId : t.sourceAccountId;
+      final counterparty = household.accountOf(counterpartyId);
+      final actor = household.memberOf(t.transferredBy);
+      // Outgoing nets total = amount + fee; incoming only amount lands.
+      final signedAmount = outgoing ? -(t.amount + t.fee) : t.amount;
+      final color = outgoing ? FtColors.sky : FtColors.moss;
+      final feeNote =
+          outgoing && t.fee > 0 ? 'Biaya ${Money.format(t.fee)}' : null;
+      return FtCard(
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          children: [
+            _IconBadge(
+              color: color,
+              icon: outgoing
+                  ? Icons.north_east_rounded
+                  : Icons.south_west_rounded,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    outgoing
+                        ? 'Pindah ke ${counterparty?.label ?? '—'}'
+                        : 'Pindah dari ${counterparty?.label ?? '—'}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    [
+                      Dates.short(t.date),
+                      if (actor != null) prettyName(actor.displayName),
+                      ?feeNote,
+                      if (t.note != null && t.note!.isNotEmpty) t.note!,
+                    ].join(' · '),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: FtColors.ink3, fontSize: 11),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              '${signedAmount < 0 ? '−' : '+'}${Money.format(signedAmount.abs())}',
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     if (entry.isExpense) {
       final e = entry.expense!;
       final cat = household.categoryOf(e.categoryId);

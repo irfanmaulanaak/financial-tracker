@@ -650,6 +650,19 @@ class ExpenseRepository {
     final expenseRef = _col(householdId).doc(expenseId);
     final householdRef =
         _db.collection('households').doc(householdId);
+    // Recurring instances live at deterministic doc IDs ("recur_<hash>_<ymd>").
+    // Without a tombstone, the runner would re-create the deleted month on
+    // the next app launch (the `exists` guard inside `add` only catches
+    // in-flight duplicates, not past deletions). Write a tombstone so the
+    // runner skips this date.
+    final isRecurringInstance = expenseId.startsWith('recur_');
+    final tombstoneRef = isRecurringInstance
+        ? _db
+            .collection('households')
+            .doc(householdId)
+            .collection('recurring_tombstones')
+            .doc(expenseId)
+        : null;
     String? touchedCardId;
     await _db.runTransaction((tx) async {
       final eSnap = await tx.get(expenseRef);
@@ -698,6 +711,12 @@ class ExpenseRepository {
         }
       }
       tx.delete(expenseRef);
+      if (tombstoneRef != null) {
+        tx.set(tombstoneRef, {
+          'tombstonedAt': Timestamp.fromDate(DateTime.now()),
+          'date': Timestamp.fromDate(expense.date),
+        });
+      }
     });
     if (touchedCardId != null) {
       await _cards.recalcUsed(hid: householdId, cardId: touchedCardId!);
