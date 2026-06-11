@@ -243,7 +243,7 @@ class _CategoryEditSheetState extends State<_CategoryEditSheet> {
         ? Money.displayDigits(widget.initial!.monthlyBudget)
         : '',
   );
-  String _color = '#3B82F6';
+  String _color = '#5E7A64';
   String _icon = 'category';
 
   static const _iconChoices = [
@@ -258,15 +258,17 @@ class _CategoryEditSheetState extends State<_CategoryEditSheet> {
     'pets',
     'sports_esports',
   ];
+  // Editorial palette (light values of `FtColors.cat*` + blush); parseColor
+  // maps them to dark variants automatically.
   static const _colorChoices = [
-    '#F59E0B',
-    '#3B82F6',
-    '#EC4899',
-    '#10B981',
-    '#8B5CF6',
-    '#EF4444',
-    '#64748B',
-    '#0EA5E9',
+    '#C4612A',
+    '#B89030',
+    '#7A3F4E',
+    '#5E7A64',
+    '#3A6075',
+    '#2D5040',
+    '#A89880',
+    '#E8B4C0',
   ];
 
   @override

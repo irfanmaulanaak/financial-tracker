@@ -267,7 +267,7 @@ class MemberAccessCard extends StatelessWidget {
   }
 }
 
-/// "Aktivitas Bulan Ini" — pengeluaran + jumlah tx for current cycle.
+/// "Aktivitas Siklus Ini" — pengeluaran + jumlah tx for current cycle.
 class MemberActivityCard extends StatelessWidget {
   const MemberActivityCard({
     super.key,
@@ -286,7 +286,7 @@ class MemberActivityCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Eyebrow('Aktivitas Bulan Ini'),
+          const Eyebrow('Aktivitas Siklus Ini'),
           const SizedBox(height: 8),
           FtCard(
             margin: EdgeInsets.zero,

@@ -65,7 +65,7 @@ class RecentList extends StatelessWidget {
                   ]
                 : [
                     for (final e in recent)
-                      _RecentExpenseRow(
+                      ExpenseActivityRow(
                         expense: e,
                         category: household.categoryOf(e.categoryId),
                         spender: household.memberOf(e.spentBy),
@@ -84,16 +84,22 @@ class RecentList extends StatelessWidget {
   }
 }
 
-class _RecentExpenseRow extends StatelessWidget {
-  const _RecentExpenseRow({
+/// Single expense row (icon, category, date · note, spender chip, amount).
+/// Tap opens [ExpenseDetailSheet]. Shared by the home "Aktivitas Terbaru"
+/// list and the spend screen activity list.
+class ExpenseActivityRow extends StatelessWidget {
+  const ExpenseActivityRow({
+    super.key,
     required this.expense,
     required this.category,
     required this.spender,
+    this.showTopBorder = true,
   });
 
   final Expense expense;
   final Category? category;
   final Member? spender;
+  final bool showTopBorder;
 
   @override
   Widget build(BuildContext context) {
@@ -107,7 +113,9 @@ class _RecentExpenseRow extends StatelessWidget {
       child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
       decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: FtColors.line, width: 0.5)),
+        border: showTopBorder
+            ? Border(top: BorderSide(color: FtColors.line, width: 0.5))
+            : null,
       ),
       child: Row(
         children: [

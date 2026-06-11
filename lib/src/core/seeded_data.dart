@@ -24,12 +24,15 @@ class SeededCategory {
   });
 }
 
+// Colors are the light-mode values of `FtColors.cat*` (warm editorial
+// palette). `parseColor` maps them — and the legacy Tailwind seeds — onto
+// theme-aware light/dark pairs at render time.
 const seededCategories = <SeededCategory>[
-  SeededCategory(id: 'food', label: 'Makanan & Minuman', icon: 'restaurant', color: '#F59E0B'),
-  SeededCategory(id: 'bills', label: 'Tagihan & Utilitas', icon: 'receipt_long', color: '#3B82F6'),
-  SeededCategory(id: 'shopping', label: 'Belanja', icon: 'shopping_bag', color: '#EC4899'),
-  SeededCategory(id: 'transport', label: 'Transportasi', icon: 'directions_car', color: '#10B981'),
-  SeededCategory(id: 'entertainment', label: 'Hiburan', icon: 'movie', color: '#8B5CF6'),
-  SeededCategory(id: 'health', label: 'Kesehatan', icon: 'favorite', color: '#EF4444'),
-  SeededCategory(id: 'other', label: 'Lainnya', icon: 'category', color: '#64748B'),
+  SeededCategory(id: 'food', label: 'Makanan & Minuman', icon: 'restaurant', color: '#C4612A'),
+  SeededCategory(id: 'bills', label: 'Tagihan & Utilitas', icon: 'receipt_long', color: '#B89030'),
+  SeededCategory(id: 'shopping', label: 'Belanja', icon: 'shopping_bag', color: '#7A3F4E'),
+  SeededCategory(id: 'transport', label: 'Transportasi', icon: 'directions_car', color: '#5E7A64'),
+  SeededCategory(id: 'entertainment', label: 'Hiburan', icon: 'movie', color: '#3A6075'),
+  SeededCategory(id: 'health', label: 'Kesehatan', icon: 'favorite', color: '#2D5040'),
+  SeededCategory(id: 'other', label: 'Lainnya', icon: 'category', color: '#A89880'),
 ];

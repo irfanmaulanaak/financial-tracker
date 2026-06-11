@@ -100,9 +100,13 @@ class _FindingRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final delta = finding.analysis.deltaPct;
     final positive = delta > 0;
-    final color = positive
-        ? (delta > 0.20 ? FtColors.danger : FtColors.ochre)
-        : FtColors.healthOk;
+    // No history → "+100% vs rata-rata Rp0" is meaningless; badge it "Baru".
+    final isNew = finding.analysis.historicalAverage == 0 && positive;
+    final color = isNew
+        ? FtColors.ochre
+        : positive
+            ? (delta > 0.20 ? FtColors.danger : FtColors.ochre)
+            : FtColors.healthOk;
     final catColor = parseColor(finding.category.color);
     return FtTapScale(
       scale: 0.98,
@@ -122,9 +126,11 @@ class _FindingRow extends StatelessWidget {
                     color: color.withValues(alpha: 0.28), width: 0.5),
               ),
               child: Icon(
-                positive
-                    ? Icons.arrow_upward_rounded
-                    : Icons.arrow_downward_rounded,
+                isNew
+                    ? Icons.fiber_new_rounded
+                    : positive
+                        ? Icons.arrow_upward_rounded
+                        : Icons.arrow_downward_rounded,
                 size: 16,
                 color: color,
               ),
@@ -149,7 +155,9 @@ class _FindingRow extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        '${positive ? '+' : ''}${(delta * 100).round()}%',
+                        isNew
+                            ? 'Baru'
+                            : '${positive ? '+' : ''}${(delta * 100).round()}%',
                         style: TextStyle(
                           color: color,
                           fontSize: 12,
@@ -161,7 +169,9 @@ class _FindingRow extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'Sekarang ${Money.format(finding.analysis.currentSpend)} · rata-rata ${Money.format(finding.analysis.historicalAverage)}',
+                    isNew
+                        ? 'Sekarang ${Money.format(finding.analysis.currentSpend)} · belum ada riwayat'
+                        : 'Sekarang ${Money.format(finding.analysis.currentSpend)} · rata-rata ${Money.format(finding.analysis.historicalAverage)}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(

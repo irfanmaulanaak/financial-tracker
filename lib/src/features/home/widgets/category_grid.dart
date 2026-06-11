@@ -23,7 +23,7 @@ class CategoryGrid extends StatelessWidget {
     return Column(
       children: [
         FtSectionHeader(
-          title: 'Pengeluaran Bulan Ini',
+          title: 'Pengeluaran Siklus Ini',
           actionLabel: 'Lihat semua',
           onAction: onTap,
         ),
@@ -39,7 +39,9 @@ class CategoryGrid extends StatelessWidget {
             physics: const NeverScrollableScrollPhysics(),
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
-            childAspectRatio: 1.45,
+            // 1.45 left cells ~1px short of the content's min height at
+            // some widths (debug "BOTTOM OVERFLOWED BY 0.8 PIXELS" stripes).
+            childAspectRatio: 1.38,
             children: [
               for (final c in categories)
                 _CategoryCell(category: c, spent: totals[c.id] ?? 0),

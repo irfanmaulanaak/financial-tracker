@@ -5,16 +5,17 @@ import 'package:go_router/go_router.dart';
 import '../../core/expense_aggregations.dart';
 import '../../core/formatters.dart';
 import '../../theme.dart';
+import '../../ui/ft_donut.dart';
 import '../../ui/ft_refresh.dart';
 import '../../ui/ft_ui.dart';
 import '../expenses/expense.dart';
 import '../expenses/expense_providers.dart';
 import '../home/widgets/home_formatters.dart';
-import '../home/widgets/mini_donut.dart';
 import '../household/household.dart';
 import '../household/household_providers.dart';
 import '../insights/insights_providers.dart';
 import 'budget_edit_sheet.dart';
+import 'spend_activity_list.dart';
 
 /// "Pengeluaran Bulanan" — donut + category breakdown drilldown.
 /// Mirrors `claude-design/screens-deep.jsx` `SpendScreen`. Tapping a category
@@ -102,7 +103,7 @@ class _SpendScreenState extends ConsumerState<SpendScreen> {
                   : 'Total ${categories.length} kategori aktif',
               segments: [
                 for (final c in categories.where((c) => (byCat[c.id] ?? 0) > 0))
-                  DonutSegment(
+                  FtDonutSegment(
                     value: (byCat[c.id] ?? 0).toDouble(),
                     color: parseColor(c.color),
                   ),
@@ -165,6 +166,7 @@ class _SpendScreenState extends ConsumerState<SpendScreen> {
                 ],
               ),
             ),
+            SpendActivityList(expenses: active, household: household),
           ],
         ),
         ),
@@ -186,7 +188,7 @@ class _Hero extends StatelessWidget {
   final int total;
   final int displayAmount;
   final String caption;
-  final List<DonutSegment> segments;
+  final List<FtDonutSegment> segments;
   final int? prevIndex;
   final int prevCount;
   final ValueChanged<int?> onPick;
@@ -227,7 +229,7 @@ class _Hero extends StatelessWidget {
                   ],
                 ),
               ),
-              MiniDonut(segments: segments, size: 116, thickness: 14),
+              FtDonut(segments: segments, size: 116, thickness: 14),
             ],
           ),
           const SizedBox(height: 12),

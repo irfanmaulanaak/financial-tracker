@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -78,7 +79,18 @@ class _HomeHeroCarouselState extends State<HomeHeroCarousel> {
         children: [
           SizedBox(
             height: 240,
-            child: PageView.builder(
+            // Default web/desktop scroll behavior excludes mouse drags, which
+            // made slides 2-4 unreachable with a mouse. Opt the PageView in.
+            child: ScrollConfiguration(
+              behavior: ScrollConfiguration.of(context).copyWith(
+                dragDevices: {
+                  PointerDeviceKind.touch,
+                  PointerDeviceKind.mouse,
+                  PointerDeviceKind.stylus,
+                  PointerDeviceKind.trackpad,
+                },
+              ),
+              child: PageView.builder(
               controller: _controller,
               itemCount: 4,
               onPageChanged: (i) {
@@ -121,10 +133,19 @@ class _HomeHeroCarouselState extends State<HomeHeroCarousel> {
                   child: slide,
                 );
               },
+              ),
             ),
           ),
           const SizedBox(height: 10),
-          _Dots(count: 4, active: _page),
+          _Dots(
+            count: 4,
+            active: _page,
+            onSelect: (i) => _controller.animateToPage(
+              i,
+              duration: const Duration(milliseconds: 320),
+              curve: Curves.easeOutCubic,
+            ),
+          ),
         ],
       ),
     );
@@ -132,9 +153,14 @@ class _HomeHeroCarouselState extends State<HomeHeroCarousel> {
 }
 
 class _Dots extends StatelessWidget {
-  const _Dots({required this.count, required this.active});
+  const _Dots({
+    required this.count,
+    required this.active,
+    required this.onSelect,
+  });
   final int count;
   final int active;
+  final ValueChanged<int> onSelect;
 
   @override
   Widget build(BuildContext context) {
@@ -142,14 +168,27 @@ class _Dots extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         for (var i = 0; i < count; i++)
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 220),
-            margin: const EdgeInsets.symmetric(horizontal: 3),
-            width: i == active ? 18 : 6,
-            height: 6,
-            decoration: BoxDecoration(
-              color: i == active ? FtColors.ink : FtColors.lineStrong,
-              borderRadius: BorderRadius.circular(3),
+          Semantics(
+            button: true,
+            label: 'Slide ${i + 1} dari $count',
+            selected: i == active,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: i == active ? null : () => onSelect(i),
+              // Padding widens the tap target around the 6px dot.
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 3, vertical: 8),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 220),
+                  width: i == active ? 18 : 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: i == active ? FtColors.ink : FtColors.lineStrong,
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
+              ),
             ),
           ),
       ],
@@ -192,7 +231,9 @@ class _AsetSlide extends ConsumerWidget {
         children: [
           Row(
             children: const [
-              Expanded(child: Eyebrow('Total Aset')),
+              // Net of card debt — distinct from the gross "Total Aset" on
+              // the Aset screen.
+              Expanded(child: Eyebrow('Kekayaan Bersih')),
               HideAssetsEye(),
             ],
           ),
@@ -232,13 +273,16 @@ class _AsetSlide extends ConsumerWidget {
                       _DeltaPill(positive: positive, amount: cycleNet.abs())
                     else
                       Text(
-                        'Tunai + tabungan + investasi',
+                        'Tunai + tabungan + investasi − utang',
                         style: TextStyle(color: FtColors.ink3, fontSize: 11),
                       ),
                     if (trend.length >= 2) ...[
                       const SizedBox(height: 10),
+                      // Full width, otherwise the SizedBox collapses to 0 and
+                      // the trend renders as a vertical stub.
                       FtSparkline(
                         data: trend,
+                        width: double.infinity,
                         height: 22,
                         color: positive ? FtColors.moss : FtColors.danger,
                       ),
@@ -847,17 +891,17 @@ class _KesehatanSlide extends StatelessWidget {
   const _KesehatanSlide({required this.score});
   final HealthScore score;
 
+  // Tiers align with `verdictFor` (>=65 sehat, >=50 cukup, <50 below).
   Color _stateColor() {
-    if (score.score >= 80) return FtColors.healthOk;
+    if (score.score >= 65) return FtColors.healthOk;
     if (score.score >= 50) return FtColors.healthWarn;
     return FtColors.healthBad;
   }
 
   String _summary() {
-    final available = score.factors.where((f) => f.contribution != null).toList()
-      ..sort((a, b) => (a.contribution ?? 0).compareTo(b.contribution ?? 0));
-    if (available.isEmpty) return 'Data belum cukup untuk membaca pola.';
-    return '${available.first.label} paling perlu perhatian.';
+    final weakest = score.weakestFactor;
+    if (weakest == null) return 'Data belum cukup untuk membaca pola.';
+    return '${weakest.label} paling perlu perhatian.';
   }
 
   @override

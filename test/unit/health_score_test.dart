@@ -119,5 +119,56 @@ void main() {
       final inv = r.factors.firstWhere((f) => f.key == 'investasi');
       expect(inv.rawScore01, 1.0);
     });
+
+    // Regression: contributions were rounded independently, so they could
+    // sum to ±1-2 off the headline score (e.g. 59 displayed vs score 58).
+    test('factor contributions always sum exactly to the score', () {
+      final inputs = [
+        _i(
+          spend: 8100000,
+          income: 14500000,
+          budget: 12000000,
+          savings: 27000000,
+          debt: 5700000,
+          avgSpend: 7600000,
+          invest: 3,
+        ),
+        _i(spend: 4900000, income: 10000000, budget: 5000000, invest: 1),
+        _i(spend: 1, income: 3, budget: 2, savings: 1, debt: 1, avgSpend: 1),
+        _i(invest: 2),
+      ];
+      for (final input in inputs) {
+        final r = computeHealthScore(input);
+        final sum = r.factors
+            .map((f) => f.contribution ?? 0)
+            .fold<int>(0, (a, b) => a + b);
+        expect(sum, r.score, reason: 'contributions must sum to score');
+      }
+    });
+
+    test('weakestFactor picks the lowest raw score with data', () {
+      final r = computeHealthScore(_i(
+        spend: 8100000,
+        income: 14500000,
+        budget: 12000000,
+        savings: 27000000,
+        debt: 5700000,
+        avgSpend: 7600000,
+        invest: 3,
+      ));
+      final weakest = r.weakestFactor;
+      expect(weakest, isNotNull);
+      final minRaw = r.factors
+          .where((f) => f.rawScore01 != null)
+          .map((f) => f.rawScore01!)
+          .reduce((a, b) => a < b ? a : b);
+      expect(weakest!.rawScore01, minRaw);
+    });
+
+    test('weakestFactor with all-zero inputs resolves to investasi', () {
+      // Only investasi has data in the all-zero case (raw 0.0 counts as data).
+      final r = computeHealthScore(_i());
+      expect(r.weakestFactor?.key, 'investasi');
+    });
   });
 }

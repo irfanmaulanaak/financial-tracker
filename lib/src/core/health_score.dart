@@ -64,6 +64,19 @@ class HealthScore {
     required this.verdict,
     required this.factors,
   });
+
+  /// Factor furthest from its ideal (lowest raw score with data), used for
+  /// the "X paling perlu perhatian" hint. Null when no factor has data.
+  HealthFactor? get weakestFactor {
+    HealthFactor? weakest;
+    for (final f in factors) {
+      if (f.rawScore01 == null) continue;
+      if (weakest == null || f.rawScore01! < weakest.rawScore01!) {
+        weakest = f;
+      }
+    }
+    return weakest;
+  }
 }
 
 double _clamp01(double v) => v < 0 ? 0 : (v > 1 ? 1 : v);
@@ -113,36 +126,52 @@ HealthScore computeHealthScore(HealthScoreInputs i) {
 
   final totalWeightWithData =
       raw.where((r) => r.$4 != null).fold<int>(0, (a, r) => a + r.$3);
-  final factors = <HealthFactor>[];
-  var sumContrib = 0.0;
 
-  for (final r in raw) {
-    if (r.$4 == null) {
-      factors.add(HealthFactor(
-        key: r.$1,
-        label: r.$2,
-        weight: r.$3,
-        rawScore01: null,
-        contribution: null,
-      ));
-      continue;
-    }
-    // Redistribute missing factor weights pro-rata across factors with data.
-    final adjustedWeight = totalWeightWithData == 100
-        ? r.$3
-        : (r.$3 * 100 / totalWeightWithData);
-    final contrib = r.$4! * adjustedWeight;
-    sumContrib += contrib;
-    factors.add(HealthFactor(
-      key: r.$1,
-      label: r.$2,
-      weight: r.$3,
-      rawScore01: r.$4,
-      contribution: contrib.round(),
-    ));
+  // Exact (double) contribution per factor-with-data, in input order.
+  final exact = <double?>[
+    for (final r in raw)
+      r.$4 == null
+          ? null
+          // Redistribute missing factor weights pro-rata across factors
+          // with data.
+          : r.$4! *
+              (totalWeightWithData == 100
+                  ? r.$3
+                  : r.$3 * 100 / totalWeightWithData),
+  ];
+  final sumContrib = exact.whereType<double>().fold<double>(0, (a, b) => a + b);
+  final score = totalWeightWithData == 0 ? 0 : sumContrib.round().clamp(0, 100);
+
+  // Largest-remainder rounding so displayed contributions sum exactly to
+  // `score` (independent rounding could drift by ±1-2 and read as a bug).
+  final contribs = List<int?>.filled(exact.length, null);
+  final remainders = <(int index, double frac)>[];
+  var floorsSum = 0;
+  for (var i = 0; i < exact.length; i++) {
+    final e = exact[i];
+    if (e == null) continue;
+    final fl = e.floor();
+    contribs[i] = fl;
+    floorsSum += fl;
+    remainders.add((i, e - fl));
+  }
+  remainders.sort((a, b) => b.$2.compareTo(a.$2));
+  for (var k = 0; k < score - floorsSum && k < remainders.length; k++) {
+    final i = remainders[k].$1;
+    contribs[i] = contribs[i]! + 1;
   }
 
-  final score = totalWeightWithData == 0 ? 0 : sumContrib.round().clamp(0, 100);
+  final factors = <HealthFactor>[
+    for (var i = 0; i < raw.length; i++)
+      HealthFactor(
+        key: raw[i].$1,
+        label: raw[i].$2,
+        weight: raw[i].$3,
+        rawScore01: raw[i].$4,
+        contribution: contribs[i],
+      ),
+  ];
+
   return HealthScore(
     score: score,
     verdict: verdictFor(score),

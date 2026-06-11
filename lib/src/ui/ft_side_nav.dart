@@ -33,7 +33,9 @@ class FtSideNav extends StatelessWidget {
     return SafeArea(
       right: false,
       child: Container(
-        width: extended ? 200 : 84,
+        // 96 fits the longest label ("Pengeluaran") at 9.5px without
+        // ellipsis; 84 truncated it to "Pengeluar…".
+        width: extended ? 200 : 96,
         margin: const EdgeInsets.fromLTRB(12, 12, 0, 12),
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
         decoration: BoxDecoration(
@@ -94,7 +96,7 @@ class _SideButton extends StatelessWidget {
         width: double.infinity,
         padding: EdgeInsets.symmetric(
           vertical: 10,
-          horizontal: extended ? 14 : 8,
+          horizontal: extended ? 14 : 4,
         ),
         decoration: BoxDecoration(
           color: active ? FtColors.bg : Colors.transparent,
