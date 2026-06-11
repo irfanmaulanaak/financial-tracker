@@ -16,6 +16,7 @@ import '../../ui/ft_ui.dart';
 import '../auth/auth_repository.dart';
 import '../cards/credit_card.dart';
 import '../cards/cards_screen.dart';
+import '../household/household.dart';
 import '../household/name_format.dart';
 import '../expenses/expense.dart';
 import '../expenses/expense_providers.dart';
@@ -28,6 +29,9 @@ import '../insights/insights_providers.dart';
 import '../investments/investment.dart';
 import '../investments/investments_screen.dart';
 import '../notifications/reminder_scheduler.dart';
+import '../onboarding/onboarding_state.dart';
+import '../onboarding/widgets/onboarding_checklist.dart';
+import '../onboarding/widgets/welcome_sheet.dart';
 import 'net_worth_snapshot.dart';
 import 'net_worth_snapshot_repository.dart';
 import 'widgets/banners.dart';
@@ -46,6 +50,32 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   String? _lastRecurringHid;
+  bool _welcomeShown = false;
+
+  /// Welcome sheet untuk anggota yang baru join — flag-nya hanya di-set
+  /// oleh join screen, jadi user lama tidak pernah kena. Sekali tampil,
+  /// langsung ditandai selesai.
+  void _maybeShowWelcome(Household household) {
+    if (_welcomeShown) return;
+    if (!ref.read(onboardingProvider).welcomePending) return;
+    final uid = ref.read(authStateProvider).value?.uid;
+    final member = uid == null ? null : household.memberOf(uid);
+    if (member == null) return;
+    _welcomeShown = true;
+    final canRecord = ref.read(canRecordTxnProvider);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      // ignore: discarded_futures
+      ref.read(onboardingProvider.notifier).markWelcomeSeen();
+      // ignore: discarded_futures
+      showOnboardingWelcomeSheet(
+        context,
+        household: household,
+        member: member,
+        canRecord: canRecord,
+      );
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -85,6 +115,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           if (household == null) {
             return const Center(child: Text('Tidak ada rumah tangga.'));
           }
+          _maybeShowWelcome(household);
 
           final now = DateTime.now();
           final expenses = cycleAsync.value ?? const <Expense>[];
@@ -263,6 +294,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     index: 0,
                   ),
                   section(
+                    OnboardingChecklist(
+                      household: household,
+                      hasExpense: expenses.isNotEmpty ||
+                          (recentAsync.value?.isNotEmpty ?? false),
+                    ),
+                    index: 1,
+                  ),
+                  section(
                     HomeHeroCarousel(
                       nw: nw,
                       trend: trend,
@@ -317,6 +356,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   void _handleMenu(String v) {
     switch (v) {
+      case 'onboarding':
+        // ignore: discarded_futures
+        ref.read(onboardingProvider.notifier).reopenChecklist();
       case 'insights':
         context.push('/health');
       case 'recap':

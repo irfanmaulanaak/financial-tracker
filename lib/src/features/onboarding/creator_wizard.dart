@@ -11,6 +11,7 @@ import '../../ui/ft_ui.dart';
 import '../household/household.dart';
 import '../household/household_repository.dart';
 import '../household/name_format.dart';
+import 'onboarding_state.dart';
 
 class CreatorWizardScreen extends ConsumerStatefulWidget {
   const CreatorWizardScreen({super.key});
@@ -73,6 +74,9 @@ class _CreatorWizardScreenState extends ConsumerState<CreatorWizardScreen> {
             monthlyBudgetTotal: budget,
             categoryBudgets: categoryBudgets,
           );
+      // Aktifkan checklist "Mulai dari sini" untuk pemilik rumah tangga
+      // baru — user lama tidak pernah lewat sini, jadi tidak terganggu.
+      await ref.read(onboardingProvider.notifier).startCreator();
       setState(() {
         _createdHouseholdId = hid;
         _step = 3;

@@ -73,6 +73,8 @@ Update this section as the project evolves.
 - Utang/piutang: `households/{hid}/debts` — ledger murni, TIDAK menyentuh saldo rekening. Layar `/debts`.
 - Rekap siklus `/recap`, Langganan `/subscriptions`, streak `core/streak.dart`.
 - Goal sumber dana aset: `Goal.fundingType/fundingId` (`savings`|`investment`) + `core/goal_funding.dart` — linked goal TIDAK pakai setoran; `current` dihitung dari nilai aset, proporsional thd target bila 1 aset dipakai >1 goal (cap di target). Layar WAJIB pakai `fundedGoalsProvider` (goals_screen.dart), bukan `goalsProvider` mentah. Aset dihapus → nilai 0 + tanda "aset tidak ditemukan". Goal manual (funding null) tetap pakai setoran/kontribusi.
+- Onboarding in-app: `features/onboarding/onboarding_state.dart` — flag per-uid di SharedPreferences (`onb_active/welcome/budget_<uid>`). Auto-trigger HANYA dari creator wizard (`startCreator`) & join screen (`startJoiner`); user lama tidak pernah lihat. Checklist "Mulai dari sini" di home (4 langkah, data-driven) + welcome sheet sekali utk anggota baru join. Buka manual: menu ⋯ → Panduan Mulai.
+- Beda layar utang: tab bawah "Utang" = `/cards` (kartu kredit + cicilan, masuk net worth); menu "Utang & Piutang" = `/debts` (pinjaman personal antar orang, catatan murni).
 - Emulator tests: seed household HARUS menyertakan `memberAccess` (rules access-tier); jalankan via `npx firebase emulators:exec --only firestore --project financial-tracker-test 'npm test'` di `emulator_tests/`.
 
 ### Build commands

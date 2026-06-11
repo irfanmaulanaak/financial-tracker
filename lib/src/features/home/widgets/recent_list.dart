@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/formatters.dart';
 import '../../../theme.dart';
@@ -56,10 +57,25 @@ class RecentList extends StatelessWidget {
             data: (recent) => recent.isEmpty
                 ? [
                     Padding(
-                      padding: EdgeInsets.fromLTRB(18, 12, 18, 18),
-                      child: Text(
-                        'Belum ada pengeluaran.',
-                        style: TextStyle(color: FtColors.ink3, fontSize: 12),
+                      padding: const EdgeInsets.fromLTRB(18, 8, 18, 18),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Belum ada pengeluaran tercatat siklus ini.',
+                            style:
+                                TextStyle(color: FtColors.ink3, fontSize: 12),
+                          ),
+                          const SizedBox(height: 10),
+                          OutlinedButton.icon(
+                            onPressed: () => context.push('/expenses/new'),
+                            icon: const Icon(Icons.add_rounded, size: 16),
+                            label: const Text(
+                              'Catat pengeluaran pertama',
+                              style: TextStyle(fontSize: 12),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ]

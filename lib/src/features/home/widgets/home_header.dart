@@ -510,6 +510,10 @@ class _OverflowMenu extends StatelessWidget {
           value: 'settings',
           child: _MenuRow(icon: Icons.settings_rounded, label: 'Pengaturan'),
         ),
+        PopupMenuItem(
+          value: 'onboarding',
+          child: _MenuRow(icon: Icons.flag_outlined, label: 'Panduan Mulai'),
+        ),
         PopupMenuDivider(),
         PopupMenuItem(
           value: 'signout',

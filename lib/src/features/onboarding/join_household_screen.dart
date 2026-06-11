@@ -10,6 +10,7 @@ import '../../ui/ft_ui.dart';
 import '../household/household.dart';
 import '../household/household_repository.dart';
 import '../household/name_format.dart';
+import 'onboarding_state.dart';
 
 class JoinHouseholdScreen extends ConsumerStatefulWidget {
   const JoinHouseholdScreen({super.key});
@@ -52,6 +53,9 @@ class _JoinHouseholdScreenState extends ConsumerState<JoinHouseholdScreen> {
             displayName: prettyName(user.displayName ?? user.email ?? ''),
             role: _role,
           );
+      // Anggota baru: welcome sheet sekali + checklist mulai. Hanya
+      // ter-trigger di sini, jadi user lama tidak pernah melihatnya.
+      await ref.read(onboardingProvider.notifier).startJoiner();
       if (mounted) context.go('/home');
     } on StateError catch (e) {
       setState(() => _error = _friendlyError(e.message));
