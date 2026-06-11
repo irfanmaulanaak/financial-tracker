@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/expense_aggregations.dart';
 import '../../core/formatters.dart';
+import '../../core/payday.dart';
 import '../../theme.dart';
 import '../../ui/ft_donut.dart';
 import '../../ui/ft_refresh.dart';
@@ -77,6 +78,19 @@ class _SpendScreenState extends ConsumerState<SpendScreen> {
     final focusedAmount =
         focused == null ? null : (byCat[focused.id] ?? 0);
 
+    // Date-range labels for the period chips, walking back from the current
+    // cycle start the same way `previousCyclesExpensesProvider` builds its
+    // windows (index 0 = most recent previous cycle).
+    final cycle = currentCycle(DateTime.now(), payday: household.payday);
+    final cycleRanges = <String>[];
+    var cursor = cycle.start;
+    for (var i = 0; i < prevCycles.length; i++) {
+      final prevStart =
+          resolvePayday(cursor.year, cursor.month - 1, household.payday);
+      cycleRanges.add(Dates.cycleRange(prevStart, cursor));
+      cursor = prevStart;
+    }
+
     return Scaffold(
       backgroundColor: FtColors.bg,
       body: FtAppChrome(
@@ -109,7 +123,7 @@ class _SpendScreenState extends ConsumerState<SpendScreen> {
                   ),
               ],
               prevIndex: _prevIndex,
-              prevCount: prevCycles.length,
+              cycleRanges: cycleRanges,
               onPick: (i) {
                 setState(() {
                   _prevIndex = i;
@@ -182,7 +196,7 @@ class _Hero extends StatelessWidget {
     required this.caption,
     required this.segments,
     required this.prevIndex,
-    required this.prevCount,
+    required this.cycleRanges,
     required this.onPick,
   });
   final int total;
@@ -190,7 +204,9 @@ class _Hero extends StatelessWidget {
   final String caption;
   final List<FtDonutSegment> segments;
   final int? prevIndex;
-  final int prevCount;
+
+  /// Compact "25 Apr–24 Mei" labels, index 0 = most recent previous cycle.
+  final List<String> cycleRanges;
   final ValueChanged<int?> onPick;
 
   @override
@@ -237,7 +253,7 @@ class _Hero extends StatelessWidget {
           const SizedBox(height: 12),
           _PeriodPicker(
             prevIndex: prevIndex,
-            prevCount: prevCount,
+            cycleRanges: cycleRanges,
             onPick: onPick,
           ),
         ],
@@ -247,25 +263,26 @@ class _Hero extends StatelessWidget {
 
   String _periodLabel(int? idx) {
     if (idx == null) return 'Siklus berjalan · Total';
-    return '${idx + 1} siklus lalu · Total';
+    final range = idx < cycleRanges.length ? ' (${cycleRanges[idx]})' : '';
+    return '${idx + 1} siklus lalu$range · Total';
   }
 }
 
 class _PeriodPicker extends StatelessWidget {
   const _PeriodPicker({
     required this.prevIndex,
-    required this.prevCount,
+    required this.cycleRanges,
     required this.onPick,
   });
   final int? prevIndex;
-  final int prevCount;
+  final List<String> cycleRanges;
   final ValueChanged<int?> onPick;
 
   @override
   Widget build(BuildContext context) {
-    // Render newest-first: prev2, prev1, prev0, current.
+    // Render oldest → newest: prev2, prev1, prev0, current.
     final options = <(int?, String)>[
-      for (var i = prevCount - 1; i >= 0; i--) (i, '−${i + 1}'),
+      for (var i = cycleRanges.length - 1; i >= 0; i--) (i, cycleRanges[i]),
       (null, 'Sekarang'),
     ];
     return Row(
@@ -302,18 +319,24 @@ class _PeriodChip extends StatelessWidget {
       onTap: active ? null : onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(vertical: 6),
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
         decoration: BoxDecoration(
           color: active ? FtColors.ink : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
         ),
         alignment: Alignment.center,
-        child: Text(
-          label,
-          style: TextStyle(
-            color: active ? FtColors.bg : FtColors.ink2,
-            fontSize: 11,
-            fontWeight: FontWeight.w500,
+        // Date-range labels ("25 Apr–24 Mei") can outgrow a quarter-width
+        // chip on phones; scale down instead of ellipsizing.
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            label,
+            maxLines: 1,
+            style: TextStyle(
+              color: active ? FtColors.bg : FtColors.ink2,
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
       ),

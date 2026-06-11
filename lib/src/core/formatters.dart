@@ -55,11 +55,22 @@ class Dates {
   static final _grouped = DateFormat('EEEE, d MMM y', 'id_ID');
   static final _monthYear = DateFormat('MMM y', 'id_ID');
   static final _month = DateFormat('MMM', 'id_ID');
+  static final _dayMonth = DateFormat('d MMM', 'id_ID');
 
   static String short(DateTime d) => _short.format(d);
   static String grouped(DateTime d) => _grouped.format(d);
   static String monthYear(DateTime d) => _monthYear.format(d);
   static String month(DateTime d) => _month.format(d);
+
+  /// "25 Apr" — used for compact cycle-range labels.
+  static String dayMonth(DateTime d) => _dayMonth.format(d);
+
+  /// "25 Apr–24 Mei" — inclusive range label for a payday cycle, where
+  /// [endExclusive] is the next cycle's start.
+  static String cycleRange(DateTime start, DateTime endExclusive) {
+    final endInclusive = endExclusive.subtract(const Duration(days: 1));
+    return '${dayMonth(start)}–${dayMonth(endInclusive)}';
+  }
 
   /// Returns midnight of the local day for `d` (used to group expenses).
   static DateTime dayKey(DateTime d) => DateTime(d.year, d.month, d.day);

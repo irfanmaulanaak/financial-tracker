@@ -41,5 +41,16 @@ void main() {
       final k = Dates.dayKey(DateTime(2025, 9, 30, 14, 33, 12));
       expect(k, DateTime(2025, 9, 30));
     });
+
+    test('cycleRange renders inclusive payday window', () {
+      // Cycle [25 Apr, 25 Mei) → shown as 25 Apr–24 Mei.
+      final s = Dates.cycleRange(DateTime(2026, 4, 25), DateTime(2026, 5, 25));
+      expect(s, '25 Apr–24 Mei');
+    });
+
+    test('cycleRange handles year boundary', () {
+      final s = Dates.cycleRange(DateTime(2025, 12, 25), DateTime(2026, 1, 23));
+      expect(s, '25 Des–22 Jan');
+    });
   });
 }
