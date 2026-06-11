@@ -65,6 +65,16 @@ Update this section as the project evolves.
   expenses+incomes only, `view` writes nothing. Access is set at invite time
   and editable by the household creator.
 
+### Fitur (riset Jun 2026 — quick wins + menengah, semua terpasang)
+- Saran kategori: `core/category_suggester.dart` (kata kunci merchant ID) + smart defaults form (SharedPreferences).
+- Reminder lokal: `core/reminders.dart` + `features/notifications/reminder_scheduler.dart` (flutter_local_notifications; Android perlu desugaring — sudah di build.gradle.kts).
+- Amplop rollover: `Category.rollover` + `core/envelope.dart` — carry = max(0, budget − prevSpent), 1 siklus, tanpa carry utang. Dipakai di spend/home/detail kategori/notifikasi.
+- Komentar/reaksi expense: reactions = map `{uid: emoji}` di doc expense (jangan hilangkan saat edit); komentar = subcollection `comments` (author-bound di rules).
+- Utang/piutang: `households/{hid}/debts` — ledger murni, TIDAK menyentuh saldo rekening. Layar `/debts`.
+- Rekap siklus `/recap`, Langganan `/subscriptions`, streak `core/streak.dart`.
+- Goal sumber dana aset: `Goal.fundingType/fundingId` (`savings`|`investment`) + `core/goal_funding.dart` — linked goal TIDAK pakai setoran; `current` dihitung dari nilai aset, proporsional thd target bila 1 aset dipakai >1 goal (cap di target). Layar WAJIB pakai `fundedGoalsProvider` (goals_screen.dart), bukan `goalsProvider` mentah. Aset dihapus → nilai 0 + tanda "aset tidak ditemukan". Goal manual (funding null) tetap pakai setoran/kontribusi.
+- Emulator tests: seed household HARUS menyertakan `memberAccess` (rules access-tier); jalankan via `npx firebase emulators:exec --only firestore --project financial-tracker-test 'npm test'` di `emulator_tests/`.
+
 ### Build commands
 - Standard run/build: `flutter run` / `flutter build {ios|apk|appbundle|web}`.
 - The Settings → Tentang card surfaces the app version via the `APP_VERSION`

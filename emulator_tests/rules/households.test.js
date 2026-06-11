@@ -27,6 +27,7 @@ const baseHousehold = (creatorUid, memberIds) => ({
   locale: 'id-ID',
   monthlyBudgetTotal: 9000000,
   memberIds,
+  memberAccess: Object.fromEntries(memberIds.map((uid) => [uid, 'full'])),
   members: memberIds.map((uid) => ({
     userId: uid,
     displayName: uid,

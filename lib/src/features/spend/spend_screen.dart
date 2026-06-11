@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/envelope.dart';
 import '../../core/expense_aggregations.dart';
 import '../../core/formatters.dart';
 import '../../core/payday.dart';
@@ -82,6 +83,26 @@ class _SpendScreenState extends ConsumerState<SpendScreen> {
           );
     final focusedAmount =
         focused == null ? null : (byCat[focused.id] ?? 0);
+
+    // Rollover carry only applies when looking at the *current* cycle;
+    // historical views use the plain budget.
+    final prevByCat = _prevIndex == null && prevCycles.isNotEmpty
+        ? spentByCategory([
+            for (final e in prevCycles[0])
+              ExpenseRecord(
+                amount: e.amount,
+                categoryId: e.categoryId,
+                spentBy: e.spentBy,
+                date: e.date,
+              ),
+          ])
+        : const <String, int>{};
+    int carryOf(Category c) => _prevIndex == null && c.rollover
+        ? carryOver(
+            monthlyBudget: c.monthlyBudget,
+            prevCycleSpent: prevByCat[c.id] ?? 0,
+          )
+        : 0;
 
     // Date-range labels for the period chips, walking back from the current
     // cycle start the same way `previousCyclesExpensesProvider` builds its
@@ -165,6 +186,7 @@ class _SpendScreenState extends ConsumerState<SpendScreen> {
                         _CategoryRow(
                           category: categories[i],
                           spent: byCat[categories[i].id] ?? 0,
+                          carry: carryOf(categories[i]),
                           total: total,
                           focused:
                               _focusedCategoryId == categories[i].id,
@@ -371,6 +393,7 @@ class _CategoryRow extends StatelessWidget {
   const _CategoryRow({
     required this.category,
     required this.spent,
+    required this.carry,
     required this.total,
     required this.focused,
     required this.canEditBudget,
@@ -380,6 +403,9 @@ class _CategoryRow extends StatelessWidget {
   });
   final Category category;
   final int spent;
+
+  /// Rollover carry from the previous cycle (0 when off / not applicable).
+  final int carry;
   final int total;
   final bool focused;
   final bool canEditBudget;
@@ -390,7 +416,7 @@ class _CategoryRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pct = total <= 0 ? 0.0 : (spent / total) * 100;
-    final budget = category.monthlyBudget;
+    final budget = category.monthlyBudget + carry;
     final overBudget = budget > 0 && spent > budget;
     final color = parseColor(category.color);
     return MouseRegion(
@@ -465,7 +491,7 @@ class _CategoryRow extends StatelessWidget {
                           overBudget
                               ? '+${(((spent / budget) - 1) * 100).round()}% vs anggaran'
                               : budget > 0
-                                  ? 'dari ${Money.format(budget)}'
+                                  ? 'dari ${Money.format(budget)}${carry > 0 ? ' (gulir +${compactMoney(carry)})' : ''}'
                                   : 'tanpa budget',
                           style: TextStyle(
                             color:

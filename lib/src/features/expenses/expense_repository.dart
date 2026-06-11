@@ -45,6 +45,20 @@ class ExpenseRepository {
         .map((s) => s.docs.map(Expense.fromSnapshot).toList());
   }
 
+  /// All recurring-flagged rows since [since]. Same query shape as the
+  /// recurring runner — served by the deployed recurring+date composite
+  /// index. Powers the "Langganan & Rutin" screen.
+  Stream<List<Expense>> watchRecurringSince({
+    required String householdId,
+    required DateTime since,
+  }) {
+    return _col(householdId)
+        .where('recurring', isEqualTo: true)
+        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(since))
+        .snapshots()
+        .map((s) => s.docs.map(Expense.fromSnapshot).toList());
+  }
+
   /// Watches the most recent **non-cicilan** expenses for a single card.
   ///
   /// Server-side query is just `where('cardId', isEqualTo: cardId)` so we
@@ -420,6 +434,7 @@ class ExpenseRepository {
           sourceAccountId: old.sourceAccountId,
           createdAt: old.createdAt,
           createdBy: old.createdBy,
+          reactions: old.reactions,
         ).toMap(),
       );
       touchedCardId = old.cardId;
@@ -542,6 +557,7 @@ class ExpenseRepository {
         sourceAccountId: isCicilan ? old.sourceAccountId : newSourceAccountId,
         createdAt: old.createdAt,
         createdBy: old.createdBy,
+        reactions: old.reactions,
       );
       tx.set(expenseRef, updated.toMap());
 

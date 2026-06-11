@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/in_app_indicators.dart';
+import '../../../core/streak.dart';
 import '../../../theme.dart';
 import 'home_formatters.dart';
 
@@ -42,6 +43,23 @@ class DueBanner extends StatelessWidget {
       icon: Icons.credit_card_rounded,
       color: urgent ? FtColors.danger : FtColors.sage,
       text: text,
+    );
+  }
+}
+
+/// Positive-only habit nudge: shown from 2 consecutive recorded days,
+/// hidden entirely otherwise (no guilt-tripping zero states).
+class StreakBanner extends StatelessWidget {
+  const StreakBanner({super.key, required this.streak});
+
+  final int streak;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertBand(
+      icon: Icons.local_fire_department_rounded,
+      color: FtColors.clay,
+      text: streakLabel(streak),
     );
   }
 }

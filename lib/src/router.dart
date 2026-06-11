@@ -11,6 +11,7 @@ import 'features/cards/card_detail_screen.dart';
 import 'features/cards/cards_screen.dart';
 import 'features/categories/category_detail_screen.dart';
 import 'features/categories/category_manage_screen.dart';
+import 'features/debts/debts_screen.dart';
 import 'features/expenses/edit_expense_screen.dart';
 import 'features/expenses/expense_log_screen.dart';
 import 'features/expenses/record_expense_screen.dart';
@@ -23,6 +24,7 @@ import 'features/home/home_screen.dart';
 import 'features/household/household_providers.dart';
 import 'features/incomes/income_log_screen.dart';
 import 'features/incomes/record_income_screen.dart';
+import 'features/insights/recap_screen.dart';
 import 'features/investments/investments_screen.dart';
 import 'features/members/member_detail_screen.dart';
 import 'features/members/member_list_screen.dart';
@@ -32,6 +34,7 @@ import 'features/onboarding/join_household_screen.dart';
 import 'features/onboarding/landing_screen.dart';
 import 'features/onboarding/splash_screen.dart';
 import 'features/profile/edit_profile_screen.dart';
+import 'features/recurring/subscriptions_screen.dart';
 import 'features/settings/settings_screen.dart';
 import 'features/spend/spend_screen.dart';
 import 'features/transfers/transfer_screen.dart';
@@ -117,12 +120,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       _scaleRoute('/cards/:cardId', (state) =>
           CardDetailScreen(cardId: state.pathParameters['cardId']!)),
       _fadeRoute('/health', (_) => const HealthScreen()),
+      _fadeRoute('/recap', (_) => const RecapScreen()),
       _fadeRoute('/goals', (_) => const GoalsScreen()),
       _bottomSlideRoute('/goals/new', (_) => const AddGoalScreen()),
       _scaleRoute('/goals/:goalId', (state) =>
           GoalDetailScreen(goalId: state.pathParameters['goalId']!)),
       _fadeRoute('/investments', (_) => const InvestmentsScreen()),
       _fadeRoute('/export', (_) => const ExportScreen()),
+      _fadeRoute('/subscriptions', (_) => const SubscriptionsScreen()),
+      _fadeRoute('/debts', (_) => const DebtsScreen()),
       _fadeRoute('/settings', (_) => const SettingsScreen()),
     ],
   );

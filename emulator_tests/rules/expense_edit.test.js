@@ -39,6 +39,7 @@ function buildHousehold(creator, opts = {}) {
     locale: 'id-ID',
     monthlyBudgetTotal: 9000000,
     memberIds: [creator],
+    memberAccess: { [creator]: 'full' },
     members: [
       {
         userId: creator,
@@ -125,10 +126,14 @@ async function updateExpense(db, hid, expenseId, patch) {
     const old = eSnap.data();
     const isCicilan = !!old.installmentPlanId;
     if (isCicilan) {
+      // Undefined patch keys mean "unchanged" (mirrors the app passing the
+      // original values through for cicilan meta-edits).
       const laneChanged =
-        (patch.newCardId ?? null) !== (old.cardId ?? null) ||
-        (patch.newSourceAccountId ?? null) !== (old.sourceAccountId ?? null) ||
-        (patch.newAmount ?? old.amount) !== old.amount;
+        (patch.newCardId !== undefined &&
+          (patch.newCardId ?? null) !== (old.cardId ?? null)) ||
+        (patch.newSourceAccountId !== undefined &&
+          (patch.newSourceAccountId ?? null) !== (old.sourceAccountId ?? null)) ||
+        (patch.newAmount !== undefined && patch.newAmount !== old.amount);
       if (laneChanged) throw new Error('cicilan_edit_locked');
     }
 
@@ -205,9 +210,10 @@ async function updateExpense(db, hid, expenseId, patch) {
       cardId: isCicilan ? old.cardId : (patch.newCardId ?? null),
       sourceAccountId: isCicilan ? old.sourceAccountId : (patch.newSourceAccountId ?? null),
     };
-    // Strip nulls that Firestore would persist explicitly (mirror Expense.toMap).
-    if (updated.cardId === null) delete updated.cardId;
-    if (updated.sourceAccountId === null) delete updated.sourceAccountId;
+    // Strip null/undefined that Firestore would reject or persist explicitly
+    // (mirror Expense.toMap's `if (x != null)` omission).
+    if (updated.cardId == null) delete updated.cardId;
+    if (updated.sourceAccountId == null) delete updated.sourceAccountId;
 
     tx.set(expRef, updated);
     tx.update(hRef, {

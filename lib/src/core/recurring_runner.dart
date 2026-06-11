@@ -181,11 +181,18 @@ class RecurringRunner {
     return created;
   }
 
-  static String _expenseKey(Expense e) =>
-      '${e.categoryId}|${e.sourceAccountId ?? ''}|${e.amount}|${e.note ?? ''}|${e.cardId ?? ''}';
-  static String _incomeKey(Income i) =>
-      '${i.source.name}|${i.destinationAccountId}|${i.amount}|${i.note ?? ''}';
+  static String _expenseKey(Expense e) => expenseTemplateKey(e);
+  static String _incomeKey(Income i) => incomeTemplateKey(i);
 }
+
+/// Stable identity of a recurring expense template. Shared with the
+/// subscriptions screen so both derive the same template set.
+String expenseTemplateKey(Expense e) =>
+    '${e.categoryId}|${e.sourceAccountId ?? ''}|${e.amount}|${e.note ?? ''}|${e.cardId ?? ''}';
+
+/// Stable identity of a recurring income template.
+String incomeTemplateKey(Income i) =>
+    '${i.source.name}|${i.destinationAccountId}|${i.amount}|${i.note ?? ''}';
 
 /// Stable per-(template, date) doc ID for recurring materialisation.
 ///

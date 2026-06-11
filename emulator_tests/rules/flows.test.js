@@ -37,6 +37,7 @@ function buildHouseholdPayload({ creatorUid, name, payday, monthlyBudget }) {
     locale: 'id-ID',
     monthlyBudgetTotal: monthlyBudget,
     memberIds: [creatorUid],
+    memberAccess: { [creatorUid]: 'full' },
     members: [
       {
         userId: creatorUid,
@@ -120,6 +121,7 @@ async function joinWithInvite(db, { code, userId, displayName }) {
     tx.update(householdRef, {
       memberIds: [...data.memberIds, userId],
       members: [...data.members, newMember],
+      memberAccess: { ...data.memberAccess, [userId]: 'full' },
       claimedInvite: code,
     });
     tx.update(inviteRef, {

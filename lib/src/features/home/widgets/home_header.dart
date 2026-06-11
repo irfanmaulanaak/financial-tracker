@@ -480,8 +480,23 @@ class _OverflowMenu extends StatelessWidget {
               icon: Icons.insights_rounded, label: 'Kesehatan Finansial'),
         ),
         PopupMenuItem(
+          value: 'recap',
+          child: _MenuRow(
+              icon: Icons.auto_stories_rounded, label: 'Rekap Siklus'),
+        ),
+        PopupMenuItem(
           value: 'categories',
           child: _MenuRow(icon: Icons.category_rounded, label: 'Kategori'),
+        ),
+        PopupMenuItem(
+          value: 'subscriptions',
+          child: _MenuRow(
+              icon: Icons.event_repeat_rounded, label: 'Langganan & Rutin'),
+        ),
+        PopupMenuItem(
+          value: 'debts',
+          child: _MenuRow(
+              icon: Icons.handshake_outlined, label: 'Utang & Piutang'),
         ),
         PopupMenuItem(
           value: 'members',

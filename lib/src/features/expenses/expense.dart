@@ -27,6 +27,10 @@ class Expense {
   final DateTime createdAt;
   final String createdBy;
 
+  /// Emoji reactions: `{uid: emoji}` — one reaction per member, stored on
+  /// the doc itself (no subcollection read needed for list rows).
+  final Map<String, String> reactions;
+
   const Expense({
     required this.id,
     required this.amount,
@@ -41,6 +45,7 @@ class Expense {
     required this.sourceAccountId,
     required this.createdAt,
     required this.createdBy,
+    this.reactions = const {},
   });
 
   Map<String, dynamic> toMap() => {
@@ -56,6 +61,7 @@ class Expense {
         if (sourceAccountId != null) 'sourceAccountId': sourceAccountId,
         'createdAt': Timestamp.fromDate(createdAt),
         'createdBy': createdBy,
+        if (reactions.isNotEmpty) 'reactions': reactions,
       };
 
   static Expense fromSnapshot(DocumentSnapshot snap) {
@@ -74,6 +80,8 @@ class Expense {
       sourceAccountId: m['sourceAccountId'] as String?,
       createdAt: (m['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       createdBy: m['createdBy'] as String,
+      reactions: Map<String, String>.from(
+          m['reactions'] as Map<String, dynamic>? ?? const {}),
     );
   }
 }

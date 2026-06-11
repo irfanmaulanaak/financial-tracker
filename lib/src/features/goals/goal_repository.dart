@@ -38,12 +38,6 @@ class GoalRepository {
         );
   }
 
-  Stream<Goal?> watchOne({required String hid, required String goalId}) {
-    return _col(hid).doc(goalId).snapshots().map(
-          (s) => s.exists ? Goal.fromSnapshot(s) : null,
-        );
-  }
-
   Future<String> add({
     required String hid,
     required String label,
@@ -56,6 +50,8 @@ class GoalRepository {
     required GoalScope scope,
     String? ownerId,
     String? presetId,
+    String? fundingType,
+    String? fundingId,
     DateTime? now,
   }) async {
     final ref = _col(hid).doc();
@@ -73,6 +69,8 @@ class GoalRepository {
       ownerId: scope == GoalScope.personal ? ownerId : null,
       createdAt: createdAt,
       presetId: presetId,
+      fundingType: fundingType,
+      fundingId: fundingId,
       // Newest goals append to the bottom by default; user can drag to
       // reorder. Epoch ms is large enough to stay below legacy goals'
       // `createdAt`-based fallback only when their createdAt is also recent.
@@ -143,6 +141,21 @@ class GoalRepository {
       'monthlyContrib': ?monthlyContrib,
       'icon': ?icon,
       'color': ?color,
+    });
+  }
+
+  /// Set/ganti/putus sumber dana goal. [type]+[id] null = kembali manual
+  /// (field dihapus; `current` lama dipakai lagi sebagai nilai manual).
+  Future<void> setFunding({
+    required String hid,
+    required String goalId,
+    String? type,
+    String? id,
+  }) async {
+    final linked = type != null && id != null;
+    await _col(hid).doc(goalId).update({
+      'fundingType': linked ? type : FieldValue.delete(),
+      'fundingId': linked ? id : FieldValue.delete(),
     });
   }
 

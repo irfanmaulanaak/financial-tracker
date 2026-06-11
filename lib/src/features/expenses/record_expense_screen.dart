@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../core/category_suggester.dart';
 import '../../core/providers.dart';
 import '../../theme.dart';
 import '../../ui/ft_celebrate.dart';
@@ -21,7 +23,12 @@ import '../record_common/meta_row.dart';
 import '../record_common/money_field.dart';
 import '../record_common/pay_type_toggle.dart';
 import 'expense.dart';
+import 'expense_providers.dart';
 import 'expense_repository.dart';
+
+const _kLastPayType = 'record_last_pay_type';
+const _kLastAccount = 'record_last_account';
+const _kLastCard = 'record_last_card';
 
 class RecordExpenseScreen extends ConsumerStatefulWidget {
   const RecordExpenseScreen({super.key, this.initial});
@@ -54,6 +61,18 @@ class _RecordExpenseScreenState extends ConsumerState<RecordExpenseScreen> {
   bool _busy = false;
   String? _error;
 
+  /// True once the user explicitly tapped a category chip (or edit mode):
+  /// suggestion & most-used defaults stop overriding their choice.
+  bool _categoryTouched = false;
+
+  /// Category id auto-applied from the note's keywords — drives the
+  /// "disarankan" hint next to the Kategori eyebrow.
+  String? _suggestedCategoryId;
+
+  /// Payment defaults wait until the last-used prefs have loaded, so a
+  /// remembered account/card wins over "first in list".
+  bool _prefsLoaded = false;
+
   @override
   void initState() {
     super.initState();
@@ -69,6 +88,21 @@ class _RecordExpenseScreenState extends ConsumerState<RecordExpenseScreen> {
       _note.text = init.note ?? '';
       _recurring = init.recurring;
       _cicilan = init.installmentPlanId != null;
+      _categoryTouched = true;
+      _prefsLoaded = true;
+    } else {
+      _note.addListener(_onNoteChanged);
+      // ignore: discarded_futures
+      SharedPreferences.getInstance().then((p) {
+        if (!mounted) return;
+        setState(() {
+          _prefsLoaded = true;
+          final pt = p.getString(_kLastPayType);
+          if (pt == 'cash' || pt == 'credit') _payType = pt!;
+          _sourceAccountId ??= p.getString(_kLastAccount);
+          _cardId ??= p.getString(_kLastCard);
+        });
+      });
     }
   }
 
@@ -76,6 +110,66 @@ class _RecordExpenseScreenState extends ConsumerState<RecordExpenseScreen> {
   void dispose() {
     _note.dispose();
     super.dispose();
+  }
+
+  /// Auto-suggest a category from the note text (custom labels first, then
+  /// the Indonesian merchant keyword map). Only while the user hasn't
+  /// manually picked a chip.
+  void _onNoteChanged() {
+    if (_categoryTouched || widget.isEdit) return;
+    final household = ref.read(currentHouseholdProvider).value;
+    if (household == null) return;
+    final active =
+        household.categories.where((c) => !c.archived).toList();
+    var next = suggestByLabel(
+      _note.text,
+      [for (final c in active) (id: c.id, label: c.label)],
+    );
+    if (next == null) {
+      final seeded = suggestSeededCategoryId(_note.text);
+      if (seeded != null && active.any((c) => c.id == seeded)) next = seeded;
+    }
+    if (next != null && next != _categoryId) {
+      setState(() {
+        _categoryId = next;
+        _suggestedCategoryId = next;
+      });
+    }
+  }
+
+  /// Most frequently used active category this cycle (ties → first hit).
+  static String? _mostUsedCategoryId(
+    List<Expense> expenses,
+    List<Category> active,
+  ) {
+    if (expenses.isEmpty) return null;
+    final activeIds = {for (final c in active) c.id};
+    final counts = <String, int>{};
+    for (final e in expenses) {
+      if (!activeIds.contains(e.categoryId)) continue;
+      counts.update(e.categoryId, (v) => v + 1, ifAbsent: () => 1);
+    }
+    String? best;
+    var bestN = 0;
+    counts.forEach((id, n) {
+      if (n > bestN) {
+        best = id;
+        bestN = n;
+      }
+    });
+    return best;
+  }
+
+  /// Remember the chosen payment route for the next record session.
+  Future<void> _saveLastPayment() async {
+    final p = await SharedPreferences.getInstance();
+    await p.setString(_kLastPayType, _payType);
+    if (_payType == 'cash' && _sourceAccountId != null) {
+      await p.setString(_kLastAccount, _sourceAccountId!);
+    }
+    if (_payType == 'credit' && _cardId != null) {
+      await p.setString(_kLastCard, _cardId!);
+    }
   }
 
   Future<void> _pickDate() async {
@@ -166,6 +260,11 @@ class _RecordExpenseScreenState extends ConsumerState<RecordExpenseScreen> {
           recurring: _recurring,
         );
       }
+      if (!widget.isEdit) {
+        // Fire-and-forget; next session opens with this payment preselected.
+        // ignore: discarded_futures
+        _saveLastPayment();
+      }
       if (mounted) {
         FtCelebrate.show(context, message: 'Tersimpan');
         context.pop();
@@ -200,21 +299,57 @@ class _RecordExpenseScreenState extends ConsumerState<RecordExpenseScreen> {
     final categories =
         household.categories.where((c) => !c.archived).toList()
           ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
-    // Default-select the first category so the form starts in a valid state.
-    if (_categoryId == null && categories.isNotEmpty) {
+    // Smart default: most-used category this cycle (falls back to the first
+    // chip). Keeps re-evaluating until the user taps a chip or a keyword
+    // suggestion kicks in, so it still applies once the stream loads.
+    if (!_categoryTouched && _suggestedCategoryId == null &&
+        categories.isNotEmpty) {
+      final cycleExpenses =
+          ref.watch(cycleExpensesProvider).value ?? const <Expense>[];
+      _categoryId =
+          _mostUsedCategoryId(cycleExpenses, categories) ?? categories.first.id;
+    } else if (_categoryId == null && categories.isNotEmpty) {
       _categoryId = categories.first.id;
     }
     final cards = ref.watch(cardsProvider(household.id)).value ?? const [];
-    if (_payType == 'credit' && _cardId == null && cards.isNotEmpty) {
+    // Drop a remembered card that no longer exists, then default.
+    if (!widget.isEdit &&
+        cards.isNotEmpty &&
+        _cardId != null &&
+        cards.every((c) => c.id != _cardId)) {
+      _cardId = null;
+    }
+    if (_prefsLoaded &&
+        _payType == 'credit' &&
+        _cardId == null &&
+        cards.isNotEmpty) {
       _cardId = cards.first.id;
       _cicilanApr = cards.first.apr;
+    }
+    // Remembered card applied from prefs skips the default branch above —
+    // sync its APR for the cicilan preview.
+    if (_payType == 'credit' && _cardId != null && !_cicilan &&
+        _cicilanApr == 0.0) {
+      for (final c in cards) {
+        if (c.id == _cardId) {
+          _cicilanApr = c.apr;
+          break;
+        }
+      }
     }
     final cicilanLock = widget.isCicilan;
     final sourceAccounts = recordAccountChoices(
       cashAccounts: household.cashAccounts,
       savingsAccounts: household.savingsAccounts,
     );
-    if (_payType == 'cash' &&
+    // Drop a remembered account that no longer exists, then default.
+    if (!widget.isEdit &&
+        _sourceAccountId != null &&
+        sourceAccounts.every((a) => a.id != _sourceAccountId)) {
+      _sourceAccountId = null;
+    }
+    if (_prefsLoaded &&
+        _payType == 'cash' &&
         _sourceAccountId == null &&
         sourceAccounts.isNotEmpty) {
       _sourceAccountId = sourceAccounts.first.id;
@@ -265,14 +400,37 @@ class _RecordExpenseScreenState extends ConsumerState<RecordExpenseScreen> {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    const Eyebrow('Kategori'),
+                    Row(
+                      children: [
+                        const Eyebrow('Kategori'),
+                        if (_suggestedCategoryId != null &&
+                            _suggestedCategoryId == _categoryId) ...[
+                          const SizedBox(width: 8),
+                          Icon(Icons.auto_awesome,
+                              size: 11, color: FtColors.clay),
+                          const SizedBox(width: 3),
+                          Text(
+                            'disarankan dari catatan',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: FtColors.ink3,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                     const SizedBox(height: 10),
                     CategoryChipRow(
                       categories: categories,
                       selected: _categoryId,
                       onSelect: (id) {
                         FtHaptics.select();
-                        setState(() => _categoryId = id);
+                        setState(() {
+                          _categoryId = id;
+                          _categoryTouched = true;
+                          _suggestedCategoryId = null;
+                        });
                       },
                     ),
                     const SizedBox(height: 22),

@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/csv_export.dart';
+import '../../core/formatters.dart';
 import '../../core/payday.dart';
 import '../../theme.dart';
 import '../../ui/ft_refresh.dart';
@@ -28,18 +29,34 @@ class ExportScreen extends ConsumerStatefulWidget {
 class _ExportScreenState extends ConsumerState<ExportScreen> {
   bool _busy = false;
 
+  /// Export window. Defaults to the last 90 days; user can pick any range.
+  late DateTimeRange _range = DateTimeRange(
+    start: DateTime.now().subtract(const Duration(days: 90)),
+    end: DateTime.now(),
+  );
+
+  Future<void> _pickRange() async {
+    final picked = await showDateRangePicker(
+      context: context,
+      initialDateRange: _range,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+      helpText: 'Rentang ekspor',
+      saveText: 'Pakai',
+    );
+    if (picked != null) setState(() => _range = picked);
+  }
+
   Future<void> _exportExpenses(Household household) async {
     setState(() => _busy = true);
     try {
-      // Last 90 days for the export window — internal app, small data.
-      final now = DateTime.now();
-      final start = DateTime(now.year, now.month - 3, now.day);
       final repo = ref.read(expenseRepositoryProvider);
       final list = await repo
           .watchInRange(
             householdId: household.id,
-            startInclusive: start,
-            endExclusive: now.add(const Duration(days: 1)),
+            startInclusive: Dates.dayKey(_range.start),
+            endExclusive:
+                Dates.dayKey(_range.end).add(const Duration(days: 1)),
           )
           .first;
       // Resolve card labels for credit-flow rows.
@@ -75,10 +92,15 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
   Future<void> _exportIncomes(Household household) async {
     setState(() => _busy = true);
     try {
-      final list = await ref
+      final startKey = Dates.dayKey(_range.start);
+      final endKey = Dates.dayKey(_range.end).add(const Duration(days: 1));
+      final all = await ref
           .read(incomeRepositoryProvider)
-          .watchRecent(hid: household.id, limit: 500)
+          .watchRecent(hid: household.id, limit: 2000)
           .first;
+      final list = all
+          .where((i) => !i.date.isBefore(startKey) && i.date.isBefore(endKey))
+          .toList();
       final rows = list.map((i) {
         final dest = household.accountOf(i.destinationAccountId);
         final member = household.memberOf(i.receivedBy);
@@ -128,7 +150,6 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
     if (household == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-    final start = DateTime.now().subtract(const Duration(days: 90));
     final cycle = currentCycle(DateTime.now(), payday: household.payday);
     return Scaffold(
       backgroundColor: FtColors.bg,
@@ -153,8 +174,37 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
                   Text('CSV', style: Theme.of(context).textTheme.titleLarge),
                   const SizedBox(height: 10),
                   Text(
-                    'Pengeluaran: 90 hari terakhir (sejak ${_short(start)}).\nPemasukan: 500 catatan terbaru.\nSiklus aktif: ${_short(cycle.start)} – ${_short(cycle.endExclusive.subtract(const Duration(days: 1)))}.',
+                    'Pengeluaran & pemasukan diekspor sesuai rentang tanggal di bawah.\nSiklus aktif: ${_short(cycle.start)} – ${_short(cycle.endExclusive.subtract(const Duration(days: 1)))}.',
                   ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            FtCard(
+              onTap: _busy ? null : _pickRange,
+              child: Row(
+                children: [
+                  Icon(Icons.date_range_rounded,
+                      size: 18, color: FtColors.ink2),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Eyebrow('Rentang tanggal'),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${_short(_range.start)} – ${_short(_range.end)}',
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(fontSize: 15),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.edit_calendar_rounded,
+                      size: 16, color: FtColors.ink4),
                 ],
               ),
             ),

@@ -121,15 +121,37 @@ service cloud.firestore {
       // these flows updates the corresponding subcollection AND the
       // household root's cashAccounts/savingsAccounts in the same txn —
       // the limited-tier root-doc rule above scopes that side-effect.
-      match /expenses/{document=**} {
+      match /expenses/{eid} {
         allow read: if isMember();
         allow write: if isMember() && canTxn();
+
+        // Komentar: create terikat ke author sendiri; hapus oleh author
+        // atau `full` (moderasi); tidak bisa diedit.
+        match /comments/{cid} {
+          allow read: if isMember();
+          allow create: if isMember() && canTxn()
+                        && request.resource.data.authorId == request.auth.uid
+                        && request.resource.data.text is string
+                        && request.resource.data.text.size() > 0
+                        && request.resource.data.text.size() <= 500;
+          allow update: if false;
+          allow delete: if isMember()
+                        && (resource.data.authorId == request.auth.uid
+                            || canFull());
+        }
       }
       match /incomes/{document=**} {
         allow read: if isMember();
         allow write: if isMember() && canTxn();
       }
       match /transfers/{document=**} {
+        allow read: if isMember();
+        allow write: if isMember() && canTxn();
+      }
+
+      // Utang/piutang: ledger keluarga — transaksi sehari-hari, jadi
+      // full + limited boleh tulis (sama seperti expenses/incomes).
+      match /debts/{document=**} {
         allow read: if isMember();
         allow write: if isMember() && canTxn();
       }

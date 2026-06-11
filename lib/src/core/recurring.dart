@@ -51,6 +51,11 @@ Map<String, DateTime> latestPerKey<E>(
   return out;
 }
 
+/// Next monthly occurrence after [lastSeen] (same day-of-month, clamped to
+/// shorter months). Used by the subscriptions screen + local reminders.
+DateTime nextMonthlyOccurrence(DateTime lastSeen) =>
+    _addMonthClampDay(lastSeen, 1);
+
 DateTime _addMonthClampDay(DateTime d, int months) {
   final targetMonth = d.month + months;
   final year = d.year + ((targetMonth - 1) ~/ 12);

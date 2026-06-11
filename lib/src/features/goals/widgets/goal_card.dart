@@ -5,6 +5,7 @@ import '../../../theme.dart';
 import '../../../ui/ft_ui.dart';
 import '../../home/widgets/home_formatters.dart';
 import '../goal.dart';
+import 'goal_funding_sheet.dart';
 
 /// Tap-friendly goal row used by `GoalsScreen`. Mirrors the goal cells in
 /// `claude-design/screens-rest.jsx` — icon badge + label + percent + tone
@@ -17,12 +18,17 @@ class GoalCard extends StatelessWidget {
     required this.ownerLabel,
     required this.onContribute,
     required this.onDelete,
+    this.fundingAsset,
   });
 
   final Goal goal;
   final String ownerLabel;
   final VoidCallback onContribute;
   final VoidCallback onDelete;
+
+  /// Non-null untuk goal yang terhubung ke aset: tombol setor diganti
+  /// label sumber dananya.
+  final GoalFundingAsset? fundingAsset;
 
   @override
   Widget build(BuildContext context) {
@@ -177,36 +183,76 @@ class GoalCard extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: FtTapScale(
-                  scale: 0.97,
-                  onTap: goal.isComplete ? null : onContribute,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    decoration: BoxDecoration(
-                      color: goal.isComplete
-                          ? FtColors.line
-                          : FtColors.surfaceAlt,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                          color: FtColors.line, width: 0.5),
-                    ),
-                    alignment: Alignment.center,
+          if (fundingAsset != null)
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              decoration: BoxDecoration(
+                color: FtColors.surfaceAlt,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: FtColors.line, width: 0.5),
+              ),
+              alignment: Alignment.center,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.link,
+                    size: 12,
+                    color: fundingAsset!.missing
+                        ? FtColors.danger
+                        : FtColors.ink3,
+                  ),
+                  const SizedBox(width: 6),
+                  Flexible(
                     child: Text(
-                      goal.isComplete ? 'Tercapai' : '+ Setor',
+                      fundingAsset!.missing
+                          ? 'Aset tidak ditemukan'
+                          : 'Dari ${fundingAsset!.label}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: goal.isComplete ? FtColors.ink3 : FtColors.ink,
+                        color: fundingAsset!.missing
+                            ? FtColors.danger
+                            : FtColors.ink2,
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
                   ),
-                ),
+                ],
               ),
-            ],
-          ),
+            )
+          else
+            Row(
+              children: [
+                Expanded(
+                  child: FtTapScale(
+                    scale: 0.97,
+                    onTap: goal.isComplete ? null : onContribute,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        color: goal.isComplete
+                            ? FtColors.line
+                            : FtColors.surfaceAlt,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                            color: FtColors.line, width: 0.5),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        goal.isComplete ? 'Tercapai' : '+ Setor',
+                        style: TextStyle(
+                          color: goal.isComplete ? FtColors.ink3 : FtColors.ink,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
         ],
       ),
     );

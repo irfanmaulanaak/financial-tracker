@@ -26,6 +26,27 @@ class ExpenseLogScreen extends ConsumerStatefulWidget {
 class _ExpenseLogScreenState extends ConsumerState<ExpenseLogScreen> {
   String? _filterMemberId;
   String? _filterCategoryId;
+  bool _searchOpen = false;
+  final _search = TextEditingController();
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  /// Matches note, category label, or amount digits ("25000" finds Rp25.000).
+  bool _matchesQuery(Expense e, Household household) {
+    final q = _search.text.trim().toLowerCase();
+    if (q.isEmpty) return true;
+    final note = e.note?.toLowerCase() ?? '';
+    if (note.contains(q)) return true;
+    final cat = household.categoryOf(e.categoryId)?.label.toLowerCase() ?? '';
+    if (cat.contains(q)) return true;
+    final digits = q.replaceAll(RegExp(r'\D'), '');
+    if (digits.isNotEmpty && e.amount.toString().contains(digits)) return true;
+    return false;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,7 +66,76 @@ class _ExpenseLogScreenState extends ConsumerState<ExpenseLogScreen> {
         current: FtTab.spend,
         child: Column(
           children: [
-              const FtSubHeader(title: 'Pengeluaran'),
+              FtSubHeader(
+                title: 'Pengeluaran',
+                trailing: FtTapScale(
+                  scale: 0.92,
+                  onTap: () => setState(() {
+                    _searchOpen = !_searchOpen;
+                    if (!_searchOpen) _search.clear();
+                  }),
+                  child: Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: _searchOpen ? FtColors.ink : FtColors.surface,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: FtColors.line, width: 0.5),
+                    ),
+                    alignment: Alignment.center,
+                    child: Icon(
+                      _searchOpen
+                          ? Icons.close_rounded
+                          : Icons.search_rounded,
+                      size: 17,
+                      color: _searchOpen ? Colors.white : FtColors.ink2,
+                    ),
+                  ),
+                ),
+              ),
+              if (_searchOpen)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(22, 2, 22, 4),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    decoration: BoxDecoration(
+                      color: FtColors.surface,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: FtColors.line, width: 0.5),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.search_rounded,
+                            size: 16, color: FtColors.ink3),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextField(
+                            controller: _search,
+                            autofocus: true,
+                            onChanged: (_) => setState(() {}),
+                            style: TextStyle(
+                                color: FtColors.ink, fontSize: 13),
+                            decoration: InputDecoration(
+                              isDense: true,
+                              border: InputBorder.none,
+                              hintText: 'Cari catatan, kategori, jumlah…',
+                              hintStyle: TextStyle(
+                                  color: FtColors.ink4, fontSize: 13),
+                              contentPadding: const EdgeInsets.symmetric(
+                                  vertical: 11),
+                            ),
+                          ),
+                        ),
+                        if (_search.text.isNotEmpty)
+                          GestureDetector(
+                            onTap: () => setState(_search.clear),
+                            child: Icon(Icons.cancel_rounded,
+                                size: 16, color: FtColors.ink4),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
               expensesStream.when(
                 data: (all) => _TodayCard(
                   expenses: all,
@@ -115,7 +205,7 @@ class _ExpenseLogScreenState extends ConsumerState<ExpenseLogScreen> {
                           e.categoryId != _filterCategoryId) {
                         return false;
                       }
-                      return true;
+                      return _matchesQuery(e, household);
                     }).toList();
 
                     if (filtered.isEmpty) {
@@ -136,7 +226,9 @@ class _ExpenseLogScreenState extends ConsumerState<ExpenseLogScreen> {
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  'Belum ada pengeluaran di siklus ini\n(${Dates.short(cycle.start)} – ${Dates.short(cycle.endExclusive.subtract(const Duration(days: 1)))})',
+                                  _search.text.trim().isNotEmpty
+                                      ? 'Tidak ada hasil untuk "${_search.text.trim()}"'
+                                      : 'Belum ada pengeluaran di siklus ini\n(${Dates.short(cycle.start)} – ${Dates.short(cycle.endExclusive.subtract(const Duration(days: 1)))})',
                                   textAlign: TextAlign.center,
                                 ),
                               ],
@@ -160,7 +252,7 @@ class _ExpenseLogScreenState extends ConsumerState<ExpenseLogScreen> {
                       switchOutCurve: Curves.easeInCubic,
                       child: ListView.builder(
                       key: ValueKey(
-                          '${_filterMemberId ?? ''}|${_filterCategoryId ?? ''}|${filtered.length}'),
+                          '${_filterMemberId ?? ''}|${_filterCategoryId ?? ''}|${_search.text}|${filtered.length}'),
                       padding: const EdgeInsets.only(top: 2, bottom: 120),
                       physics: const BouncingScrollPhysics(
                         parent: AlwaysScrollableScrollPhysics(),

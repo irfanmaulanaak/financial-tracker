@@ -10,11 +10,16 @@ class CategoryGrid extends StatelessWidget {
     super.key,
     required this.categories,
     required this.totals,
+    this.carries = const {},
     required this.onTap,
   });
 
   final List<Category> categories;
   final Map<String, int> totals;
+
+  /// Per-category rollover carry from last cycle (only for rollover
+  /// categories; missing = 0).
+  final Map<String, int> carries;
   final VoidCallback onTap;
 
   @override
@@ -44,7 +49,11 @@ class CategoryGrid extends StatelessWidget {
             childAspectRatio: 1.38,
             children: [
               for (final c in categories)
-                _CategoryCell(category: c, spent: totals[c.id] ?? 0),
+                _CategoryCell(
+                  category: c,
+                  spent: totals[c.id] ?? 0,
+                  carry: carries[c.id] ?? 0,
+                ),
             ],
           ),
         ),
@@ -54,15 +63,20 @@ class CategoryGrid extends StatelessWidget {
 }
 
 class _CategoryCell extends StatelessWidget {
-  const _CategoryCell({required this.category, required this.spent});
+  const _CategoryCell({
+    required this.category,
+    required this.spent,
+    this.carry = 0,
+  });
 
   final Category category;
   final int spent;
+  final int carry;
 
   @override
   Widget build(BuildContext context) {
     final color = parseColor(category.color);
-    final budget = category.monthlyBudget;
+    final budget = category.monthlyBudget + carry;
     final pct = budget > 0 ? (spent / budget * 100).round() : 0;
     return Container(
       padding: const EdgeInsets.all(12),

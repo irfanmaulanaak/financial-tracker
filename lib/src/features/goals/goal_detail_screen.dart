@@ -13,13 +13,12 @@ import '../../ui/ft_ui.dart';
 import '../goals/contribution.dart';
 import '../goals/goal.dart';
 import '../goals/goal_repository.dart';
+import '../goals/goals_screen.dart' show fundedGoalsProvider, goalsProvider;
 import '../home/widgets/home_formatters.dart';
 import '../household/household_providers.dart';
-
-final _goalProvider =
-    StreamProvider.family<Goal?, ({String hid, String goalId})>((ref, p) {
-  return ref.watch(goalRepositoryProvider).watchOne(hid: p.hid, goalId: p.goalId);
-});
+import '../investments/investment.dart';
+import '../investments/investments_screen.dart' show investmentsProvider;
+import 'widgets/goal_funding_sheet.dart';
 
 class GoalDetailScreen extends ConsumerWidget {
   const GoalDetailScreen({super.key, required this.goalId});
@@ -31,14 +30,21 @@ class GoalDetailScreen extends ConsumerWidget {
     if (household == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-    final goalAsync = ref.watch(_goalProvider((hid: household.id, goalId: goalId)));
+    final goalsAsync = ref.watch(fundedGoalsProvider(household.id));
 
     return Scaffold(
       backgroundColor: FtColors.bg,
-      body: goalAsync.when(
+      body: goalsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Gagal: $e')),
-        data: (goal) {
+        data: (goals) {
+          Goal? goal;
+          for (final g in goals) {
+            if (g.id == goalId) {
+              goal = g;
+              break;
+            }
+          }
           if (goal == null) {
             return FtAppChrome(
               current: FtTab.goals,
@@ -76,6 +82,24 @@ class _Body extends ConsumerWidget {
         : 0;
     final color = parseColor(goal.color);
 
+    final household = ref.watch(currentHouseholdProvider).value;
+    final investments =
+        ref.watch(investmentsProvider(householdId)).value ??
+            const <Investment>[];
+    final fundingAsset = household == null
+        ? null
+        : goalFundingAssetOf(
+            goal: goal,
+            household: household,
+            investments: investments,
+          );
+    // Goal lain yang berbagi aset sumber dana yang sama (basis proporsional).
+    final allGoals =
+        ref.watch(fundedGoalsProvider(householdId)).value ?? const <Goal>[];
+    final sharedCount = goal.fundingKey == null
+        ? 0
+        : allGoals.where((g) => g.fundingKey == goal.fundingKey).length;
+
     // Real contribution history bucketed into the last 8 months.
     final contribsAsync = ref.watch(
       goalContributionsProvider((hid: householdId, goalId: goal.id)),
@@ -94,7 +118,8 @@ class _Body extends ConsumerWidget {
       child: FtRefreshable(
         onRefresh: () async {
           ref.invalidate(currentHouseholdProvider);
-          ref.invalidate(_goalProvider((hid: householdId, goalId: goal.id)));
+          ref.invalidate(goalsProvider(householdId));
+          ref.invalidate(investmentsProvider(householdId));
           ref.invalidate(goalContributionsProvider((hid: householdId, goalId: goal.id)));
           await ftRefreshDelay();
         },
@@ -106,10 +131,12 @@ class _Body extends ConsumerWidget {
         children: [
           FtSubHeader(
             title: goal.label,
-            trailing: FtAddButton(
-              tooltip: 'Setor',
-              onTap: () => _openContribute(context, ref),
-            ),
+            trailing: goal.isLinked
+                ? null
+                : FtAddButton(
+                    tooltip: 'Setor',
+                    onTap: () => _openContribute(context, ref),
+                  ),
           ),
           FtCard(
             margin: const EdgeInsets.fromLTRB(22, 4, 22, 18),
@@ -174,6 +201,82 @@ class _Body extends ConsumerWidget {
               ],
             ),
           ),
+          FtCard(
+            margin: const EdgeInsets.fromLTRB(22, 0, 22, 18),
+            onTap: () => _changeFunding(context, ref),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Expanded(child: Eyebrow('Sumber Dana')),
+                    Text(
+                      'Ubah',
+                      style: TextStyle(
+                        color: FtColors.ink3,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                if (fundingAsset == null)
+                  Text(
+                    'Manual — dicatat lewat setoran ke tujuan ini.',
+                    style: TextStyle(
+                        color: FtColors.ink2, fontSize: 13, height: 1.5),
+                  )
+                else if (fundingAsset.missing)
+                  Text(
+                    'Aset sumber dana sudah dihapus. Pilih sumber lain '
+                    'atau kembalikan ke manual.',
+                    style: TextStyle(
+                        color: FtColors.danger, fontSize: 13, height: 1.5),
+                  )
+                else ...[
+                  Row(
+                    children: [
+                      Icon(Icons.link, size: 14, color: FtColors.ink2),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          fundingAsset.label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: FtColors.ink,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        Money.format(fundingAsset.value),
+                        style: TextStyle(
+                          color: FtColors.ink2,
+                          fontSize: 12,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    sharedCount > 1
+                        ? 'Porsi tujuan ini ${Money.format(goal.current)} — '
+                            'nilai aset dibagi proporsional dengan '
+                            '${sharedCount - 1} tujuan lain.'
+                        : 'Nilai tujuan mengikuti nilai aset ini secara '
+                            'otomatis.',
+                    style: TextStyle(
+                        color: FtColors.ink2, fontSize: 12, height: 1.5),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          if (!goal.isLinked) ...[
           const Padding(
             padding: EdgeInsets.fromLTRB(22, 0, 22, 8),
             child: Eyebrow('Setoran 8 Bulan Terakhir'),
@@ -233,6 +336,7 @@ class _Body extends ConsumerWidget {
                     ),
                   ),
           ),
+          ],
           FtCard(
             margin: const EdgeInsets.fromLTRB(22, 0, 22, 18),
             child: Column(
@@ -261,8 +365,12 @@ class _Body extends ConsumerWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: FilledButton(
-                    onPressed: () => _openContribute(context, ref),
-                    child: const Text('+ Setor Sekarang'),
+                    onPressed: goal.isLinked
+                        ? () => _changeFunding(context, ref)
+                        : () => _openContribute(context, ref),
+                    child: Text(goal.isLinked
+                        ? 'Ubah Sumber Dana'
+                        : '+ Setor Sekarang'),
                   ),
                 ),
               ],
@@ -272,6 +380,33 @@ class _Body extends ConsumerWidget {
       ),
       ),
     );
+  }
+
+  Future<void> _changeFunding(BuildContext context, WidgetRef ref) async {
+    final household = ref.read(currentHouseholdProvider).value;
+    if (household == null) return;
+    final investments =
+        ref.read(investmentsProvider(householdId)).value ??
+            const <Investment>[];
+    final choice = await showGoalFundingSheet(
+      context,
+      household: household,
+      investments: investments,
+      currentKey: goal.fundingKey,
+    );
+    if (choice == null) return;
+    try {
+      await ref.read(goalRepositoryProvider).setFunding(
+            hid: householdId,
+            goalId: goal.id,
+            type: choice.type,
+            id: choice.id,
+          );
+    } catch (e) {
+      if (context.mounted) {
+        showFtErrorSnack(context, e, prefix: 'Gagal mengubah sumber dana');
+      }
+    }
   }
 
   Future<void> _openContribute(BuildContext context, WidgetRef ref) async {

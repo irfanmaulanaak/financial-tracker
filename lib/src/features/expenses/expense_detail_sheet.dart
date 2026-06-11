@@ -15,6 +15,7 @@ import '../household/household_providers.dart';
 import '../members/member_chip.dart';
 import 'expense.dart';
 import 'expense_repository.dart';
+import 'widgets/expense_social_section.dart';
 
 /// Modal bottom sheet showing a single expense in full: amount, date,
 /// category, source (account or card), member, note, recurring flag.
@@ -71,7 +72,13 @@ class ExpenseDetailSheet extends ConsumerWidget {
         ),
         child: ListView(
           controller: controller,
-          padding: const EdgeInsets.fromLTRB(22, 8, 22, 24),
+          padding: EdgeInsets.fromLTRB(
+            22,
+            8,
+            22,
+            // Keep the comment input reachable above the keyboard.
+            24 + MediaQuery.viewInsetsOf(context).bottom,
+          ),
           children: [
             const _Grabber(),
             const SizedBox(height: 14),
@@ -160,6 +167,8 @@ class ExpenseDetailSheet extends ConsumerWidget {
                 ],
               ),
             ),
+            const SizedBox(height: 18),
+            ExpenseSocialSection(expense: expense, household: household),
             const SizedBox(height: 18),
             if (canDelete) ...[
               _EditButton(

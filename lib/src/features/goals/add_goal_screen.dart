@@ -2,16 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/formatters.dart';
 import '../../core/providers.dart';
 import '../../theme.dart';
 import '../../ui/ft_haptics.dart';
 import '../../ui/ft_submit_dot.dart';
 import '../../ui/ft_ui.dart';
 import '../household/household_providers.dart';
+import '../investments/investment.dart';
+import '../investments/investments_screen.dart' show investmentsProvider;
 import 'goal.dart';
 import 'goal_repository.dart';
 import 'widgets/goal_amount_fields.dart';
 import 'widgets/goal_form_parts.dart';
+import 'widgets/goal_funding_sheet.dart';
 import 'widgets/goal_preset_grid.dart';
 
 /// Full add-goal flow: preset → name + color → target + current with keypad
@@ -32,8 +36,12 @@ class _AddGoalScreenState extends ConsumerState<AddGoalScreen> {
   int _target = 0;
   int _current = 0;
   int _monthsTo = 12;
+  String? _fundingType;
+  String? _fundingId;
   bool _busy = false;
   String? _error;
+
+  bool get _linked => _fundingType != null && _fundingId != null;
 
   static const _monthsList = [3, 6, 12, 24, 36, 60, 120, 180, 240];
 
@@ -68,7 +76,8 @@ class _AddGoalScreenState extends ConsumerState<AddGoalScreen> {
       _error = null;
     });
     try {
-      final remaining = (_target - _current).clamp(0, _target);
+      final current = _linked ? 0 : _current;
+      final remaining = (_target - current).clamp(0, _target);
       final monthly = _monthsTo > 0 ? (remaining / _monthsTo).ceil() : 0;
       final dueDate = DateTime(
         DateTime.now().year,
@@ -82,7 +91,7 @@ class _AddGoalScreenState extends ConsumerState<AddGoalScreen> {
             hid: hid,
             label: label,
             target: _target,
-            current: _current,
+            current: current,
             dueDate: dueDate,
             monthlyContrib: monthly,
             color: _hexFor(_tone),
@@ -90,6 +99,8 @@ class _AddGoalScreenState extends ConsumerState<AddGoalScreen> {
             scope: GoalScope.shared,
             ownerId: user.uid,
             presetId: _presetId,
+            fundingType: _fundingType,
+            fundingId: _fundingId,
           );
       if (!mounted) return;
       context.pop();
@@ -101,13 +112,55 @@ class _AddGoalScreenState extends ConsumerState<AddGoalScreen> {
     }
   }
 
+  Future<void> _pickFunding() async {
+    final household = ref.read(currentHouseholdProvider).value;
+    if (household == null) return;
+    final investments =
+        ref.read(investmentsProvider(household.id)).value ??
+            const <Investment>[];
+    final choice = await showGoalFundingSheet(
+      context,
+      household: household,
+      investments: investments,
+      currentKey: _linked ? '$_fundingType:$_fundingId' : null,
+    );
+    if (choice == null) return;
+    FtHaptics.select();
+    setState(() {
+      _fundingType = choice.type;
+      _fundingId = choice.id;
+    });
+  }
+
+  String _fundingLabel(WidgetRef ref) {
+    if (!_linked) return 'Manual (setoran)';
+    final household = ref.read(currentHouseholdProvider).value;
+    if (household == null) return '-';
+    if (_fundingType == 'savings') {
+      final acc = household.accountOf(_fundingId!);
+      return acc == null ? '-' : '${acc.label} · ${Money.format(acc.value)}';
+    }
+    final investments =
+        ref.read(investmentsProvider(household.id)).value ??
+            const <Investment>[];
+    for (final inv in investments) {
+      if (inv.id == _fundingId) {
+        return '${inv.label} · ${Money.format(inv.currentValue)}';
+      }
+    }
+    return '-';
+  }
+
   @override
   Widget build(BuildContext context) {
     final household = ref.watch(currentHouseholdProvider).value;
     if (household == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-    final remaining = (_target - _current).clamp(0, _target);
+    // Keep the funding label live while the sheet sources stream in.
+    ref.watch(investmentsProvider(household.id));
+    final current = _linked ? 0 : _current;
+    final remaining = (_target - current).clamp(0, _target);
     final monthly = _monthsTo > 0 ? (remaining / _monthsTo).ceil() : 0;
 
     return Scaffold(
@@ -132,7 +185,7 @@ class _AddGoalScreenState extends ConsumerState<AddGoalScreen> {
                   label: _label.text.trim(),
                   tone: _tone,
                   target: _target,
-                  current: _current,
+                  current: current,
                   monthly: monthly,
                   monthsTo: _monthsTo,
                 ),
@@ -172,9 +225,58 @@ class _AddGoalScreenState extends ConsumerState<AddGoalScreen> {
                   target: _target,
                   current: _current,
                   tone: _tone,
+                  showCurrent: !_linked,
                   onChangeTarget: (v) => setState(() => _target = v),
                   onChangeCurrent: (v) => setState(() => _current = v),
                 ),
+                const SizedBox(height: 14),
+                const Eyebrow('Sumber Dana'),
+                const SizedBox(height: 8),
+                InkWell(
+                  onTap: _pickFunding,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: FtColors.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: FtColors.line, width: 0.5),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          _linked ? Icons.link : Icons.edit_outlined,
+                          size: 16,
+                          color: FtColors.ink2,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            _fundingLabel(ref),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: FtColors.ink,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        Icon(Icons.chevron_right,
+                            size: 18, color: FtColors.ink3),
+                      ],
+                    ),
+                  ),
+                ),
+                if (_linked) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    'Progress tujuan mengikuti nilai aset ini — dibagi '
+                    'proporsional bila aset dipakai beberapa tujuan.',
+                    style: TextStyle(color: FtColors.ink3, fontSize: 11),
+                  ),
+                ],
                 const SizedBox(height: 14),
                 GoalMonthsRow(
                   monthsTo: _monthsTo,
@@ -190,7 +292,7 @@ class _AddGoalScreenState extends ConsumerState<AddGoalScreen> {
                     tone: _tone,
                     monthly: monthly,
                     monthsTo: _monthsTo,
-                    current: _current,
+                    current: current,
                   ),
                 ],
                 if (_error != null) ...[

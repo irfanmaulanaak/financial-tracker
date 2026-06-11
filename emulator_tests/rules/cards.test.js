@@ -32,6 +32,7 @@ function buildHousehold(creator) {
     locale: 'id-ID',
     monthlyBudgetTotal: 0,
     memberIds: [creator],
+    memberAccess: { [creator]: 'full' },
     members: [
       {
         userId: creator,
@@ -235,11 +236,14 @@ async function deleteExpense(db, hid, expenseId) {
       if (cardSnap.exists() && instSnap.exists()) {
         // Reverse only the **remaining** debt — `tandai dibayar` taps already
         // chipped each month's `monthly` off `card.used`, so the card already
-        // reflects the post-tap state.
+        // reflects the post-tap state. Anchor on `total` (not monthly ×
+        // months) so rounding remainders cancel out exactly, mirroring the
+        // repo's recalcUsed-from-scratch behaviour.
         const inst = instSnap.data();
-        const remaining =
-          Math.max(0, (inst.monthsTotal || 0) - (inst.monthsPaid || 0)) *
-          (inst.monthly || 0);
+        const remaining = Math.max(
+          0,
+          (inst.total || 0) - (inst.monthsPaid || 0) * (inst.monthly || 0)
+        );
         const next = Math.max(0, (cardSnap.data().used || 0) - remaining);
         tx.update(cardRef, { used: next });
       }

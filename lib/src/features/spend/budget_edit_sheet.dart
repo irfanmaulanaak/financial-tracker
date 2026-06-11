@@ -39,6 +39,7 @@ class _BudgetEditSheetState extends ConsumerState<BudgetEditSheet> {
   late final TextEditingController _budget = TextEditingController(
     text: Money.displayDigits(widget.category.monthlyBudget),
   );
+  late bool _rollover = widget.category.rollover;
   bool _busy = false;
 
   @override
@@ -55,7 +56,7 @@ class _BudgetEditSheetState extends ConsumerState<BudgetEditSheet> {
     try {
       final updated = household.categories
           .map((c) => c.id == widget.category.id
-              ? c.copyWith(monthlyBudget: next)
+              ? c.copyWith(monthlyBudget: next, rollover: _rollover)
               : c)
           .toList();
       await ref.read(householdRepositoryProvider).updateCategories(
@@ -116,7 +117,37 @@ class _BudgetEditSheetState extends ConsumerState<BudgetEditSheet> {
                 prefixText: 'Rp ',
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Sisa amplop bergulir',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w500, fontSize: 13),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Sisa anggaran siklus lalu ditambahkan ke amplop siklus ini.',
+                        style: TextStyle(color: FtColors.ink3, fontSize: 11),
+                      ),
+                    ],
+                  ),
+                ),
+                Switch.adaptive(
+                  value: _rollover,
+                  activeTrackColor: FtColors.clay,
+                  onChanged: (v) {
+                    FtHaptics.select();
+                    setState(() => _rollover = v);
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
             FilledButton(
               onPressed: _busy ? null : _save,
               child: _busy

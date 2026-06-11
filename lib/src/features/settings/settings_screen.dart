@@ -18,6 +18,7 @@ import '../household/name_format.dart';
 import '../members/invite_sheet.dart';
 import 'widgets/household_section.dart';
 import 'widgets/members_section.dart';
+import 'widgets/reminders_section.dart';
 import 'widgets/settings_row.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -76,6 +77,7 @@ class SettingsScreen extends ConsumerWidget {
               },
             ),
             _DisplaySection(themeMode: themeMode, ref: ref),
+            const RemindersSection(),
             HouseholdSection(
               household: household,
               canEdit: canFull,

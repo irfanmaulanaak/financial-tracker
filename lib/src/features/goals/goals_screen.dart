@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/formatters.dart';
+import '../../core/goal_funding.dart';
 import '../../core/providers.dart';
 import '../../theme.dart';
 import '../../ui/ft_haptics.dart';
@@ -11,12 +12,47 @@ import '../../ui/ft_refresh.dart';
 import '../../ui/ft_ui.dart';
 import '../household/household_providers.dart';
 import '../household/name_format.dart';
+import '../investments/investment.dart';
+import '../investments/investments_screen.dart' show investmentsProvider;
 import 'goal.dart';
 import 'goal_repository.dart';
 import 'widgets/goal_card.dart';
+import 'widgets/goal_funding_sheet.dart';
 
 final goalsProvider = StreamProvider.family<List<Goal>, String>((ref, hid) {
   return ref.watch(goalRepositoryProvider).watchAll(hid);
+});
+
+/// Goals dengan `current` linked goals SUDAH dihitung dari nilai asetnya
+/// (proporsional terhadap target bila satu aset dipakai beberapa goal).
+/// Semua layar yang menampilkan progress goal harus pakai ini, bukan
+/// [goalsProvider] mentah.
+final fundedGoalsProvider =
+    Provider.family<AsyncValue<List<Goal>>, String>((ref, hid) {
+  final goalsAsync = ref.watch(goalsProvider(hid));
+  final household = ref.watch(currentHouseholdProvider).value;
+  final investments =
+      ref.watch(investmentsProvider(hid)).value ?? const <Investment>[];
+  return goalsAsync.whenData((goals) {
+    final assetValues = <String, int>{
+      if (household != null)
+        for (final a in household.savingsAccounts)
+          goalFundingKey('savings', a.id): a.value,
+      for (final inv in investments)
+        goalFundingKey('investment', inv.id): inv.currentValue,
+    };
+    final alloc = allocateLinkedGoals(
+      goals: [
+        for (final g in goals)
+          (id: g.id, target: g.target, fundingKey: g.fundingKey),
+      ],
+      assetValues: assetValues,
+    );
+    return [
+      for (final g in goals)
+        g.isLinked ? g.withCurrent(alloc[g.id] ?? 0) : g,
+    ];
+  });
 });
 
 class GoalsScreen extends ConsumerWidget {
@@ -32,7 +68,10 @@ class GoalsScreen extends ConsumerWidget {
         body: const FtSkeletonListView(count: 4, tileHeight: 110),
       );
     }
-    final goalsAsync = ref.watch(goalsProvider(household.id));
+    final goalsAsync = ref.watch(fundedGoalsProvider(household.id));
+    final investments =
+        ref.watch(investmentsProvider(household.id)).value ??
+            const <Investment>[];
 
     return Scaffold(
       backgroundColor: FtColors.bg,
@@ -131,6 +170,11 @@ class GoalsScreen extends ConsumerWidget {
                                       ?.displayName ??
                                   '-')
                               : 'Bersama',
+                          fundingAsset: goalFundingAssetOf(
+                            goal: g,
+                            household: household,
+                            investments: investments,
+                          ),
                           onContribute: () => _openContributeSheet(
                               context, ref, household.id, g),
                           onDelete: () =>

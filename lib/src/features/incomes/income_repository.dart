@@ -23,6 +23,19 @@ class IncomeRepository {
         .map((s) => s.docs.map(Income.fromSnapshot).toList());
   }
 
+  /// All recurring-flagged incomes since [since] (recurring+date composite
+  /// index). Powers the "Langganan & Rutin" screen.
+  Stream<List<Income>> watchRecurringSince({
+    required String hid,
+    required DateTime since,
+  }) {
+    return _incomes(hid)
+        .where('recurring', isEqualTo: true)
+        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(since))
+        .snapshots()
+        .map((s) => s.docs.map(Income.fromSnapshot).toList());
+  }
+
   /// Watches recent incomes credited to a given cash/savings account.
   ///
   /// Single-field `where` to dodge composite-index requirements; sort/slice

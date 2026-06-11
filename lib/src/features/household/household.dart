@@ -108,6 +108,11 @@ class Category {
   /// an instrument is saving, not consumption.
   final bool isInvestment;
 
+  /// Envelope rollover: leftover budget from the previous cycle is added on
+  /// top of this cycle's budget (one-cycle lookback, never negative). See
+  /// `core/envelope.dart`.
+  final bool rollover;
+
   const Category({
     required this.id,
     required this.label,
@@ -117,6 +122,7 @@ class Category {
     this.archived = false,
     this.sortOrder = 0,
     this.isInvestment = false,
+    this.rollover = false,
   });
 
   Category copyWith({
@@ -127,6 +133,7 @@ class Category {
     bool? archived,
     int? sortOrder,
     bool? isInvestment,
+    bool? rollover,
   }) =>
       Category(
         id: id,
@@ -137,6 +144,7 @@ class Category {
         archived: archived ?? this.archived,
         sortOrder: sortOrder ?? this.sortOrder,
         isInvestment: isInvestment ?? this.isInvestment,
+        rollover: rollover ?? this.rollover,
       );
 
   Map<String, dynamic> toMap() => {
@@ -148,6 +156,7 @@ class Category {
         'archived': archived,
         'sortOrder': sortOrder,
         'isInvestment': isInvestment,
+        'rollover': rollover,
       };
 
   static Category fromMap(Map<String, dynamic> m) => Category(
@@ -159,6 +168,7 @@ class Category {
         archived: m['archived'] as bool? ?? false,
         sortOrder: (m['sortOrder'] as num?)?.toInt() ?? 0,
         isInvestment: m['isInvestment'] as bool? ?? false,
+        rollover: m['rollover'] as bool? ?? false,
       );
 }
 

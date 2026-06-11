@@ -16,6 +16,7 @@ class GoalAmountFields extends StatelessWidget {
     required this.tone,
     required this.onChangeTarget,
     required this.onChangeCurrent,
+    this.showCurrent = true,
   });
 
   final int target;
@@ -23,6 +24,10 @@ class GoalAmountFields extends StatelessWidget {
   final Color tone;
   final ValueChanged<int> onChangeTarget;
   final ValueChanged<int> onChangeCurrent;
+
+  /// False saat goal terhubung ke aset: "sudah terkumpul" dihitung dari
+  /// nilai aset, bukan input manual.
+  final bool showCurrent;
 
   @override
   Widget build(BuildContext context) {
@@ -34,13 +39,15 @@ class GoalAmountFields extends StatelessWidget {
           tone: tone,
           onChanged: onChangeTarget,
         ),
-        const SizedBox(height: 8),
-        _Field(
-          eyebrow: 'SUDAH TERKUMPUL · OPSIONAL',
-          amount: current,
-          tone: tone,
-          onChanged: onChangeCurrent,
-        ),
+        if (showCurrent) ...[
+          const SizedBox(height: 8),
+          _Field(
+            eyebrow: 'SUDAH TERKUMPUL · OPSIONAL',
+            amount: current,
+            tone: tone,
+            onChanged: onChangeCurrent,
+          ),
+        ],
       ],
     );
   }

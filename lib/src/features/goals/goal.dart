@@ -30,6 +30,14 @@ class Goal {
   /// as fallback so the list stays stable until the user reorders.
   final int? sortIndex;
 
+  /// Sumber dana goal. Null = manual (setoran). `savings` = rekening
+  /// tabungan di household, `investment` = posisi investasi. Goal linked
+  /// tidak pakai setoran; `current`-nya dihitung dari nilai aset
+  /// (proporsional bila aset dipakai beberapa goal) — lihat
+  /// `core/goal_funding.dart`.
+  final String? fundingType;
+  final String? fundingId;
+
   const Goal({
     required this.id,
     required this.label,
@@ -44,11 +52,35 @@ class Goal {
     required this.createdAt,
     this.presetId,
     this.sortIndex,
+    this.fundingType,
+    this.fundingId,
   });
+
+  bool get isLinked => fundingType != null && fundingId != null;
+  String? get fundingKey => isLinked ? '$fundingType:$fundingId' : null;
 
   double get progress => target == 0 ? 0 : (current / target).clamp(0, 1);
   int get remaining => (target - current).clamp(0, target);
   bool get isComplete => current >= target;
+
+  /// Salinan goal dengan `current` hasil hitungan dari aset (linked goals).
+  Goal withCurrent(int value) => Goal(
+        id: id,
+        label: label,
+        target: target,
+        current: value,
+        dueDate: dueDate,
+        monthlyContrib: monthlyContrib,
+        icon: icon,
+        color: color,
+        scope: scope,
+        ownerId: ownerId,
+        createdAt: createdAt,
+        presetId: presetId,
+        sortIndex: sortIndex,
+        fundingType: fundingType,
+        fundingId: fundingId,
+      );
 
   Map<String, dynamic> toMap() => {
         'label': label,
@@ -63,6 +95,8 @@ class Goal {
         'createdAt': Timestamp.fromDate(createdAt),
         if (presetId != null) 'presetId': presetId,
         if (sortIndex != null) 'sortIndex': sortIndex,
+        if (fundingType != null) 'fundingType': fundingType,
+        if (fundingId != null) 'fundingId': fundingId,
       };
 
   static Goal fromSnapshot(DocumentSnapshot snap) {
@@ -81,6 +115,8 @@ class Goal {
       createdAt: (m['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       presetId: m['presetId'] as String?,
       sortIndex: (m['sortIndex'] as num?)?.toInt(),
+      fundingType: m['fundingType'] as String?,
+      fundingId: m['fundingId'] as String?,
     );
   }
 }

@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/envelope.dart';
 import '../../core/formatters.dart';
 import '../../core/payday.dart';
 import '../../theme.dart';
@@ -179,12 +180,23 @@ class _HeaderCard extends StatelessWidget {
           (a, e) => a + e.amount.toInt(),
         ) ??
         0;
-    final budget = category.monthlyBudget;
-    final pct = budget > 0 ? (spent / budget * 100).round() : 0;
-    final over = spent > budget;
-
     // Compute historical average from previous cycles
     final prev = prevAsync.value ?? const <List<Expense>>[];
+    final prevSpent = prev.isEmpty
+        ? 0
+        : prev[0].where((e) => e.categoryId == category.id).fold<int>(
+              0,
+              (a, e) => a + e.amount.toInt(),
+            );
+    final carry = category.rollover
+        ? carryOver(
+            monthlyBudget: category.monthlyBudget,
+            prevCycleSpent: prevSpent,
+          )
+        : 0;
+    final budget = category.monthlyBudget + carry;
+    final pct = budget > 0 ? (spent / budget * 100).round() : 0;
+    final over = spent > budget;
     final prevTotals = <int>[
       for (final w in prev)
         w.where((e) => e.categoryId == category.id).fold<int>(
@@ -266,7 +278,8 @@ class _HeaderCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '${Money.format(spent)} / ${Money.format(budget)}',
+                '${Money.format(spent)} / ${Money.format(budget)}'
+                '${carry > 0 ? ' (gulir +${Money.format(carry)})' : ''}',
                 style: TextStyle(
                     color: FtColors.ink2, fontSize: 11),
               ),

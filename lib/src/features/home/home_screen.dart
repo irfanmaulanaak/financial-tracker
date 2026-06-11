@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/envelope.dart';
 import '../../core/expense_aggregations.dart';
 import '../../core/health_score.dart';
 import '../../core/in_app_indicators.dart';
 import '../../core/net_worth.dart';
 import '../../core/providers.dart';
 import '../../core/recurring_runner.dart';
+import '../../core/streak.dart';
 import '../../theme.dart';
 import '../../ui/ft_refresh.dart';
 import '../../ui/ft_ui.dart';
@@ -25,6 +27,7 @@ import '../incomes/income_providers.dart';
 import '../insights/insights_providers.dart';
 import '../investments/investment.dart';
 import '../investments/investments_screen.dart';
+import '../notifications/reminder_scheduler.dart';
 import 'net_worth_snapshot.dart';
 import 'net_worth_snapshot_repository.dart';
 import 'widgets/banners.dart';
@@ -50,6 +53,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     // Self-heal stale `users/{uid}.householdId` after a creator removed us
     // from the household.
     ref.watch(orphanedMembershipCleanupProvider);
+    // Keep local reminders in sync with settings + cards + recurring bills.
+    ref.watch(reminderSchedulerProvider);
     final loadedHid = householdAsync.value?.id;
     if (loadedHid != null && loadedHid != _lastRecurringHid) {
       _lastRecurringHid = loadedHid;
@@ -65,7 +70,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ? ref.watch(cardsProvider(household.id))
         : null;
     final goalsAsync = household != null
-        ? ref.watch(goalsProvider(household.id))
+        ? ref.watch(fundedGoalsProvider(household.id))
         : null;
     final investmentsAsync = household != null
         ? ref.watch(investmentsProvider(household.id))
@@ -117,6 +122,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           final investments = investmentsAsync?.value ?? const <Investment>[];
           final prevAsync = ref.watch(previousCyclesExpensesProvider(3));
           final prevCycles = prevAsync.value ?? const <List<Expense>>[];
+          final prevByCat = prevCycles.isEmpty
+              ? const <String, int>{}
+              : spentByCategory([
+                  for (final e in prevCycles[0])
+                    ExpenseRecord(
+                      amount: e.amount,
+                      categoryId: e.categoryId,
+                      spentBy: e.spentBy,
+                      date: e.date,
+                    ),
+                ]);
+          final carries = {
+            for (final c in categories)
+              if (c.rollover)
+                c.id: carryOver(
+                  monthlyBudget: c.monthlyBudget,
+                  prevCycleSpent: prevByCat[c.id] ?? 0,
+                ),
+          };
           final avgPrev = prevCycles.isEmpty
               ? 0
               : prevCycles
@@ -191,6 +215,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 if (c.used > 0)
                   DueBanner(cardLabel: c.label, daysUntil: d, used: c.used),
           ];
+          final streak = ref.watch(recordingStreakProvider);
 
           Widget section(Widget child, {int index = 0}) => FtFadeUp(
                 duration: const Duration(milliseconds: 340),
@@ -252,10 +277,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                   for (var i = 0; i < dueBanners.length; i++)
                     section(dueBanners[i], index: 2 + i),
+                  if (streak >= minVisibleStreak)
+                    section(
+                      StreakBanner(streak: streak),
+                      index: 2 + dueBanners.length,
+                    ),
                   section(
                     CategoryGrid(
                       categories: categories.take(4).toList(),
                       totals: byCat,
+                      carries: carries,
                       onTap: () => context.push('/spend'),
                     ),
                     index: 3,
@@ -288,8 +319,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     switch (v) {
       case 'insights':
         context.push('/health');
+      case 'recap':
+        context.push('/recap');
       case 'categories':
         context.push('/categories');
+      case 'subscriptions':
+        context.push('/subscriptions');
+      case 'debts':
+        context.push('/debts');
       case 'members':
         context.push('/members');
       case 'export':

@@ -33,6 +33,7 @@ function buildHousehold(creator) {
     locale: 'id-ID',
     monthlyBudgetTotal: 1000000,
     memberIds: [creator],
+    memberAccess: { [creator]: 'full' },
     members: [
       {
         userId: creator,

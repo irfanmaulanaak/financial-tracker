@@ -1,14 +1,18 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/envelope.dart';
 import '../../core/expense_aggregations.dart';
 import '../../core/in_app_indicators.dart';
 import '../../core/providers.dart';
 import '../cards/cards_screen.dart' show cardsProvider;
+import '../expenses/expense.dart';
 import '../expenses/expense_providers.dart';
 import '../goals/goal.dart' show Goal;
-import '../goals/goals_screen.dart' show goalsProvider;
+import '../goals/goals_screen.dart' show fundedGoalsProvider;
 import '../household/household_providers.dart';
+import '../insights/insights_providers.dart'
+    show previousCyclesExpensesProvider;
 import '../investments/investments_screen.dart' show investmentsProvider;
 
 /// Notification kinds drive the icon + tone in the UI.
@@ -80,12 +84,32 @@ final notificationsProvider = Provider<List<AppNotification>>((ref) {
       latestExpenseByCat[e.categoryId] = e.date;
     }
   }
+  // Rollover categories measure against budget + last cycle's leftover.
+  final prevCycles =
+      ref.watch(previousCyclesExpensesProvider(1)).value ??
+          const <List<Expense>>[];
+  final prevByCat = prevCycles.isEmpty
+      ? const <String, int>{}
+      : spentByCategory([
+          for (final e in prevCycles[0])
+            ExpenseRecord(
+              amount: e.amount,
+              categoryId: e.categoryId,
+              spentBy: e.spentBy,
+              date: e.date,
+            ),
+        ]);
   for (final c in household.categories) {
     if (c.archived || c.monthlyBudget <= 0) continue;
     final spent = byCat[c.id] ?? 0;
+    final limit = effectiveBudget(
+      monthlyBudget: c.monthlyBudget,
+      rollover: c.rollover,
+      prevCycleSpent: prevByCat[c.id] ?? 0,
+    );
     final status = budgetStatus(
       totalSpent: spent,
-      monthlyBudget: c.monthlyBudget,
+      monthlyBudget: limit,
     );
     if (status == BudgetStatus.exceeded) {
       out.add(AppNotification(
@@ -94,7 +118,7 @@ final notificationsProvider = Provider<List<AppNotification>>((ref) {
         group: NotificationGroup.fresh,
         title: '${c.label} melebihi anggaran',
         detail:
-            'Sudah Rp ${_short(spent)} dari batas Rp ${_short(c.monthlyBudget)}',
+            'Sudah Rp ${_short(spent)} dari batas Rp ${_short(limit)}',
         ts: latestExpenseByCat[c.id] ?? now,
         route: '/categories/${c.id}',
       ));
@@ -125,7 +149,7 @@ final notificationsProvider = Provider<List<AppNotification>>((ref) {
   }
 
   // Goal milestones (≥75% / ≥100%) -----------------------------------------
-  final goalsAsync = ref.watch(goalsProvider(household.id));
+  final goalsAsync = ref.watch(fundedGoalsProvider(household.id));
   final goals = goalsAsync.value ?? const <Goal>[];
   for (final g in goals) {
     if (g.target <= 0) continue;
