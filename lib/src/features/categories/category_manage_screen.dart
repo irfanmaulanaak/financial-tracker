@@ -107,6 +107,7 @@ class CategoryManageScreen extends ConsumerWidget {
             icon: saved.icon,
             color: saved.color,
             monthlyBudget: saved.budget,
+            isInvestment: saved.isInvestment,
           );
     } catch (e) {
       if (context.mounted) {
@@ -135,6 +136,7 @@ class CategoryManageScreen extends ConsumerWidget {
                   icon: saved.icon,
                   color: saved.color,
                   monthlyBudget: saved.budget,
+                  isInvestment: saved.isInvestment,
                 )
               : x,
         )
@@ -194,7 +196,9 @@ class _CategoryTile extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  Money.format(category.monthlyBudget),
+                  category.isInvestment
+                      ? '${Money.format(category.monthlyBudget)} · Investasi'
+                      : Money.format(category.monthlyBudget),
                 ),
               ],
             ),
@@ -223,7 +227,14 @@ class _CategoryDraft {
   final String icon;
   final String color;
   final int budget;
-  const _CategoryDraft(this.label, this.icon, this.color, this.budget);
+  final bool isInvestment;
+  const _CategoryDraft(
+    this.label,
+    this.icon,
+    this.color,
+    this.budget,
+    this.isInvestment,
+  );
 }
 
 class _CategoryEditSheet extends StatefulWidget {
@@ -245,6 +256,7 @@ class _CategoryEditSheetState extends State<_CategoryEditSheet> {
   );
   String _color = '#5E7A64';
   String _icon = 'category';
+  late bool _isInvestment = widget.initial?.isInvestment ?? false;
 
   static const _iconChoices = [
     'restaurant',
@@ -257,6 +269,7 @@ class _CategoryEditSheetState extends State<_CategoryEditSheet> {
     'school',
     'pets',
     'sports_esports',
+    'trending_up',
   ];
   // Editorial palette (light values of `FtColors.cat*` + blush); parseColor
   // maps them to dark variants automatically.
@@ -289,7 +302,10 @@ class _CategoryEditSheetState extends State<_CategoryEditSheet> {
     final label = _label.text.trim();
     if (label.isEmpty) return;
     final budget = Money.parse(_budget.text) ?? 0;
-    Navigator.pop(context, _CategoryDraft(label, _icon, _color, budget));
+    Navigator.pop(
+      context,
+      _CategoryDraft(label, _icon, _color, budget, _isInvestment),
+    );
   }
 
   @override
@@ -328,7 +344,19 @@ class _CategoryEditSheetState extends State<_CategoryEditSheet> {
                 prefixText: 'Rp ',
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 4),
+            SwitchListTile(
+              value: _isInvestment,
+              onChanged: (v) => setState(() => _isInvestment = v),
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Kategori investasi'),
+              subtitle: const Text(
+                'Tetap tampil di daftar, tapi tidak dihitung '
+                'dalam total pengeluaran',
+                style: TextStyle(fontSize: 12),
+              ),
+            ),
+            const SizedBox(height: 4),
             const Text('Ikon'),
             const SizedBox(height: 4),
             Wrap(
@@ -401,5 +429,6 @@ IconData _iconFor(String name) => switch (name) {
   'school' => Icons.school,
   'pets' => Icons.pets,
   'sports_esports' => Icons.sports_esports,
+  'trending_up' => Icons.trending_up,
   _ => Icons.category,
 };

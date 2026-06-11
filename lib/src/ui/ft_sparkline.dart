@@ -8,6 +8,10 @@ import '../theme.dart';
 /// On first build the line draws progressively from left to right over
 /// [animationDuration]. On data changes the line is redrawn from zero (a
 /// quick re-sweep reads as "the trend updated").
+///
+/// When [onHoverPoint] is set the chart becomes scrubable: mouse hover or
+/// finger drag highlights the nearest point (dot + guide line) and reports
+/// its index to the parent (null when the pointer leaves).
 class FtSparkline extends StatefulWidget {
   const FtSparkline({
     super.key,
@@ -18,6 +22,7 @@ class FtSparkline extends StatefulWidget {
     this.height = 28,
     this.strokeWidth = 1.4,
     this.animationDuration = const Duration(milliseconds: 600),
+    this.onHoverPoint,
   });
 
   final List<double> data;
@@ -27,6 +32,7 @@ class FtSparkline extends StatefulWidget {
   final double height;
   final double strokeWidth;
   final Duration animationDuration;
+  final ValueChanged<int?>? onHoverPoint;
 
   @override
   State<FtSparkline> createState() => _FtSparklineState();
@@ -34,6 +40,7 @@ class FtSparkline extends StatefulWidget {
 
 class _FtSparklineState extends State<FtSparkline> {
   double _target = 1;
+  int? _hover;
 
   @override
   void didUpdateWidget(covariant FtSparkline oldWidget) {
@@ -41,11 +48,18 @@ class _FtSparklineState extends State<FtSparkline> {
     if (oldWidget.data != widget.data) {
       // Reset to 0 then back to 1 to trigger a new sweep.
       _target = 0;
+      _hover = null;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         setState(() => _target = 1);
       });
     }
+  }
+
+  void _setHover(int? idx) {
+    if (idx == _hover) return;
+    setState(() => _hover = idx);
+    widget.onHoverPoint?.call(idx);
   }
 
   @override
@@ -54,25 +68,57 @@ class _FtSparklineState extends State<FtSparkline> {
       return SizedBox(width: widget.width, height: widget.height);
     }
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    final chart = TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: _target),
+      duration: reduceMotion ? Duration.zero : widget.animationDuration,
+      curve: Curves.easeOutCubic,
+      builder: (_, t, _) {
+        return CustomPaint(
+          painter: _SparklinePainter(
+            data: widget.data,
+            color: widget.color ?? FtColors.moss,
+            fill: widget.fill,
+            strokeWidth: widget.strokeWidth,
+            progress: t,
+            highlightIndex: _hover,
+          ),
+        );
+      },
+    );
+
     return SizedBox(
       width: widget.width,
       height: widget.height,
-      child: TweenAnimationBuilder<double>(
-        tween: Tween(begin: 0, end: _target),
-        duration: reduceMotion ? Duration.zero : widget.animationDuration,
-        curve: Curves.easeOutCubic,
-        builder: (_, t, _) {
-          return CustomPaint(
-            painter: _SparklinePainter(
-              data: widget.data,
-              color: widget.color ?? FtColors.moss,
-              fill: widget.fill,
-              strokeWidth: widget.strokeWidth,
-              progress: t,
+      child: widget.onHoverPoint == null
+          ? chart
+          : LayoutBuilder(
+              builder: (context, constraints) {
+                final w = constraints.maxWidth;
+                void update(Offset local) {
+                  final idx = (local.dx / w * (widget.data.length - 1))
+                      .round()
+                      .clamp(0, widget.data.length - 1);
+                  _setHover(idx);
+                }
+
+                return MouseRegion(
+                  onEnter: (e) => update(e.localPosition),
+                  onHover: (e) => update(e.localPosition),
+                  onExit: (_) => _setHover(null),
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    // Touch: press/drag to scrub, release to dismiss.
+                    onTapDown: (d) => update(d.localPosition),
+                    onTapUp: (_) => _setHover(null),
+                    onHorizontalDragStart: (d) => update(d.localPosition),
+                    onHorizontalDragUpdate: (d) => update(d.localPosition),
+                    onHorizontalDragEnd: (_) => _setHover(null),
+                    onHorizontalDragCancel: () => _setHover(null),
+                    child: chart,
+                  ),
+                );
+              },
             ),
-          );
-        },
-      ),
     );
   }
 }
@@ -84,6 +130,7 @@ class _SparklinePainter extends CustomPainter {
     required this.fill,
     required this.strokeWidth,
     required this.progress,
+    this.highlightIndex,
   });
 
   final List<double> data;
@@ -91,6 +138,7 @@ class _SparklinePainter extends CustomPainter {
   final bool fill;
   final double strokeWidth;
   final double progress;
+  final int? highlightIndex;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -158,6 +206,21 @@ class _SparklinePainter extends CustomPainter {
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
     canvas.drawPath(line, stroke);
+
+    // Scrub marker: vertical guide + dot at the highlighted point.
+    final hi = highlightIndex;
+    if (hi != null && hi >= 0 && hi < points.length && progress >= 0.99) {
+      final pt = points[hi];
+      canvas.drawLine(
+        Offset(pt.dx, 0),
+        Offset(pt.dx, size.height),
+        Paint()
+          ..color = color.withValues(alpha: 0.30)
+          ..strokeWidth = 1,
+      );
+      canvas.drawCircle(pt, 3.6, Paint()..color = FtColors.surface);
+      canvas.drawCircle(pt, 2.6, Paint()..color = color);
+    }
   }
 
   @override
@@ -166,5 +229,6 @@ class _SparklinePainter extends CustomPainter {
       old.color != color ||
       old.fill != fill ||
       old.strokeWidth != strokeWidth ||
-      old.progress != progress;
+      old.progress != progress ||
+      old.highlightIndex != highlightIndex;
 }

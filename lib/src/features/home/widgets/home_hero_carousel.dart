@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/cicilan.dart';
+import '../../../core/formatters.dart';
 import '../../../core/health_score.dart';
 import '../../../core/hide_assets_provider.dart';
 import '../../../core/in_app_indicators.dart';
@@ -33,6 +34,7 @@ class HomeHeroCarousel extends StatefulWidget {
     super.key,
     required this.nw,
     required this.trend,
+    this.trendDates = const [],
     required this.cycleNet,
     required this.spend,
     required this.gajiIncome,
@@ -42,6 +44,10 @@ class HomeHeroCarousel extends StatefulWidget {
 
   final NetWorth nw;
   final List<double> trend;
+
+  /// Calendar day for each [trend] point; same length when provided.
+  /// Enables the hover/scrub readout on the asset sparkline.
+  final List<DateTime> trendDates;
 
   /// Income (Gaji only) minus spend, this cycle. Used by the asset slide
   /// to render the small delta pill.
@@ -102,6 +108,7 @@ class _HomeHeroCarouselState extends State<HomeHeroCarousel> {
                   0 => _AsetSlide(
                       nw: widget.nw,
                       trend: widget.trend,
+                      trendDates: widget.trendDates,
                       cycleNet: widget.cycleNet,
                     ),
                   1 => _RatioSlide(
@@ -199,22 +206,42 @@ class _Dots extends StatelessWidget {
 /// ---------------------------------------------------------------------------
 /// Slide 1 — Total Aset
 /// ---------------------------------------------------------------------------
-class _AsetSlide extends ConsumerWidget {
+class _AsetSlide extends ConsumerStatefulWidget {
   const _AsetSlide({
     required this.nw,
     required this.trend,
+    required this.trendDates,
     required this.cycleNet,
   });
 
   final NetWorth nw;
   final List<double> trend;
+  final List<DateTime> trendDates;
   final int cycleNet;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_AsetSlide> createState() => _AsetSlideState();
+}
+
+class _AsetSlideState extends ConsumerState<_AsetSlide> {
+  /// Index into [_AsetSlide.trend] currently under the pointer, if any.
+  int? _scrubIdx;
+
+  @override
+  Widget build(BuildContext context) {
+    final nw = widget.nw;
+    final trend = widget.trend;
+    final cycleNet = widget.cycleNet;
     final hidden = ref.watch(hideAssetsProvider);
     final showDelta = !hidden && cycleNet != 0 && nw.total > 0;
     final positive = cycleNet >= 0;
+    final canScrub = !hidden && widget.trendDates.length == trend.length;
+    final scrub = _scrubIdx != null && canScrub && _scrubIdx! < trend.length
+        ? (
+            date: widget.trendDates[_scrubIdx!],
+            total: trend[_scrubIdx!].round(),
+          )
+        : null;
     final segments = <FtDonutSegment>[
       if (nw.cash > 0)
         FtDonutSegment(value: nw.cash.toDouble(), color: FtColors.sky),
@@ -269,13 +296,39 @@ class _AsetSlide extends ConsumerWidget {
                                 ),
                           ),
                     const SizedBox(height: 8),
-                    if (showDelta)
-                      _DeltaPill(positive: positive, amount: cycleNet.abs())
-                    else
-                      Text(
-                        'Tunai + tabungan + investasi − utang',
-                        style: TextStyle(color: FtColors.ink3, fontSize: 11),
+                    // Fixed-height slot so scrubbing the sparkline swaps the
+                    // pill for the day readout without layout jitter.
+                    SizedBox(
+                      height: 22,
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: scrub != null
+                            ? Text(
+                                '${Dates.dayMonth(scrub.date)} · '
+                                '${Money.format(scrub.total)}',
+                                style: TextStyle(
+                                  color: FtColors.ink2,
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w600,
+                                  fontFeatures: const [
+                                    FontFeature.tabularFigures(),
+                                  ],
+                                ),
+                              )
+                            : showDelta
+                                ? _DeltaPill(
+                                    positive: positive,
+                                    amount: cycleNet.abs(),
+                                  )
+                                : Text(
+                                    'Tunai + tabungan + investasi − utang',
+                                    style: TextStyle(
+                                      color: FtColors.ink3,
+                                      fontSize: 11,
+                                    ),
+                                  ),
                       ),
+                    ),
                     if (trend.length >= 2) ...[
                       const SizedBox(height: 10),
                       // Full width, otherwise the SizedBox collapses to 0 and
@@ -283,8 +336,11 @@ class _AsetSlide extends ConsumerWidget {
                       FtSparkline(
                         data: trend,
                         width: double.infinity,
-                        height: 22,
+                        height: 26,
                         color: positive ? FtColors.moss : FtColors.danger,
+                        onHoverPoint: canScrub
+                            ? (i) => setState(() => _scrubIdx = i)
+                            : null,
                       ),
                     ],
                   ],

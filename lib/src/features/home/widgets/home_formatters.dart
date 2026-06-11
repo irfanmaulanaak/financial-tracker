@@ -79,6 +79,8 @@ IconData iconFor(String name) => switch (name) {
       'favorite' => Icons.favorite,
       'school' => Icons.school,
       'sports_esports' => Icons.sports_esports,
+      'pets' => Icons.pets,
+      'trending_up' => Icons.trending_up,
       _ => Icons.category,
     };
 

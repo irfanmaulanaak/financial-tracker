@@ -39,10 +39,12 @@ class GoalCard extends StatelessWidget {
         ? (remaining / 6).ceil()
         : 0;
 
+    // No onLongPress here: holding the card is the reorder gesture
+    // (ReorderableDelayedDragStartListener in GoalsScreen). Delete lives in
+    // the ⋯ menu instead.
     return FtCard(
       margin: const EdgeInsets.fromLTRB(22, 0, 22, 12),
       onTap: () => context.push('/goals/${goal.id}'),
-      onLongPress: onDelete,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -122,6 +124,24 @@ class GoalCard extends StatelessWidget {
                         ),
                       ],
                     ),
+                  ],
+                ),
+              ),
+              SizedBox(
+                width: 30,
+                child: PopupMenuButton<String>(
+                  padding: EdgeInsets.zero,
+                  tooltip: 'Opsi tujuan',
+                  icon: Icon(
+                    Icons.more_vert,
+                    size: 18,
+                    color: FtColors.ink3,
+                  ),
+                  onSelected: (v) {
+                    if (v == 'delete') onDelete();
+                  },
+                  itemBuilder: (_) => const [
+                    PopupMenuItem(value: 'delete', child: Text('Hapus')),
                   ],
                 ),
               ),

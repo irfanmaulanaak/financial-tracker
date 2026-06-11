@@ -85,6 +85,22 @@ class Goal {
   }
 }
 
+/// Pure reorder math for `ReorderableListView.onReorder`: Flutter reports
+/// [newIndex] as if the moved item were still in place, so moving an item
+/// down needs a −1 fix-up before insert.
+List<String> reorderIds({
+  required List<String> ids,
+  required int oldIndex,
+  required int newIndex,
+}) {
+  var ni = newIndex;
+  if (ni > oldIndex) ni -= 1;
+  final out = [...ids];
+  final moved = out.removeAt(oldIndex);
+  out.insert(ni, moved);
+  return out;
+}
+
 /// Pure helper: months remaining to hit target at current monthly contribution.
 /// Returns null when target already met OR when no monthly contribution is set.
 int? monthsToGoal({

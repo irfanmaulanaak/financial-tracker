@@ -103,6 +103,11 @@ class Category {
   final bool archived;
   final int sortOrder;
 
+  /// Investment categories (e.g. "Investasi"): their expenses stay in
+  /// activity lists but are excluded from total-spend aggregates — buying
+  /// an instrument is saving, not consumption.
+  final bool isInvestment;
+
   const Category({
     required this.id,
     required this.label,
@@ -111,6 +116,7 @@ class Category {
     required this.monthlyBudget,
     this.archived = false,
     this.sortOrder = 0,
+    this.isInvestment = false,
   });
 
   Category copyWith({
@@ -120,6 +126,7 @@ class Category {
     int? monthlyBudget,
     bool? archived,
     int? sortOrder,
+    bool? isInvestment,
   }) =>
       Category(
         id: id,
@@ -129,6 +136,7 @@ class Category {
         monthlyBudget: monthlyBudget ?? this.monthlyBudget,
         archived: archived ?? this.archived,
         sortOrder: sortOrder ?? this.sortOrder,
+        isInvestment: isInvestment ?? this.isInvestment,
       );
 
   Map<String, dynamic> toMap() => {
@@ -139,6 +147,7 @@ class Category {
         'monthlyBudget': monthlyBudget,
         'archived': archived,
         'sortOrder': sortOrder,
+        'isInvestment': isInvestment,
       };
 
   static Category fromMap(Map<String, dynamic> m) => Category(
@@ -149,6 +158,7 @@ class Category {
         monthlyBudget: (m['monthlyBudget'] as num?)?.toInt() ?? 0,
         archived: m['archived'] as bool? ?? false,
         sortOrder: (m['sortOrder'] as num?)?.toInt() ?? 0,
+        isInvestment: m['isInvestment'] as bool? ?? false,
       );
 }
 
@@ -203,6 +213,11 @@ class Household {
     }
     return null;
   }
+
+  /// IDs of investment categories — expenses in these are excluded from
+  /// total-spend aggregates (see [Category.isInvestment]).
+  Set<String> get investmentCategoryIds =>
+      {for (final c in categories) if (c.isInvestment) c.id};
 
   /// `memberAccess` is the uid→accessLevel map mirrored from `members[]`.
   /// Stored alongside members so Firestore rules can look up the caller's

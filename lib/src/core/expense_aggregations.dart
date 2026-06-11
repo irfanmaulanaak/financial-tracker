@@ -20,6 +20,18 @@ class ExpenseRecord {
 int totalSpent(Iterable<ExpenseRecord> expenses) =>
     expenses.fold<int>(0, (a, e) => a + e.amount.toInt());
 
+/// Drops expenses whose category is an investment category. Spend totals
+/// count consumption only — buying an instrument is saving, not spending —
+/// but the dropped records stay visible in activity lists.
+List<ExpenseRecord> consumptionOnly(
+  Iterable<ExpenseRecord> expenses,
+  Set<String> investmentCategoryIds,
+) =>
+    [
+      for (final e in expenses)
+        if (!investmentCategoryIds.contains(e.categoryId)) e,
+    ];
+
 /// Spend grouped by `categoryId`. Categories with zero spend are omitted.
 Map<String, int> spentByCategory(Iterable<ExpenseRecord> expenses) {
   final out = <String, int>{};

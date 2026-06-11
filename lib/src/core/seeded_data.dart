@@ -16,11 +16,15 @@ class SeededCategory {
   final String icon;
   final String color;
 
+  /// See `Category.isInvestment` — excluded from total-spend aggregates.
+  final bool isInvestment;
+
   const SeededCategory({
     required this.id,
     required this.label,
     required this.icon,
     required this.color,
+    this.isInvestment = false,
   });
 }
 
@@ -34,5 +38,6 @@ const seededCategories = <SeededCategory>[
   SeededCategory(id: 'transport', label: 'Transportasi', icon: 'directions_car', color: '#5E7A64'),
   SeededCategory(id: 'entertainment', label: 'Hiburan', icon: 'movie', color: '#3A6075'),
   SeededCategory(id: 'health', label: 'Kesehatan', icon: 'favorite', color: '#2D5040'),
+  SeededCategory(id: 'investment', label: 'Investasi', icon: 'trending_up', color: '#E8B4C0', isInvestment: true),
   SeededCategory(id: 'other', label: 'Lainnya', icon: 'category', color: '#A89880'),
 ];

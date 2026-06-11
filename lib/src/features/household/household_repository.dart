@@ -54,6 +54,7 @@ class HouseholdRepository {
           color: seededCategories[i].color,
           monthlyBudget: categoryBudgets[seededCategories[i].id] ?? 0,
           sortOrder: i,
+          isInvestment: seededCategories[i].isInvestment,
         ),
     ];
     final creator = Member(
@@ -320,6 +321,7 @@ class HouseholdRepository {
     required String icon,
     required String color,
     required int monthlyBudget,
+    bool isInvestment = false,
   }) async {
     final household = await get(householdId);
     if (household == null) throw StateError('household_missing');
@@ -330,6 +332,7 @@ class HouseholdRepository {
       color: color,
       monthlyBudget: monthlyBudget,
       sortOrder: household.categories.length,
+      isInvestment: isInvestment,
     );
     await updateCategories(
       householdId: householdId,

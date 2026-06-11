@@ -63,3 +63,44 @@ String snapshotDocId(DateTime date) {
 /// Local-midnight (00:00) for the given date — used as the canonical
 /// `date` field on the snapshot doc.
 DateTime localMidnight(DateTime t) => DateTime(t.year, t.month, t.day);
+
+/// One chart point per calendar day.
+typedef DailyNetWorthPoint = ({DateTime date, int total});
+
+/// Expands sparse snapshots into one point per calendar day over the last
+/// [days] days ending today. Snapshots only exist for days the app was
+/// opened, so missing days carry the last known total forward — that keeps
+/// the sparkline's time axis honest (a 3-day gap is 3 equal steps, not 1).
+/// Days before the very first snapshot are omitted. Oldest first.
+List<DailyNetWorthPoint> fillDailyNetWorthSeries(
+  List<NetWorthSnapshot> snapshots, {
+  int days = 14,
+  DateTime? now,
+}) {
+  if (snapshots.isEmpty) return const [];
+  final byDay = <DateTime, int>{
+    for (final s in snapshots) localMidnight(s.date): s.total,
+  };
+  final today = localMidnight(now ?? DateTime.now());
+  final windowStart = DateTime(today.year, today.month, today.day - (days - 1));
+
+  // Prime the carry-forward with the latest snapshot before the window.
+  int? last;
+  final sortedDays = byDay.keys.toList()..sort();
+  for (final d in sortedDays) {
+    if (d.isBefore(windowStart)) {
+      last = byDay[d];
+    } else {
+      break;
+    }
+  }
+
+  final out = <DailyNetWorthPoint>[];
+  for (var i = days - 1; i >= 0; i--) {
+    final day = DateTime(today.year, today.month, today.day - i);
+    last = byDay[day] ?? last;
+    if (last == null) continue; // before the first snapshot ever
+    out.add((date: day, total: last));
+  }
+  return out;
+}

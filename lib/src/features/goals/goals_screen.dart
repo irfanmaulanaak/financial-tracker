@@ -109,6 +109,7 @@ class GoalsScreen extends ConsumerWidget {
                     physics: const NeverScrollableScrollPhysics(),
                     buildDefaultDragHandles: false,
                     itemCount: goals.length,
+                    onReorderStart: (_) => FtHaptics.tap(),
                     onReorder: (oldIndex, newIndex) =>
                         _onReorder(ref, household.id, goals, oldIndex, newIndex),
                     proxyDecorator: (child, _, _) => Material(
@@ -117,7 +118,9 @@ class GoalsScreen extends ConsumerWidget {
                     ),
                     itemBuilder: (context, i) {
                       final g = goals[i];
-                      return ReorderableDragStartListener(
+                      // Delayed (hold-then-drag) so normal scrolling over the
+                      // cards doesn't lift them — press and hold to reorder.
+                      return ReorderableDelayedDragStartListener(
                         key: ValueKey(g.id),
                         index: i,
                         child: GoalCard(
@@ -158,12 +161,11 @@ class GoalsScreen extends ConsumerWidget {
     int newIndex,
   ) {
     FtHaptics.tap();
-    // Flutter quirk: when moving down, newIndex is reported after removal.
-    var ni = newIndex;
-    if (ni > oldIndex) ni -= 1;
-    final ids = goals.map((g) => g.id).toList();
-    final moved = ids.removeAt(oldIndex);
-    ids.insert(ni, moved);
+    final ids = reorderIds(
+      ids: goals.map((g) => g.id).toList(),
+      oldIndex: oldIndex,
+      newIndex: newIndex,
+    );
     // ignore: discarded_futures
     ref.read(goalRepositoryProvider).reorderGoals(
           hid: hid,

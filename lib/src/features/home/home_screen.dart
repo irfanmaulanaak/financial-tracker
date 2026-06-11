@@ -92,7 +92,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 date: e.date,
               ),
           ];
-          final totalSpentValue = totalSpent(records);
+          // Totals count consumption only — investment-category expenses
+          // are savings, not spending. Per-category grid stays complete.
+          final invCatIds = household.investmentCategoryIds;
+          final totalSpentValue =
+              totalSpent(consumptionOnly(records, invCatIds));
           final income = ref.watch(currentCycleIncomeTotalProvider);
           final gajiIncome = (ref.watch(cycleIncomesProvider).value ??
                   const <Income>[])
@@ -116,7 +120,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           final avgPrev = prevCycles.isEmpty
               ? 0
               : prevCycles
-                        .map((w) => w.fold<int>(0, (a, b) => a + b.amount))
+                        .map((w) => w
+                            .where((e) => !invCatIds.contains(e.categoryId))
+                            .fold<int>(0, (a, b) => a + b.amount))
                         .fold<int>(0, (a, b) => a + b) ~/
                     prevCycles.length;
           final invTotal =
@@ -161,7 +167,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           }
           final history =
               ref.watch(netWorthHistoryProvider(14)).value ?? const <NetWorthSnapshot>[];
-          final trend = [for (final s in history) s.total.toDouble()];
+          // One point per calendar day (carry-forward over unopened days) so
+          // the sparkline's x-axis is real time and scrubbing maps to dates.
+          final dailySeries = fillDailyNetWorthSeries(history);
+          final trend = [for (final p in dailySeries) p.total.toDouble()];
+          final trendDates = [for (final p in dailySeries) p.date];
           final health = computeHealthScore(
             HealthScoreInputs(
               spendThisCycle: totalSpentValue,
@@ -231,6 +241,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     HomeHeroCarousel(
                       nw: nw,
                       trend: trend,
+                      trendDates: trendDates,
                       cycleNet: cycleNet,
                       spend: totalSpentValue,
                       gajiIncome: gajiIncome,

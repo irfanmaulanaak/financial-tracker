@@ -57,8 +57,13 @@ class _SpendScreenState extends ConsumerState<SpendScreen> {
           date: e.date,
         ),
     ];
-    final total = totalSpent(records);
-    final byCat = spentByCategory(records);
+    // Total + donut count consumption only; investment-category expenses
+    // are surfaced separately (note under the total + activity list).
+    final spendRecords =
+        consumptionOnly(records, household.investmentCategoryIds);
+    final total = totalSpent(spendRecords);
+    final invested = totalSpent(records) - total;
+    final byCat = spentByCategory(spendRecords);
     final categories = household.categories
         .where((c) => !c.archived)
         .toList()
@@ -112,6 +117,7 @@ class _SpendScreenState extends ConsumerState<SpendScreen> {
             _Hero(
               total: total,
               displayAmount: focusedAmount ?? total,
+              invested: invested,
               caption: focused != null
                   ? focused.label
                   : 'Total ${categories.length} kategori aktif',
@@ -193,6 +199,7 @@ class _Hero extends StatelessWidget {
   const _Hero({
     required this.total,
     required this.displayAmount,
+    required this.invested,
     required this.caption,
     required this.segments,
     required this.prevIndex,
@@ -201,6 +208,10 @@ class _Hero extends StatelessWidget {
   });
   final int total;
   final int displayAmount;
+
+  /// Investment-category spend this period — shown as a note, not counted
+  /// in [total].
+  final int invested;
   final String caption;
   final List<FtDonutSegment> segments;
   final int? prevIndex;
@@ -242,6 +253,18 @@ class _Hero extends StatelessWidget {
                       style:
                           TextStyle(color: FtColors.ink3, fontSize: 11),
                     ),
+                    if (invested > 0) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        '+ ${compactMoney(invested)} ke investasi '
+                        '(tidak dihitung)',
+                        style: TextStyle(
+                          color: FtColors.moss,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),

@@ -49,12 +49,16 @@ class HealthScreen extends ConsumerWidget {
               date: e.date,
             ))
         .toList();
-    final totalSpentValue = totalSpent(records);
+    // Consumption only — investment-category expenses don't count as spend.
+    final invCatIds = household.investmentCategoryIds;
+    final totalSpentValue = totalSpent(consumptionOnly(records, invCatIds));
 
     final avgPrev = prevCycles.isEmpty
         ? 0
         : prevCycles
-                .map((w) => w.fold<int>(0, (a, b) => a + b.amount))
+                .map((w) => w
+                    .where((e) => !invCatIds.contains(e.categoryId))
+                    .fold<int>(0, (a, b) => a + b.amount))
                 .fold<int>(0, (a, b) => a + b) ~/
             prevCycles.length;
 
@@ -112,7 +116,11 @@ class HealthScreen extends ConsumerWidget {
             ),
           ),
           HealthFindings(
-            categories: household.categories,
+            // Investment categories aren't spending behaviour — keep them
+            // out of the boros/hemat verdicts.
+            categories: household.categories
+                .where((c) => !c.isInvestment)
+                .toList(),
             current: cycleExpenses,
             previousWindows: prevCycles,
             onTap: (catId) => context.push('/categories/$catId'),

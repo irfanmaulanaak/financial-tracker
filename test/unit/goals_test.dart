@@ -2,6 +2,32 @@ import 'package:financial_tracker/src/features/goals/goal.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  group('reorderIds', () {
+    const ids = ['a', 'b', 'c', 'd'];
+
+    test('moving down applies the ReorderableListView -1 fix-up', () {
+      // Drag 'a' below 'c': Flutter reports newIndex 3 (pre-removal).
+      expect(
+        reorderIds(ids: ids, oldIndex: 0, newIndex: 3),
+        ['b', 'c', 'a', 'd'],
+      );
+    });
+
+    test('moving up inserts at the reported index', () {
+      expect(
+        reorderIds(ids: ids, oldIndex: 3, newIndex: 1),
+        ['a', 'd', 'b', 'c'],
+      );
+    });
+
+    test('dropping in place is a no-op', () {
+      expect(reorderIds(ids: ids, oldIndex: 2, newIndex: 2), ids);
+      // Dropping one slot below itself (newIndex = old + 1) is also a no-op
+      // after the fix-up.
+      expect(reorderIds(ids: ids, oldIndex: 2, newIndex: 3), ids);
+    });
+  });
+
   group('Goal helpers', () {
     test('progress clamped 0..1', () {
       final g = Goal(
