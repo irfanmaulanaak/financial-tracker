@@ -6,13 +6,34 @@ class CreditCard {
   final String label;
   final String last4;
   final int limit;
+
+  /// "Limit terpakai" display figure, mirroring what the BCA app shows:
+  /// billed-but-unpaid cicilan months + full pre-block for cicilan that
+  /// haven't hit their first statement + plain unpaid charges. Jumps on the
+  /// statement date (billingDay) by design — use [outstanding] for the real
+  /// debt figure.
   final int used;
+
+  /// True remaining obligation: plain unpaid charges + the FULL unpaid
+  /// remainder of every active cicilan (billed or not). Date-independent,
+  /// so net worth never jumps on statement day. Written by
+  /// `CardRepository.recalcUsed`; legacy docs fall back to [used] until the
+  /// first recalc.
+  final int outstanding;
+
+  /// Cumulative card payments allocated to plain (non-cicilan) charges.
+  /// Incremented by the pay flows; `recalcUsed` subtracts it from the
+  /// all-time plain expense sum so paid charges drop out of [used] /
+  /// [outstanding] without touching expense history. Cicilan payments are
+  /// NOT included here — those advance `monthsPaid` instead.
+  final int plainPaid;
   final int dueDay;
 
   /// Day-of-month the bank closes the statement (e.g. BCA closes on the 12th
   /// then due on the 28th). Drives cicilan billing rollover in
-  /// [cicilanBlocked]. Legacy cards default to `max(1, dueDay - 16)` so the
-  /// computed `used` stays sensible until the user edits the card.
+  /// [cicilanBlocked] (the [used] display figure only). Legacy cards default
+  /// to `max(1, dueDay - 16)` so the computed `used` stays sensible until the
+  /// user edits the card.
   final int billingDay;
   final double apr;
   final String accent;
@@ -25,6 +46,8 @@ class CreditCard {
     required this.last4,
     required this.limit,
     required this.used,
+    required this.outstanding,
+    this.plainPaid = 0,
     required this.dueDay,
     required this.billingDay,
     required this.apr,
@@ -37,6 +60,8 @@ class CreditCard {
     String? last4,
     int? limit,
     int? used,
+    int? outstanding,
+    int? plainPaid,
     int? dueDay,
     int? billingDay,
     double? apr,
@@ -50,6 +75,8 @@ class CreditCard {
         last4: last4 ?? this.last4,
         limit: limit ?? this.limit,
         used: used ?? this.used,
+        outstanding: outstanding ?? this.outstanding,
+        plainPaid: plainPaid ?? this.plainPaid,
         dueDay: dueDay ?? this.dueDay,
         billingDay: billingDay ?? this.billingDay,
         apr: apr ?? this.apr,
@@ -63,6 +90,8 @@ class CreditCard {
         'last4': last4,
         'limit': limit,
         'used': used,
+        'outstanding': outstanding,
+        'plainPaid': plainPaid,
         'dueDay': dueDay,
         'billingDay': billingDay,
         'apr': apr,
@@ -75,13 +104,16 @@ class CreditCard {
     final dueDay = (m['dueDay'] as num?)?.toInt() ?? 1;
     final fallbackBilling = (dueDay - 16).clamp(1, 28).toInt();
     final billingDay = (m['billingDay'] as num?)?.toInt() ?? fallbackBilling;
+    final used = (m['used'] as num?)?.toInt() ?? 0;
     return CreditCard(
       id: snap.id,
       ownerId: m['ownerId'] as String? ?? '',
       label: m['label'] as String? ?? '',
       last4: m['last4'] as String? ?? '',
       limit: (m['limit'] as num?)?.toInt() ?? 0,
-      used: (m['used'] as num?)?.toInt() ?? 0,
+      used: used,
+      outstanding: (m['outstanding'] as num?)?.toInt() ?? used,
+      plainPaid: (m['plainPaid'] as num?)?.toInt() ?? 0,
       dueDay: dueDay,
       billingDay: billingDay,
       apr: (m['apr'] as num?)?.toDouble() ?? 0.18,

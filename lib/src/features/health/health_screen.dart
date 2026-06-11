@@ -64,7 +64,8 @@ class HealthScreen extends ConsumerWidget {
 
     final assets = householdAssetsAndDebt(
       household,
-      cards.map((c) => (limit: c.limit, used: c.used)),
+      // True obligation (incl. unbilled cicilan), matching home/net worth.
+      cards.map((c) => (limit: c.limit, used: c.outstanding)),
     );
     final score = computeHealthScore(
       HealthScoreInputs(

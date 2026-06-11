@@ -56,19 +56,29 @@ class _PayCardSheetState extends ConsumerState<PayCardSheet> {
         minPaymentPct: widget.card.minPaymentPct,
       );
 
-  /// This month's bill = sum(active monthly cicilan) + plain CC charges.
-  /// Plain charges = `card.used - sum(active remaining)`. Cicilan list is
-  /// read from the shared installments stream so the figure matches the
-  /// in-flight Firestore data the repo will see.
+  /// This month's bill, statement-style: one `monthly` per cicilan that has
+  /// been billed but not yet paid, plus unpaid plain CC charges. Plain =
+  /// `card.outstanding - sum(active remaining)` (exact, since outstanding =
+  /// plain + remaining). Mirrors [CardRepository.payMonthlyBill]; cicilan
+  /// list comes from the shared installments stream so the figure matches
+  /// the in-flight Firestore data the repo will see.
   int _monthlyBillAmount(List<Installment> installments) {
+    final now = DateTime.now();
     var monthlyDue = 0;
     var remainingDue = 0;
     for (final i in installments) {
       if (i.isComplete) continue;
-      monthlyDue += i.monthly;
       remainingDue += i.remainingAmount;
+      final billed = computeMonthsBilled(
+        startedAt: i.startedAt,
+        today: now,
+        billingDay: widget.card.billingDay,
+      );
+      if (billed <= i.monthsPaid) continue;
+      monthlyDue += i.monthly;
     }
-    final plain = (widget.card.used - remainingDue).clamp(0, widget.card.used);
+    final plain = (widget.card.outstanding - remainingDue)
+        .clamp(0, widget.card.outstanding);
     return monthlyDue + plain;
   }
 
@@ -81,7 +91,12 @@ class _PayCardSheetState extends ConsumerState<PayCardSheet> {
   Future<void> _pay(List<Installment> installments) async {
     final amount = _amount(installments);
     final sourceId = _sourceAccountId;
-    if (amount <= 0 || amount > widget.card.used || sourceId == null) {
+    // Cap vs `outstanding` (true debt): the monthly bill can legitimately
+    // exceed `used` when cicilan months haven't rolled into the statement
+    // figure yet. Custom amounts stay clamped to `used` at input time.
+    final cap =
+        widget.card.outstanding > widget.card.used ? widget.card.outstanding : widget.card.used;
+    if (amount <= 0 || amount > cap || sourceId == null) {
       FtHaptics.warning();
       return;
     }

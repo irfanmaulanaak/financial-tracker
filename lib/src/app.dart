@@ -14,6 +14,14 @@ class FinancialTrackerApp extends ConsumerWidget {
     final router = ref.watch(routerProvider);
     final themeMode = ref.watch(themeModeProvider);
 
+    // FtColors is consumed statically, so Theme's InheritedWidget alone
+    // doesn't reach widgets that never look at it. Force a one-off rebuild of
+    // the whole tree on every theme flip (also covers the async pref load at
+    // startup when the stored theme is dark).
+    ref.listen(themeModeProvider, (previous, next) {
+      if (previous != next) ftRebuildAllWidgets();
+    });
+
     return MaterialApp.router(
       title: 'FinSist',
       debugShowCheckedModeBanner: false,

@@ -282,11 +282,13 @@ class CardDetailScreen extends ConsumerWidget {
       builder: (_) => AlertDialog(
         title: const Text('Hitung ulang terpakai?'),
         content: Text(
-          'Saldo "Terpakai" akan dihitung ulang dari pengeluaran kartu plus '
-          'cicilan yang sudah melewati tanggal tutup tagihan '
-          '(tgl ${card.billingDay}) tapi belum dibayar. Cicilan baru tetap '
-          'memblokir total pokok sampai tagihan pertama keluar — sama '
-          'seperti BCA.',
+          'Dua angka dihitung ulang dari data mentah:\n\n'
+          '• "Terpakai" — gaya tagihan bank: cicilan yang sudah melewati '
+          'tanggal tutup tagihan (tgl ${card.billingDay}) tapi belum '
+          'dibayar, plus transaksi reguler yang belum dibayar.\n'
+          '• Total sisa utang — seluruh sisa cicilan (tertagih maupun '
+          'belum) plus transaksi reguler. Angka ini yang dipakai kekayaan '
+          'bersih, jadi grafik tidak lompat di tanggal cetak.',
         ),
         actions: [
           TextButton(

@@ -65,6 +65,18 @@ class CardDetailHeader extends StatelessWidget {
             'Tersedia: ${Money.format(available)} dari ${Money.format(card.limit)}',
             style: const TextStyle(color: Colors.white70, fontSize: 12),
           ),
+          // "Terpakai" mirrors the bank statement figure; when there are
+          // cicilan months not yet billed, the real obligation is larger —
+          // surface it so the net-worth debt number is explainable.
+          if (card.outstanding != card.used)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                'Total sisa utang (termasuk cicilan belum tertagih): '
+                '${Money.format(card.outstanding)}',
+                style: const TextStyle(color: Colors.white70, fontSize: 12),
+              ),
+            ),
           const SizedBox(height: 12),
           ClipRRect(
             borderRadius: BorderRadius.circular(6),

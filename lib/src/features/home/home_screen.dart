@@ -197,14 +197,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   id: c.id,
                   label: c.label,
                   limit: c.limit,
-                  used: c.used,
+                  // Net worth counts the true obligation (full unpaid cicilan
+                  // remainder), not the statement-day `used` figure — so the
+                  // chart doesn't jump on tanggal cetak.
+                  used: c.outstanding,
                 ),
             ],
             investments: invTotal,
           );
           final assets = householdAssetsAndDebt(
             household,
-            cards.map((c) => (limit: c.limit, used: c.used)),
+            cards.map((c) => (limit: c.limit, used: c.outstanding)),
           );
           // Record today's net-worth snapshot once everything's loaded.
           // Idempotent per day (see [NetWorthSnapshotRepository.recordToday]).

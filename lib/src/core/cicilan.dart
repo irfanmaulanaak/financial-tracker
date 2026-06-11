@@ -226,3 +226,52 @@ DateTime _clampToMonth(int year, int month, int day) {
 
 bool _sameDay(DateTime a, DateTime b) =>
     a.year == b.year && a.month == b.month && a.day == b.day;
+
+/// Minimal cicilan state needed for card debt math. Mirrors the
+/// `Installment` doc fields (kept primitive so core stays Firestore-free).
+typedef CicilanPlanState = ({
+  int monthsTotal,
+  int monthsPaid,
+  int monthly,
+  DateTime startedAt,
+});
+
+/// The card's two debt figures, computed from raw state:
+///
+///   * `used` — BCA-display "limit terpakai": billed-but-unpaid cicilan
+///     months (pre-block full remainder before the first statement) + plain
+///     charges not yet covered by payments. Moves on the statement date.
+///   * `outstanding` — true remaining obligation: FULL unpaid remainder of
+///     every cicilan + unpaid plain charges. Date-independent — this is the
+///     net-worth debt figure, so statement day never moves net worth.
+///
+/// `plainTotal` is the all-time sum of non-cicilan card expenses;
+/// `plainPaid` is the cumulative amount of card payments allocated to those
+/// charges (clamped here so deleted expenses can't push it negative).
+({int used, int outstanding}) cardDebtTotals({
+  required int plainTotal,
+  required int plainPaid,
+  required List<CicilanPlanState> plans,
+  required DateTime today,
+  required int billingDay,
+}) {
+  final plainOutstanding = (plainTotal - plainPaid).clamp(0, plainTotal);
+  var blocked = 0;
+  var remaining = 0;
+  for (final p in plans) {
+    blocked += cicilanBlocked(
+      monthsTotal: p.monthsTotal,
+      monthsPaid: p.monthsPaid,
+      monthly: p.monthly,
+      startedAt: p.startedAt,
+      today: today,
+      billingDay: billingDay,
+    );
+    final months = (p.monthsTotal - p.monthsPaid).clamp(0, p.monthsTotal);
+    remaining += months * p.monthly;
+  }
+  return (
+    used: blocked + plainOutstanding,
+    outstanding: remaining + plainOutstanding,
+  );
+}

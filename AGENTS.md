@@ -76,6 +76,7 @@ Update this section as the project evolves.
 - Onboarding in-app: `features/onboarding/onboarding_state.dart` — flag per-uid di SharedPreferences (`onb_active/welcome/budget_<uid>`). Auto-trigger HANYA dari creator wizard (`startCreator`) & join screen (`startJoiner`); user lama tidak pernah lihat. Checklist "Mulai dari sini" di home (4 langkah, data-driven) + welcome sheet sekali utk anggota baru join. Buka manual: menu ⋯ → Panduan Mulai.
 - Beda layar utang: tab bawah "Utang" = `/cards` (kartu kredit + cicilan, masuk net worth); menu "Utang & Piutang" = `/debts` (pinjaman personal antar orang, catatan murni).
 - Emulator tests: seed household HARUS menyertakan `memberAccess` (rules access-tier); jalankan via `npx firebase emulators:exec --only firestore --project financial-tracker-test 'npm test'` di `emulator_tests/`.
+- Utang kartu = 2 angka (Jun 2026): `used` = tampilan ala app BCA (cicilan tertagih belum dibayar; pre-block penuh sebelum tagihan pertama; lompat di `billingDay` — by design) untuk UI kartu/limit. `outstanding` = utang riil (SELURUH sisa cicilan + transaksi belum dibayar; bebas tanggal) — dipakai net worth + health score. `plainPaid` di doc kartu = akumulasi pembayaran transaksi reguler (cicilan via `monthsPaid`). Semua dihitung `cardDebtTotals()` di `core/cicilan.dart`, ditulis `recalcUsed`. Regression: `test/unit/cicilan_test.dart` group `cardDebtTotals`.
 
 ### Build commands
 - Standard run/build: `flutter run` / `flutter build {ios|apk|appbundle|web}`.

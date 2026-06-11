@@ -49,6 +49,8 @@ final previousCyclesExpensesProvider =
 });
 
 /// Convenience: pulls the household's savings balance + card debt totals.
+/// Callers pass `CreditCard.outstanding` as `used` so the debt figure is the
+/// true remaining obligation (stable across statement dates).
 ({int savingsBalance, int cardDebt}) householdAssetsAndDebt(
   Household household,
   Iterable<({int limit, int used})> cards,

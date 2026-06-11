@@ -268,6 +268,110 @@ void main() {
     });
   });
 
+  group('cardDebtTotals', () {
+    // Regression for the 2026-06-12 net-worth jump: Krissflyer card,
+    // billingDay 12, real plans + plain charges from the household audit.
+    const plain = 1926492;
+    final plans = <CicilanPlanState>[
+      // vga — 2/3 paid, month 3 bills on Jun 12.
+      (
+        monthsTotal: 3,
+        monthsPaid: 2,
+        monthly: 3562860,
+        startedAt: DateTime(2026, 4, 5),
+      ),
+      // coach wifey — 2/3 paid, month 3 bills on Jun 12.
+      (
+        monthsTotal: 3,
+        monthsPaid: 2,
+        monthly: 3666333,
+        startedAt: DateTime(2026, 3, 24),
+      ),
+      // shopee walking pad — 0/3 paid, first billing Jun 12.
+      (
+        monthsTotal: 3,
+        monthsPaid: 0,
+        monthly: 516733,
+        startedAt: DateTime(2026, 5, 18),
+      ),
+      // sepatu puma ballet — 0/3 paid, first billing Jun 12.
+      (
+        monthsTotal: 3,
+        monthsPaid: 0,
+        monthly: 433000,
+        startedAt: DateTime(2026, 5, 18),
+      ),
+    ];
+
+    test('used follows the statement; outstanding does NOT move on '
+        'tanggal cetak (the net-worth-jump regression)', () {
+      final before = cardDebtTotals(
+        plainTotal: plain,
+        plainPaid: 0,
+        plans: plans,
+        today: DateTime(2026, 6, 11),
+        billingDay: 12,
+      );
+      final onBilling = cardDebtTotals(
+        plainTotal: plain,
+        plainPaid: 0,
+        plans: plans,
+        today: DateTime(2026, 6, 12),
+        billingDay: 12,
+      );
+      // Statement figure jumps when month-3 of the two big cicilan bills…
+      expect(before.used, 4775691);
+      expect(onBilling.used, 10105418);
+      // …but the true obligation is identical on both days.
+      expect(before.outstanding, 12004884);
+      expect(onBilling.outstanding, 12004884);
+    });
+
+    test('payments clear plain charges from both figures', () {
+      final paid = cardDebtTotals(
+        plainTotal: plain,
+        plainPaid: plain,
+        plans: const [],
+        today: DateTime(2026, 6, 12),
+        billingDay: 12,
+      );
+      expect(paid.used, 0);
+      expect(paid.outstanding, 0);
+    });
+
+    test('plainPaid overshoot (deleted expenses) clamps to zero, '
+        'never negative', () {
+      final t = cardDebtTotals(
+        plainTotal: 100000,
+        plainPaid: 250000,
+        plans: const [],
+        today: DateTime(2026, 6, 1),
+        billingDay: 12,
+      );
+      expect(t.used, 0);
+      expect(t.outstanding, 0);
+    });
+
+    test('fully paid cicilan contributes nothing to either figure', () {
+      final t = cardDebtTotals(
+        plainTotal: 0,
+        plainPaid: 0,
+        plans: [
+          (
+            monthsTotal: 3,
+            monthsPaid: 3,
+            monthly: 1000000,
+            startedAt: DateTime(2026, 1, 1),
+          ),
+        ],
+        today: DateTime(2026, 6, 12),
+        billingDay: 12,
+      );
+      expect(t.used, 0);
+      expect(t.outstanding, 0);
+    });
+  });
+
   group('minimumPayment', () {
     test('returns 0 for non-positive balance', () {
       expect(minimumPayment(balance: 0, minPaymentPct: 0.1), 0);

@@ -50,6 +50,23 @@ class FtColors {
   static Color get catOther => _dark ? const Color(0xFF807668) : const Color(0xFFA89880);
 }
 
+/// Marks every element dirty so the whole tree rebuilds on the next frame.
+///
+/// FtColors is read statically at build time all over the app, so flipping
+/// the theme only repaints widgets that happen to depend on `Theme` — const
+/// subtrees keep their stale colors until something else rebuilds them
+/// (previously: a manual refresh). Elements are only marked dirty, never
+/// remounted, so navigation/scroll/input state survives. Expensive, but only
+/// runs on an explicit theme switch.
+void ftRebuildAllWidgets() {
+  void rebuild(Element el) {
+    el.markNeedsBuild();
+    el.visitChildren(rebuild);
+  }
+
+  WidgetsBinding.instance.rootElement?.visitChildren(rebuild);
+}
+
 ThemeData buildTheme(Brightness brightness) {
   FtColors.setBrightness(brightness);
   final isDark = brightness == Brightness.dark;

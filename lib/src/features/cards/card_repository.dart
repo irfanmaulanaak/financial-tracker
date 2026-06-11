@@ -64,6 +64,8 @@ class CardRepository {
       last4: last4,
       limit: limit,
       used: used,
+      // No cicilan yet at creation, so the true debt equals `used`.
+      outstanding: used,
       dueDay: dueDay,
       billingDay: billingDay,
       apr: apr,
@@ -132,10 +134,10 @@ class CardRepository {
   }
 
   /// Applies the card's minimum payment: debits the minimum from the chosen
-  /// household account. The card's `used` is reconciled by [recalcUsed]
-  /// after the tx — no in-flight write to `used` here. Returns the amount
-  /// applied. Throws `card_missing`, `household_missing`, `account_missing`,
-  /// or `insufficient`.
+  /// household account and books it against plain charges (`plainPaid`).
+  /// The card's totals are reconciled by [recalcUsed] after the tx. Returns
+  /// the amount applied. Throws `card_missing`, `household_missing`,
+  /// `account_missing`, or `insufficient`.
   Future<int> payMinimum({
     required String hid,
     required String cardId,
@@ -162,15 +164,17 @@ class CardRepository {
         sourceAccountId: sourceAccountId,
         amount: amount,
       );
+      tx.update(cardRef, {'plainPaid': card.plainPaid + amount});
       return amount;
     });
     if (amount > 0) await recalcUsed(hid: hid, cardId: cardId);
     return amount;
   }
 
-  /// Pays a user-defined `amount` against the card from `sourceAccountId`.
-  /// Used by the "Jumlah Lain" / custom-amount flow in [PayCardSheet].
-  /// Returns the amount applied (capped to `card.used`).
+  /// Pays a user-defined `amount` against the card from `sourceAccountId`,
+  /// booked against plain charges (`plainPaid` — cicilan months are paid via
+  /// their own flows). Used by the "Jumlah Lain" / custom-amount flow in
+  /// [PayCardSheet]. Returns the amount applied (capped to `card.used`).
   Future<int> payCustom({
     required String hid,
     required String cardId,
@@ -196,22 +200,27 @@ class CardRepository {
         sourceAccountId: sourceAccountId,
         amount: applied,
       );
+      tx.update(cardRef, {'plainPaid': card.plainPaid + applied});
       return applied;
     });
     if (applied > 0) await recalcUsed(hid: hid, cardId: cardId);
     return applied;
   }
 
-  /// Pays this month's billing: sum of (each active installment's `monthly`)
-  /// plus the card's plain (non-cicilan) charges. Debits the chosen account
-  /// and advances each active installment's `monthsPaid` by one in a single
-  /// transaction. [recalcUsed] runs post-tx to reconcile the card's `used`
-  /// under the BCA-style model. Returns the total amount paid.
+  /// Pays this month's bill the way the bank statement does: one `monthly`
+  /// per cicilan that has been BILLED but not yet paid (a cicilan opened
+  /// after the last statement date isn't charged yet) plus the card's plain
+  /// (non-cicilan) unpaid charges. Debits the chosen account, advances each
+  /// billed installment's `monthsPaid` by one, and books the plain portion
+  /// to `plainPaid` — all in a single transaction. [recalcUsed] runs post-tx
+  /// to reconcile both totals. Returns the total amount paid.
   Future<int> payMonthlyBill({
     required String hid,
     required String cardId,
     required String sourceAccountId,
+    DateTime? today,
   }) async {
+    final now = today ?? DateTime.now();
     final cardRef = _cards(hid).doc(cardId);
     final householdRef = _db.collection('households').doc(hid);
     // Installment docs can't be queried inside a transaction (no
@@ -230,17 +239,28 @@ class CardRepository {
 
       var monthlyDue = 0;
       var remainingDue = 0;
-      final activePlans = <(DocumentReference<Map<String, dynamic>>, Installment)>[];
+      final billedPlans = <(DocumentReference<Map<String, dynamic>>, Installment)>[];
       for (final ref in activeRefs) {
         final snap = await tx.get(ref);
         if (!snap.exists) continue;
         final inst = Installment.fromSnapshot(snap, cardId);
         if (inst.isComplete) continue;
-        monthlyDue += inst.monthly;
         remainingDue += inst.remainingAmount;
-        activePlans.add((ref, inst));
+        final billed = computeMonthsBilled(
+          startedAt: inst.startedAt,
+          today: now,
+          billingDay: card.billingDay,
+        );
+        // Only months the bank has actually rolled into a statement are due.
+        if (billed <= inst.monthsPaid) continue;
+        monthlyDue += inst.monthly;
+        billedPlans.add((ref, inst));
       }
-      final plainCharges = (card.used - remainingDue).clamp(0, card.used);
+      // `outstanding` = plain + Σ remaining, so this subtraction is exact.
+      // (The old `used`-based math under-counted plain charges whenever a
+      // cicilan month hadn't been billed yet.)
+      final plainCharges =
+          (card.outstanding - remainingDue).clamp(0, card.outstanding);
       final amount = monthlyDue + plainCharges;
       if (amount <= 0) return 0;
 
@@ -254,8 +274,11 @@ class CardRepository {
         sourceAccountId: sourceAccountId,
         amount: amount,
       );
-      for (final (ref, inst) in activePlans) {
+      for (final (ref, inst) in billedPlans) {
         tx.update(ref, {'monthsPaid': inst.monthsPaid + 1});
+      }
+      if (plainCharges > 0) {
+        tx.update(cardRef, {'plainPaid': card.plainPaid + plainCharges});
       }
       return amount;
     });
@@ -263,16 +286,19 @@ class CardRepository {
     return amount;
   }
 
-  /// Recomputes `card.used` from raw data using the BCA-style model:
-  ///   * Plain CC expenses contribute their full `amount`.
-  ///   * Cicilan expenses contribute `cicilanBlocked(...)` — the per-cicilan
-  ///     rule that pre-blocks full principal until the first billing date
-  ///     passes, then only blocks billed-but-unpaid installments.
+  /// Recomputes the card's two debt figures (see [cardDebtTotals]):
+  ///
+  ///   * `used` — BCA-display "limit terpakai". Moves on the statement date,
+  ///     mirroring the bank app.
+  ///   * `outstanding` — true remaining obligation (full unpaid cicilan
+  ///     remainder + unpaid plain charges). Date-independent; this is what
+  ///     net worth / health score count as debt, so statement day causes no
+  ///     net-worth jump and paying cicilan is net-worth-neutral.
   ///
   /// Reads expenses + installments + the card outside the transaction
-  /// (Firestore txns can't run queries), then writes the new total in a
+  /// (Firestore txns can't run queries), then writes both totals in a
   /// single update. Acceptable race-condition surface for a 2–5 user
-  /// household.
+  /// household. Returns the new `used`.
   Future<int> recalcUsed({
     required String hid,
     required String cardId,
@@ -296,30 +322,38 @@ class CardRepository {
         d.id: Installment.fromSnapshot(d, cardId),
     };
 
-    var total = 0;
+    var plainTotal = 0;
+    final plans = <CicilanPlanState>[];
     for (final d in expensesSnap.docs) {
       final exp = Expense.fromSnapshot(d);
       final planId = exp.installmentPlanId;
       if (planId != null) {
-        // Cicilan: contribute the BCA-style blocked amount. Orphaned plans
-        // (no installment doc) contribute nothing — same direction as
-        // delete(): they're gone.
+        // Cicilan. Orphaned plans (no installment doc) contribute nothing —
+        // same direction as delete(): they're gone.
         final plan = installments[planId];
         if (plan == null) continue;
-        total += cicilanBlocked(
+        plans.add((
           monthsTotal: plan.monthsTotal,
           monthsPaid: plan.monthsPaid,
           monthly: plan.monthly,
           startedAt: plan.startedAt,
-          today: now,
-          billingDay: card.billingDay,
-        );
+        ));
       } else {
-        total += exp.amount;
+        plainTotal += exp.amount;
       }
     }
-    await cardRef.update({'used': total});
-    return total;
+    final totals = cardDebtTotals(
+      plainTotal: plainTotal,
+      plainPaid: card.plainPaid,
+      plans: plans,
+      today: now,
+      billingDay: card.billingDay,
+    );
+    await cardRef.update({
+      'used': totals.used,
+      'outstanding': totals.outstanding,
+    });
+    return totals.used;
   }
 
   /// Advances one month on a single installment: bumps `monthsPaid` and
