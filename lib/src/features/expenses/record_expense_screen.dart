@@ -259,6 +259,7 @@ class _RecordExpenseScreenState extends ConsumerState<RecordExpenseScreen> {
                         opacity: cicilanLock ? 0.5 : 1,
                         child: MoneyField(
                           amount: _amount,
+                          calculator: true,
                           onChanged: (v) => setState(() => _amount = v),
                         ),
                       ),

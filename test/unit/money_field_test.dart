@@ -2,6 +2,20 @@ import 'package:financial_tracker/src/features/record_common/money_field.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+TextEditingValue _applyExpr(String oldText, String newText) {
+  final formatter = MoneyExpressionFormatter();
+  return formatter.formatEditUpdate(
+    TextEditingValue(
+      text: oldText,
+      selection: TextSelection.collapsed(offset: oldText.length),
+    ),
+    TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: newText.length),
+    ),
+  );
+}
+
 TextEditingValue _apply(String oldText, String newText) {
   final formatter = ThousandsSeparatorFormatter();
   return formatter.formatEditUpdate(
@@ -54,6 +68,34 @@ void main() {
       final out = _apply('1.000', '10000');
       expect(out.text, '10.000');
       expect(out.selection.baseOffset, out.text.length);
+    });
+  });
+
+  group('MoneyExpressionFormatter', () {
+    test('keeps operators and regroups each term', () {
+      final out = _applyExpr('25.000+1300', '25.000+13000');
+      expect(out.text, '25.000+13.000');
+      expect(out.selection.baseOffset, out.text.length);
+    });
+
+    test('typing after an operator starts a new grouped term', () {
+      final out = _applyExpr('25.000+', '25.000+5');
+      expect(out.text, '25.000+5');
+    });
+
+    test('rejects a leading operator', () {
+      final out = _applyExpr('', '+');
+      expect(out.text, '');
+    });
+
+    test('second operator replaces the first (no "+-" runs)', () {
+      final out = _applyExpr('100+', '100+-');
+      expect(out.text, '100-');
+    });
+
+    test('plain digits behave like the thousands formatter', () {
+      final out = _applyExpr('1.000', '1.0000');
+      expect(out.text, '10.000');
     });
   });
 }

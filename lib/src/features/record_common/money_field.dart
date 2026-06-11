@@ -3,10 +3,12 @@ import 'package:flutter/services.dart';
 
 import '../../core/formatters.dart';
 import '../../theme.dart';
+import '../../ui/ft_haptics.dart';
 
-/// Backwards-compatible re-export. The canonical formatter now lives in
+/// Backwards-compatible re-export. The canonical formatters now live in
 /// `lib/src/core/formatters.dart`.
-export '../../core/formatters.dart' show ThousandsSeparatorFormatter;
+export '../../core/formatters.dart'
+    show ThousandsSeparatorFormatter, MoneyExpressionFormatter;
 
 /// Big serif amount input backed by the system **numeric** keyboard (no
 /// QWERTY). Drops the custom in-app numpad while keeping the editorial
@@ -17,6 +19,13 @@ export '../../core/formatters.dart' show ThousandsSeparatorFormatter;
 /// [ThousandsSeparatorFormatter]. Cursor always lands at the end after
 /// formatting — matches the UX of every Indonesian wallet app and avoids
 /// the messy "cursor between separator dots" edge cases.
+///
+/// With [calculator] enabled the field accepts running `+`/`-` sums
+/// ("25.000+13.000") typed via two small operator chips (the system numeric
+/// keypad has no such keys on iOS). The evaluated total is previewed live,
+/// reported through [onChanged], and the text collapses to the total on
+/// blur or when tapping `=`. Digits still come from the system keyboard —
+/// no custom in-app numpad.
 class MoneyField extends StatefulWidget {
   const MoneyField({
     super.key,
@@ -27,6 +36,7 @@ class MoneyField extends StatefulWidget {
     this.activeColor,
     this.autofocus = true,
     this.focusNode,
+    this.calculator = false,
   });
 
   final int amount;
@@ -36,6 +46,9 @@ class MoneyField extends StatefulWidget {
   final Color? activeColor;
   final bool autofocus;
   final FocusNode? focusNode;
+
+  /// Allows +/- expressions in the field and shows the operator chips.
+  final bool calculator;
 
   @override
   State<MoneyField> createState() => _MoneyFieldState();
@@ -50,15 +63,21 @@ class _MoneyFieldState extends State<MoneyField> {
     super.initState();
     _controller = TextEditingController(text: _displayFor(widget.amount));
     _focusNode = widget.focusNode ?? FocusNode();
+    if (widget.calculator) {
+      // Chips & "= total" preview depend on text/focus, not just on amount.
+      _controller.addListener(_onLocalChange);
+      _focusNode.addListener(_onFocusChange);
+    }
   }
 
   @override
   void didUpdateWidget(covariant MoneyField old) {
     super.didUpdateWidget(old);
-    // Reflect external resets (e.g. parent clears the form). Skip when the
-    // value already matches so we don't fight the user's typing.
-    final next = _displayFor(widget.amount);
-    if (_controller.text != next) {
+    // Reflect external resets (e.g. parent clears the form). Compare by
+    // value, not text, so an in-progress expression ("25.000+1") isn't
+    // clobbered when the parent re-renders with the evaluated total.
+    if (_valueOf(_controller.text) != widget.amount) {
+      final next = _displayFor(widget.amount);
       _controller.value = TextEditingValue(
         text: next,
         selection: TextSelection.collapsed(offset: next.length),
@@ -68,12 +87,61 @@ class _MoneyFieldState extends State<MoneyField> {
 
   @override
   void dispose() {
+    if (widget.calculator) {
+      _controller.removeListener(_onLocalChange);
+      _focusNode.removeListener(_onFocusChange);
+    }
     _controller.dispose();
     if (widget.focusNode == null) _focusNode.dispose();
     super.dispose();
   }
 
   static String _displayFor(int amount) => Money.displayDigits(amount);
+
+  int _valueOf(String text) => widget.calculator
+      ? (Money.evalExpression(text) ?? 0)
+      : (Money.parse(text) ?? 0);
+
+  bool get _isExpression =>
+      widget.calculator && _controller.text.contains(RegExp(r'[+\-]'));
+
+  void _onLocalChange() {
+    if (mounted) setState(() {});
+  }
+
+  void _onFocusChange() {
+    if (!_focusNode.hasFocus) _collapse();
+    if (mounted) setState(() {});
+  }
+
+  /// Appends `+` or `-` to the expression (no-op on empty field).
+  void _insertOperator(String op) {
+    FtHaptics.select();
+    _focusNode.requestFocus();
+    final next = Money.formatExpression(_controller.text + op);
+    if (next == _controller.text) return;
+    _controller.value = TextEditingValue(
+      text: next,
+      selection: TextSelection.collapsed(offset: next.length),
+    );
+    _emit(next);
+  }
+
+  /// Replaces the expression with its evaluated total ("25.000+500" → "25.500").
+  void _collapse() {
+    if (!_isExpression) return;
+    final next = _displayFor(_valueOf(_controller.text));
+    _controller.value = TextEditingValue(
+      text: next,
+      selection: TextSelection.collapsed(offset: next.length),
+    );
+    _emit(next);
+  }
+
+  void _emit(String text) {
+    final parsed = _valueOf(text);
+    if (parsed != widget.amount) widget.onChanged(parsed);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -107,10 +175,12 @@ class _MoneyFieldState extends State<MoneyField> {
                   autofocus: widget.autofocus,
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: false),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    ThousandsSeparatorFormatter(),
-                  ],
+                  inputFormatters: widget.calculator
+                      ? [MoneyExpressionFormatter()]
+                      : [
+                          FilteringTextInputFormatter.digitsOnly,
+                          ThousandsSeparatorFormatter(),
+                        ],
                   textAlign: TextAlign.left,
                   cursorColor: cursorColor,
                   cursorWidth: 2,
@@ -139,16 +209,80 @@ class _MoneyFieldState extends State<MoneyField> {
                         letterSpacing: -1.5,
                         color: tint,
                       ),
-                  onChanged: (raw) {
-                    final parsed = Money.parse(raw) ?? 0;
-                    if (parsed != widget.amount) widget.onChanged(parsed);
-                  },
+                  onChanged: _emit,
                 ),
               ),
             ),
           ],
         ),
+        if (_isExpression)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              '= ${Money.format(_valueOf(_controller.text))}',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+                color: _valueOf(_controller.text) < 0
+                    ? FtColors.danger
+                    : FtColors.ink3,
+              ),
+            ),
+          ),
+        if (widget.calculator && _focusNode.hasFocus)
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: TextFieldTapRegion(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _OpChip(label: '+', onTap: () => _insertOperator('+')),
+                  const SizedBox(width: 10),
+                  _OpChip(label: '−', onTap: () => _insertOperator('-')),
+                  if (_isExpression) ...[
+                    const SizedBox(width: 10),
+                    _OpChip(label: '=', onTap: _collapse),
+                  ],
+                ],
+              ),
+            ),
+          ),
       ],
+    );
+  }
+}
+
+/// Small pill button for the calculator row. Lives inside a
+/// [TextFieldTapRegion] so tapping it never dismisses the keyboard.
+class _OpChip extends StatelessWidget {
+  const _OpChip({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: FtColors.surface,
+      shape: StadiumBorder(
+        side: BorderSide(color: FtColors.lineStrong, width: 0.8),
+      ),
+      child: InkWell(
+        customBorder: const StadiumBorder(),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 7),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 17,
+              height: 1.2,
+              fontWeight: FontWeight.w600,
+              color: FtColors.ink2,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

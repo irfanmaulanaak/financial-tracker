@@ -30,6 +30,50 @@ void main() {
     });
   });
 
+  group('Money.evalExpression', () {
+    test('sums a running +/- expression left-to-right', () {
+      expect(Money.evalExpression('25.000+13.000'), 38000);
+      expect(Money.evalExpression('25.000+13.000-500'), 37500);
+      expect(Money.evalExpression('5.000'), 5000);
+    });
+
+    test('ignores a trailing operator', () {
+      expect(Money.evalExpression('100+'), 100);
+      expect(Money.evalExpression('100-'), 100);
+    });
+
+    test('can go negative (submit stays blocked upstream)', () {
+      expect(Money.evalExpression('10.000-15.000'), -5000);
+    });
+
+    test('null when no digits', () {
+      expect(Money.evalExpression(''), isNull);
+      expect(Money.evalExpression('+'), isNull);
+    });
+  });
+
+  group('Money.formatExpression', () {
+    test('groups each term id-ID style', () {
+      expect(Money.formatExpression('25000+13000'), '25.000+13.000');
+      expect(Money.formatExpression('1.000+20000'), '1.000+20.000');
+    });
+
+    test('strips leading operators', () {
+      expect(Money.formatExpression('+500'), '500');
+      expect(Money.formatExpression('-500'), '500');
+    });
+
+    test('collapses doubled operators, last one wins', () {
+      expect(Money.formatExpression('100+-'), '100-');
+      expect(Money.formatExpression('100-+'), '100+');
+    });
+
+    test('drops junk chars and leading zeros per term', () {
+      expect(Money.formatExpression('Rp 1.234+5'), '1.234+5');
+      expect(Money.formatExpression('007+05'), '7+5');
+    });
+  });
+
   group('Dates', () {
     test('short format uses Indonesian locale', () {
       final s = Dates.short(DateTime(2025, 9, 30));
