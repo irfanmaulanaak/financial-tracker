@@ -63,13 +63,6 @@ Color parseColor(String hex) {
   }
   return Color(int.parse('FF$h', radix: 16));
 }
-
-Color healthColor(int s) {
-  if (s >= 65) return FtColors.sage;
-  if (s >= 50) return FtColors.ochre;
-  return FtColors.danger;
-}
-
 IconData iconFor(String name) => switch (name) {
       'restaurant' => Icons.restaurant,
       'receipt_long' => Icons.receipt_long,

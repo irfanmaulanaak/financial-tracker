@@ -19,6 +19,7 @@ import '../members/invite_sheet.dart';
 import 'widgets/household_section.dart';
 import 'widgets/members_section.dart';
 import 'widgets/reminders_section.dart';
+import 'widgets/security_section.dart';
 import 'widgets/settings_row.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -96,6 +97,7 @@ class SettingsScreen extends ConsumerWidget {
                     label: 'Mata uang',
                     detail: 'IDR · Rupiah',
                   ),
+                  AppLockRows(),
                 ],
               ),
             ),

@@ -9,12 +9,6 @@
 /// 2-5 internal users.
 library;
 
-class RecurringTemplate<T> {
-  final T template;
-  final DateTime lastSeen;
-  RecurringTemplate({required this.template, required this.lastSeen});
-}
-
 /// Materialisation plan: for each template, the list of new dates to create.
 List<DateTime> datesToMaterialise({
   required DateTime lastSeen,

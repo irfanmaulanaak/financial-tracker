@@ -59,3 +59,10 @@ class InvestmentsRepository {
 final investmentsRepositoryProvider = Provider<InvestmentsRepository>((ref) {
   return InvestmentsRepository(ref.watch(firestoreProvider));
 });
+
+final investmentsProvider = StreamProvider.family<List<Investment>, String>((
+  ref,
+  hid,
+) {
+  return ref.watch(investmentsRepositoryProvider).watchAll(hid);
+});

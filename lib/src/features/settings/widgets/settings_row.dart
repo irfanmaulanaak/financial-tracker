@@ -92,6 +92,61 @@ class SettingsToggleRow extends StatelessWidget {
   }
 }
 
+/// Label + detail + Switch.adaptive — dipakai section Pengingat & Keamanan.
+class SettingsSwitchRow extends StatelessWidget {
+  const SettingsSwitchRow({
+    super.key,
+    required this.label,
+    required this.detail,
+    required this.value,
+    required this.onChanged,
+    this.trailing,
+  });
+
+  final String label;
+  final String detail;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 12, 10),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w500, fontSize: 13),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  detail,
+                  style: TextStyle(color: FtColors.ink3, fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+          if (trailing != null) ...[
+            trailing!,
+            const SizedBox(width: 8),
+          ],
+          Switch.adaptive(
+            value: value,
+            activeTrackColor: FtColors.clay,
+            onChanged: onChanged,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Pill-style ink/surface choice chip used for theme + layout pickers.
 class SettingsChoiceChip extends StatelessWidget {
   const SettingsChoiceChip({

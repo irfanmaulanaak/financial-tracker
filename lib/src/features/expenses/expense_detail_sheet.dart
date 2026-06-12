@@ -15,6 +15,7 @@ import '../household/household_providers.dart';
 import '../members/member_chip.dart';
 import 'expense.dart';
 import 'expense_repository.dart';
+import 'widgets/expense_review_section.dart';
 import 'widgets/expense_social_section.dart';
 
 /// Modal bottom sheet showing a single expense in full: amount, date,
@@ -167,6 +168,7 @@ class ExpenseDetailSheet extends ConsumerWidget {
                 ],
               ),
             ),
+            ExpenseReviewSection(expense: expense, household: household),
             const SizedBox(height: 18),
             ExpenseSocialSection(expense: expense, household: household),
             const SizedBox(height: 18),

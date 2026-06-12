@@ -4,8 +4,8 @@ import '../theme.dart';
 import 'ft_haptics.dart';
 import 'ft_motion.dart';
 
-/// 12-key numeric keypad used by record-expense, record-income, add-goal,
-/// edit-asset, and pay-card flows. Keys: 0..9, "000", and a backspace.
+/// 12-key numeric keypad used by the pay-card sheet and PIN entry
+/// (lock screen + PIN sheets). Keys: 0..9, "000", and a backspace.
 /// Emits string keys ("0".."9", "000") plus a `null` for backspace via the
 /// [onKey] callback. The host owns the amount state.
 class FtKeypad extends StatelessWidget {
@@ -13,6 +13,7 @@ class FtKeypad extends StatelessWidget {
     super.key,
     required this.onKey,
     this.compact = false,
+    this.pinMode = false,
   });
 
   /// Called with "0".."9", "000", or `null` for backspace.
@@ -21,14 +22,17 @@ class FtKeypad extends StatelessWidget {
   /// When true, shrinks the key height (~46) for use inside bottom sheets.
   final bool compact;
 
+  /// PIN entry: drops the "000" shortcut (cell kosong, non-tappable).
+  final bool pinMode;
+
   @override
   Widget build(BuildContext context) {
     final h = compact ? 46.0 : 56.0;
-    final keys = const [
-      ['1', '2', '3'],
-      ['4', '5', '6'],
-      ['7', '8', '9'],
-      ['000', '0', '<'],
+    final keys = [
+      const ['1', '2', '3'],
+      const ['4', '5', '6'],
+      const ['7', '8', '9'],
+      [pinMode ? '' : '000', '0', '<'],
     ];
     return Column(
       children: [
@@ -62,6 +66,7 @@ class _Key extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (label.isEmpty) return SizedBox(height: height);
     final isBack = label == '<';
     return FtTapScale(
       scale: 0.94,

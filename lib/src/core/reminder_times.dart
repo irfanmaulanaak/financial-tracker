@@ -2,6 +2,8 @@
 /// notifications plugin.
 library;
 
+import 'payday.dart';
+
 /// Next occurrence of HH:mm strictly after [now] (today if still ahead,
 /// otherwise tomorrow).
 DateTime nextTimeOfDay(DateTime now, int hour, int minute) {
@@ -41,4 +43,32 @@ DateTime? reminderMoment(
     hour,
   ).subtract(Duration(days: daysBefore));
   return at.isAfter(now) ? at : null;
+}
+
+/// Next occurrence of [weekday] (DateTime.monday..sunday) at HH:mm strictly
+/// after [now] — anchor untuk notifikasi mingguan (rekap mingguan).
+DateTime nextWeekdayTime(DateTime now, int weekday, int hour, int minute) {
+  var candidate = DateTime(now.year, now.month, now.day, hour, minute);
+  while (candidate.weekday != weekday || !candidate.isAfter(now)) {
+    candidate = candidate.add(const Duration(days: 1));
+  }
+  return candidate;
+}
+
+/// Momen "money date": 2 hari sebelum gajian berikutnya, 19.30. Bila momen
+/// siklus ini sudah lewat, geser ke akhir siklus berikutnya.
+DateTime nextMoneyDateMoment(DateTime now, int payday) {
+  DateTime momentFor(DateTime nextPayday) => DateTime(
+        nextPayday.year,
+        nextPayday.month,
+        nextPayday.day,
+        19,
+        30,
+      ).subtract(const Duration(days: 2));
+
+  final cycle = currentCycle(now, payday: payday);
+  final first = momentFor(cycle.endExclusive);
+  if (first.isAfter(now)) return first;
+  final nextCycle = currentCycle(cycle.endExclusive, payday: payday);
+  return momentFor(nextCycle.endExclusive);
 }

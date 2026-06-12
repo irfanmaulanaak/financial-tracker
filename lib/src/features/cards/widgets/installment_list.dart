@@ -111,35 +111,3 @@ class CardInstallmentsInline extends ConsumerWidget {
     );
   }
 }
-
-/// Sums monthly cicilan across the given cards. Used in the cards-screen
-/// hero stat grid. Renders `—` while data is loading.
-class CardCicilanTotal extends ConsumerWidget {
-  const CardCicilanTotal({
-    super.key,
-    required this.hid,
-    required this.cards,
-    required this.builder,
-  });
-
-  final String hid;
-  final List<CreditCard> cards;
-
-  /// Builder receives the running total (already loaded streams only).
-  final Widget Function(BuildContext context, int monthlyTotal) builder;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    var total = 0;
-    for (final c in cards) {
-      final list = ref
-              .watch(cardInstallmentsProvider((hid: hid, cardId: c.id)))
-              .value ??
-          const [];
-      for (final i in list) {
-        if (!i.isComplete) total += i.monthly;
-      }
-    }
-    return builder(context, total);
-  }
-}

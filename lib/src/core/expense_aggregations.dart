@@ -1,5 +1,3 @@
-import 'formatters.dart';
-
 /// Pure aggregation helpers for expenses. Designed to be testable without
 /// touching Firestore — caller passes already-fetched expense records.
 class ExpenseRecord {
@@ -50,31 +48,4 @@ Map<String, int> spentByMember(Iterable<ExpenseRecord> expenses) {
         ifAbsent: () => e.amount.toInt());
   }
   return out;
-}
-
-/// Groups expenses by local day, newest first. Within a day, original order
-/// is preserved (caller is expected to sort the source by date desc).
-Map<DateTime, List<ExpenseRecord>> groupByDay(Iterable<ExpenseRecord> expenses) {
-  final out = <DateTime, List<ExpenseRecord>>{};
-  for (final e in expenses) {
-    final key = Dates.dayKey(e.date);
-    out.putIfAbsent(key, () => []).add(e);
-  }
-  return out;
-}
-
-/// Returns the top-N category IDs by spend, descending.
-List<MapEntry<String, int>> topCategories(
-  Iterable<ExpenseRecord> expenses, {
-  int limit = 3,
-}) {
-  final byCat = spentByCategory(expenses).entries.toList()
-    ..sort((a, b) => b.value.compareTo(a.value));
-  return byCat.take(limit).toList();
-}
-
-/// Daily budget = monthly budget / days in cycle.
-int dailyBudget({required int monthlyBudget, required int cycleDays}) {
-  if (cycleDays <= 0) return 0;
-  return (monthlyBudget / cycleDays).round();
 }

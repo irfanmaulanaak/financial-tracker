@@ -494,6 +494,11 @@ class _OverflowMenu extends StatelessWidget {
               icon: Icons.event_repeat_rounded, label: 'Langganan & Rutin'),
         ),
         PopupMenuItem(
+          value: 'calendar',
+          child: _MenuRow(
+              icon: Icons.calendar_month_rounded, label: 'Kalender Tagihan'),
+        ),
+        PopupMenuItem(
           value: 'debts',
           child: _MenuRow(
               icon: Icons.handshake_outlined, label: 'Utang & Piutang'),

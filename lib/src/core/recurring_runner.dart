@@ -221,6 +221,3 @@ final recurringRunnerProvider = Provider<RecurringRunner>((ref) {
     ref.watch(incomeRepositoryProvider),
   );
 });
-
-/// Test-only: reset the per-session gate. Not used in production.
-void resetRecurringRunnerGateForTests() => _lastRunPerHousehold.clear();

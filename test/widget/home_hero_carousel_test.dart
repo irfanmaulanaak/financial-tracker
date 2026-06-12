@@ -46,6 +46,13 @@ Widget _harness() {
           gajiIncome: 14500000,
           cards: const [],
           health: health,
+          safe: (
+            perDay: 150000,
+            remaining: 3000000,
+            daysLeft: 20,
+            nextPayday: DateTime(2026, 7, 1),
+            hasBudget: true,
+          ),
         ),
       ),
     ),
@@ -58,11 +65,24 @@ void main() {
     await initializeDateFormatting('id_ID');
   });
 
+  // Slide kedua: "aman dibelanjakan" + anotasi cara hitung (slide pertama
+  // sekarang Kekayaan Bersih).
+  testWidgets('safe-to-spend slide shows perDay and annotation',
+      (tester) async {
+    await tester.pumpWidget(_harness());
+    await tester.pump(const Duration(milliseconds: 700));
+    await tester.tap(find.bySemanticsLabel('Slide 2 dari 5'));
+    await tester.pumpAndSettle();
+    expect(find.text('Rp150.000'), findsOneWidget);
+    expect(find.textContaining('÷ 20 hari'), findsOneWidget);
+  });
+
   // Regression: sparkline used to collapse to ~0 width when its parent
   // column didn't impose one, rendering 14 points as a 2px stub.
   testWidgets('hero sparkline gets a real width', (tester) async {
     await tester.pumpWidget(_harness());
     await tester.pump(const Duration(milliseconds: 700));
+    // Slide aset (sparkline) kini slide pertama — tanpa navigasi.
     final size = tester.getSize(find.byType(FtSparkline));
     expect(size.width, greaterThan(100));
   });
@@ -88,7 +108,7 @@ void main() {
     expect(find.textContaining('· Rp'), findsNothing);
   });
 
-  // Regression: dots were purely decorative, leaving slides 2-4 unreachable
+  // Regression: dots were purely decorative, leaving slides 2-5 unreachable
   // with a mouse (PageView ignores mouse drags on web by default).
   testWidgets('tapping a dot navigates to that slide', (tester) async {
     await tester.pumpWidget(_harness());
@@ -99,8 +119,8 @@ void main() {
         .controller;
     expect(controller?.page, 0);
 
-    await tester.tap(find.bySemanticsLabel('Slide 4 dari 4'));
+    await tester.tap(find.bySemanticsLabel('Slide 5 dari 5'));
     await tester.pumpAndSettle();
-    expect(controller?.page, 3);
+    expect(controller?.page, 4);
   });
 }

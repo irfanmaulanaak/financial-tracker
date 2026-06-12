@@ -14,9 +14,3 @@ library;
   if (next > amount) next = amount;
   return (paid: next, settled: next >= amount);
 }
-
-/// Sisa yang belum dibayar.
-int debtRemaining({required int amount, required int paid}) {
-  final left = amount - paid;
-  return left < 0 ? 0 : left;
-}

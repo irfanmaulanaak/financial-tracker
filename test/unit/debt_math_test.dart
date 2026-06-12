@@ -27,13 +27,4 @@ void main() {
       expect(r.settled, false);
     });
   });
-
-  group('debtRemaining', () {
-    test('remaining', () {
-      expect(debtRemaining(amount: 1000000, paid: 250000), 750000);
-    });
-    test('never negative', () {
-      expect(debtRemaining(amount: 100, paid: 500), 0);
-    });
-  });
 }

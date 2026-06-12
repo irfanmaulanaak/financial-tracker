@@ -5,6 +5,7 @@ import '../../../core/reminders.dart';
 import '../../../theme.dart';
 import '../../../ui/ft_haptics.dart';
 import '../../../ui/ft_ui.dart';
+import 'settings_row.dart';
 
 /// Pengaturan → Pengingat. All reminders are local notifications on this
 /// device only (opt-in, no server). Hidden on web where scheduled local
@@ -70,7 +71,7 @@ class RemindersSection extends ConsumerWidget {
           padding: EdgeInsets.zero,
           child: Column(
             children: [
-              _SwitchRow(
+              SettingsSwitchRow(
                 label: 'Catat harian',
                 detail: 'Pengingat jam $timeLabel bila hari ini belum catat',
                 value: s.daily,
@@ -105,7 +106,7 @@ class RemindersSection extends ConsumerWidget {
                     : null,
               ),
               Divider(height: 1, thickness: 0.5, color: FtColors.line),
-              _SwitchRow(
+              SettingsSwitchRow(
                 label: 'Jatuh tempo kartu',
                 detail: 'Diingatkan 3 hari sebelum & saat jatuh tempo',
                 value: s.cardDue,
@@ -117,7 +118,7 @@ class RemindersSection extends ConsumerWidget {
                 ),
               ),
               Divider(height: 1, thickness: 0.5, color: FtColors.line),
-              _SwitchRow(
+              SettingsSwitchRow(
                 label: 'Tagihan rutin',
                 detail: 'Diingatkan sehari sebelum tagihan bulanan biasanya',
                 value: s.recurringBills,
@@ -125,6 +126,30 @@ class RemindersSection extends ConsumerWidget {
                   context,
                   ref,
                   s.copyWith(recurringBills: v),
+                  turningOn: v,
+                ),
+              ),
+              Divider(height: 1, thickness: 0.5, color: FtColors.line),
+              SettingsSwitchRow(
+                label: 'Rekap mingguan',
+                detail: 'Sekali tiap Minggu sore — ajakan lihat ringkasan',
+                value: s.weeklyRecap,
+                onChanged: (v) => _toggle(
+                  context,
+                  ref,
+                  s.copyWith(weeklyRecap: v),
+                  turningOn: v,
+                ),
+              ),
+              Divider(height: 1, thickness: 0.5, color: FtColors.line),
+              SettingsSwitchRow(
+                label: 'Money date akhir siklus',
+                detail: 'Ajakan review bareng 2 hari sebelum gajian',
+                value: s.moneyDate,
+                onChanged: (v) => _toggle(
+                  context,
+                  ref,
+                  s.copyWith(moneyDate: v),
                   turningOn: v,
                 ),
               ),
@@ -140,59 +165,6 @@ class RemindersSection extends ConsumerWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _SwitchRow extends StatelessWidget {
-  const _SwitchRow({
-    required this.label,
-    required this.detail,
-    required this.value,
-    required this.onChanged,
-    this.trailing,
-  });
-
-  final String label;
-  final String detail;
-  final bool value;
-  final ValueChanged<bool> onChanged;
-  final Widget? trailing;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 10, 12, 10),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w500, fontSize: 13),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  detail,
-                  style: TextStyle(color: FtColors.ink3, fontSize: 11),
-                ),
-              ],
-            ),
-          ),
-          if (trailing != null) ...[
-            trailing!,
-            const SizedBox(width: 8),
-          ],
-          Switch.adaptive(
-            value: value,
-            activeTrackColor: FtColors.clay,
-            onChanged: onChanged,
-          ),
-        ],
-      ),
     );
   }
 }

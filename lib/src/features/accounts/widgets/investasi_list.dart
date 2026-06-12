@@ -8,7 +8,6 @@ import '../../../theme.dart';
 import '../../../ui/ft_refresh.dart';
 import '../../../ui/ft_ui.dart';
 import '../../household/household_providers.dart' show currentHouseholdProvider;
-import '../../investments/investments_screen.dart' show investmentsProvider;
 import '../../home/widgets/home_formatters.dart';
 import '../../investments/investment.dart';
 import '../../investments/investments_repository.dart';

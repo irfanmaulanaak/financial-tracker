@@ -26,8 +26,6 @@ FtBreakpoint ftBreakpointForWidth(double width) {
 extension FtBreakpointContext on BuildContext {
   FtBreakpoint get bp => ftBreakpointForWidth(MediaQuery.sizeOf(this).width);
 
-  bool get isCompact => bp == FtBreakpoint.compact;
   bool get isAtLeastMedium => bp.index >= FtBreakpoint.medium.index;
   bool get isAtLeastExpanded => bp.index >= FtBreakpoint.expanded.index;
-  bool get isLarge => bp == FtBreakpoint.large;
 }

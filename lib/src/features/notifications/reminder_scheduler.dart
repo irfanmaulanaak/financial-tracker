@@ -57,5 +57,6 @@ final reminderSchedulerProvider = Provider<void>((ref) {
         settings: settings,
         cards: cardInputs,
         bills: bills,
+        payday: household.payday,
       );
 });

@@ -24,8 +24,9 @@ import 'features/home/home_screen.dart';
 import 'features/household/household_providers.dart';
 import 'features/incomes/income_log_screen.dart';
 import 'features/incomes/record_income_screen.dart';
+import 'features/insights/bill_calendar_screen.dart';
+import 'features/insights/money_date_screen.dart';
 import 'features/insights/recap_screen.dart';
-import 'features/investments/investments_screen.dart';
 import 'features/members/member_detail_screen.dart';
 import 'features/members/member_list_screen.dart';
 import 'features/notifications/notifications_screen.dart';
@@ -121,13 +122,14 @@ final routerProvider = Provider<GoRouter>((ref) {
           CardDetailScreen(cardId: state.pathParameters['cardId']!)),
       _fadeRoute('/health', (_) => const HealthScreen()),
       _fadeRoute('/recap', (_) => const RecapScreen()),
+      _bottomSlideRoute('/money-date', (_) => const MoneyDateScreen()),
       _fadeRoute('/goals', (_) => const GoalsScreen()),
       _bottomSlideRoute('/goals/new', (_) => const AddGoalScreen()),
       _scaleRoute('/goals/:goalId', (state) =>
           GoalDetailScreen(goalId: state.pathParameters['goalId']!)),
-      _fadeRoute('/investments', (_) => const InvestmentsScreen()),
       _fadeRoute('/export', (_) => const ExportScreen()),
       _fadeRoute('/subscriptions', (_) => const SubscriptionsScreen()),
+      _fadeRoute('/calendar', (_) => const BillCalendarScreen()),
       _fadeRoute('/debts', (_) => const DebtsScreen()),
       _fadeRoute('/settings', (_) => const SettingsScreen()),
     ],

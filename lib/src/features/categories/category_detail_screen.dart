@@ -16,6 +16,7 @@ import '../home/widgets/home_formatters.dart';
 import '../household/household.dart';
 import '../household/household_providers.dart';
 import '../insights/insights_providers.dart';
+import 'budget_move_sheet.dart';
 
 class CategoryDetailScreen extends ConsumerWidget {
   const CategoryDetailScreen({super.key, required this.categoryId});
@@ -80,6 +81,7 @@ class CategoryDetailScreen extends ConsumerWidget {
               prevAsync: prevAsync,
               cycle: cycle,
               color: color,
+              canMoveBudget: ref.watch(canWriteAllProvider),
             ),
             expensesAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -166,12 +168,16 @@ class _HeaderCard extends StatelessWidget {
     required this.prevAsync,
     required this.cycle,
     required this.color,
+    required this.canMoveBudget,
   });
   final Category category;
   final AsyncValue<List<Expense>> expensesAsync;
   final AsyncValue<List<List<Expense>>> prevAsync;
   final ({DateTime start, DateTime endExclusive}) cycle;
   final Color color;
+
+  /// Akses `full` → boleh geser anggaran antar kategori.
+  final bool canMoveBudget;
 
   @override
   Widget build(BuildContext context) {
@@ -369,28 +375,43 @@ class _HeaderCard extends StatelessWidget {
                 width: 0.5,
               ),
             ),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
-                  over
-                      ? Icons.warning_amber_rounded
-                      : Icons.check_circle_outline_rounded,
-                  size: 18,
-                  color: over ? FtColors.danger : FtColors.moss,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    over
-                        ? 'Kategori ini melebihi anggaran ${pct - 100}%.'
-                        : 'Pola pengeluaran wajar. Sisa ${Money.format(budget - spent)} untuk siklus ini.',
-                    style: TextStyle(
+                Row(
+                  children: [
+                    Icon(
+                      over
+                          ? Icons.warning_amber_rounded
+                          : Icons.check_circle_outline_rounded,
+                      size: 18,
                       color: over ? FtColors.danger : FtColors.moss,
-                      fontSize: 12,
-                      height: 1.4,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        over
+                            ? 'Melebihi anggaran ${pct - 100}%. Wajar kok meleset — geser saja dari kategori yang masih longgar.'
+                            : 'Pola pengeluaran wajar. Sisa ${Money.format(budget - spent)} untuk siklus ini.',
+                        style: TextStyle(
+                          color: over ? FtColors.danger : FtColors.moss,
+                          fontSize: 12,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                if (over && canMoveBudget)
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton.icon(
+                      onPressed: () =>
+                          BudgetMoveSheet.show(context, toId: category.id),
+                      icon: const Icon(Icons.swap_horiz_rounded, size: 16),
+                      label: const Text('Geser anggaran'),
                     ),
                   ),
-                ),
               ],
             ),
           ),

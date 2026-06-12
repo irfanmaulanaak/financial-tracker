@@ -1,25 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
-import '../../../core/in_app_indicators.dart';
 import '../../../core/streak.dart';
 import '../../../theme.dart';
 import 'home_formatters.dart';
-
-class BudgetBanner extends StatelessWidget {
-  const BudgetBanner({super.key, required this.status});
-
-  final BudgetStatus status;
-
-  @override
-  Widget build(BuildContext context) {
-    final exceeded = status == BudgetStatus.exceeded;
-    final color = exceeded ? FtColors.danger : FtColors.ochre;
-    final msg = exceeded
-        ? 'Pengeluaran sudah melampaui pendapatan siklus ini.'
-        : 'Sudah 80% dari pendapatan siklus ini.';
-    return AlertBand(icon: Icons.warning_amber_rounded, color: color, text: msg);
-  }
-}
 
 class DueBanner extends StatelessWidget {
   const DueBanner({
@@ -43,6 +27,8 @@ class DueBanner extends StatelessWidget {
       icon: Icons.credit_card_rounded,
       color: urgent ? FtColors.danger : FtColors.sage,
       text: text,
+      actionLabel: 'Lihat',
+      onAction: () => context.push('/cards'),
     );
   }
 }
@@ -70,15 +56,22 @@ class AlertBand extends StatelessWidget {
     required this.icon,
     required this.color,
     required this.text,
+    this.actionLabel,
+    this.onAction,
   });
 
   final IconData icon;
   final Color color;
   final String text;
 
+  /// Aksi kecil di kanan banner ("peringatan selalu berpasangan dengan
+  /// langkah berikutnya"). Keduanya null = banner pasif.
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final band = Container(
       margin: const EdgeInsets.fromLTRB(22, 0, 22, 10),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
       decoration: BoxDecoration(
@@ -100,8 +93,24 @@ class AlertBand extends StatelessWidget {
               ),
             ),
           ),
+          if (actionLabel != null) ...[
+            const SizedBox(width: 8),
+            Text(
+              actionLabel!,
+              style: TextStyle(
+                color: color,
+                fontSize: 11.5,
+                fontWeight: FontWeight.w700,
+                decoration: TextDecoration.underline,
+                decorationColor: color,
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded, color: color, size: 16),
+          ],
         ],
       ),
     );
+    if (onAction == null) return band;
+    return GestureDetector(onTap: onAction, child: band);
   }
 }

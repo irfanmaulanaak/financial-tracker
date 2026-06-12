@@ -19,12 +19,14 @@ import '../../../ui/ft_sparkline.dart';
 import '../../../ui/ft_ui.dart';
 import '../../cards/credit_card.dart';
 import 'home_formatters.dart';
+import 'safe_to_spend_slide.dart';
 
-/// 4-page swipeable hero card on the home screen:
+/// 5-page swipeable hero card on the home screen:
 ///   1. Total Aset (net worth + breakdown)
-///   2. Pengeluaran vs Gaji (ring chart, this cycle)
-///   3. Kartu Kredit (akumulasi tagihan)
-///   4. Kesehatan finansial
+///   2. Aman dibelanjakan (sisa anggaran ÷ hari tersisa)
+///   3. Pengeluaran vs Gaji (ring chart, this cycle)
+///   4. Kartu Kredit (akumulasi tagihan)
+///   5. Kesehatan finansial
 ///
 /// Each page is a self-contained card body wrapped in [FtCard] with a
 /// `onTap` that routes to the full feature screen. Below the PageView sits
@@ -40,6 +42,7 @@ class HomeHeroCarousel extends StatefulWidget {
     required this.gajiIncome,
     required this.cards,
     required this.health,
+    required this.safe,
   });
 
   final NetWorth nw;
@@ -62,6 +65,15 @@ class HomeHeroCarousel extends StatefulWidget {
 
   final List<CreditCard> cards;
   final HealthScore health;
+
+  /// Data slide "aman dibelanjakan" (dihitung di home dari budget siklus).
+  final ({
+    int perDay,
+    int remaining,
+    int daysLeft,
+    DateTime nextPayday,
+    bool hasBudget,
+  }) safe;
 
   @override
   State<HomeHeroCarousel> createState() => _HomeHeroCarouselState();
@@ -98,7 +110,7 @@ class _HomeHeroCarouselState extends State<HomeHeroCarousel> {
               ),
               child: PageView.builder(
               controller: _controller,
-              itemCount: 4,
+              itemCount: 5,
               onPageChanged: (i) {
                 FtHaptics.select();
                 setState(() => _page = i);
@@ -111,11 +123,18 @@ class _HomeHeroCarouselState extends State<HomeHeroCarousel> {
                       trendDates: widget.trendDates,
                       cycleNet: widget.cycleNet,
                     ),
-                  1 => _RatioSlide(
+                  1 => SafeToSpendSlide(
+                      perDay: widget.safe.perDay,
+                      remaining: widget.safe.remaining,
+                      daysLeft: widget.safe.daysLeft,
+                      nextPayday: widget.safe.nextPayday,
+                      hasBudget: widget.safe.hasBudget,
+                    ),
+                  2 => _RatioSlide(
                       spend: widget.spend,
                       gajiIncome: widget.gajiIncome,
                     ),
-                  2 => _KartuSlide(cards: widget.cards),
+                  3 => _KartuSlide(cards: widget.cards),
                   _ => _KesehatanSlide(score: widget.health),
                 };
                 return AnimatedBuilder(
@@ -145,7 +164,7 @@ class _HomeHeroCarouselState extends State<HomeHeroCarousel> {
           ),
           const SizedBox(height: 10),
           _Dots(
-            count: 4,
+            count: 5,
             active: _page,
             onSelect: (i) => _controller.animateToPage(
               i,

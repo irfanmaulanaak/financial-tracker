@@ -113,6 +113,10 @@ class Category {
   /// `core/envelope.dart`.
   final bool rollover;
 
+  /// ZISWAF (zakat/infak/sedekah/wakaf): pengeluarannya direkap total
+  /// tahunannya di layar Rekap — membantu hitung zakat & niat sedekah.
+  final bool ziswaf;
+
   const Category({
     required this.id,
     required this.label,
@@ -123,6 +127,7 @@ class Category {
     this.sortOrder = 0,
     this.isInvestment = false,
     this.rollover = false,
+    this.ziswaf = false,
   });
 
   Category copyWith({
@@ -134,6 +139,7 @@ class Category {
     int? sortOrder,
     bool? isInvestment,
     bool? rollover,
+    bool? ziswaf,
   }) =>
       Category(
         id: id,
@@ -145,6 +151,7 @@ class Category {
         sortOrder: sortOrder ?? this.sortOrder,
         isInvestment: isInvestment ?? this.isInvestment,
         rollover: rollover ?? this.rollover,
+        ziswaf: ziswaf ?? this.ziswaf,
       );
 
   Map<String, dynamic> toMap() => {
@@ -157,6 +164,7 @@ class Category {
         'sortOrder': sortOrder,
         'isInvestment': isInvestment,
         'rollover': rollover,
+        'ziswaf': ziswaf,
       };
 
   static Category fromMap(Map<String, dynamic> m) => Category(
@@ -169,6 +177,43 @@ class Category {
         sortOrder: (m['sortOrder'] as num?)?.toInt() ?? 0,
         isInvestment: m['isInvestment'] as bool? ?? false,
         rollover: m['rollover'] as bool? ?? false,
+        ziswaf: m['ziswaf'] as bool? ?? false,
+      );
+}
+
+/// Satu kejadian "geser anggaran" antar kategori — jejak siapa/kapan,
+/// disimpan di doc household (array kecil, dibatasi 30 terbaru).
+class BudgetMove {
+  const BudgetMove({
+    required this.fromId,
+    required this.toId,
+    required this.amount,
+    required this.by,
+    required this.at,
+  });
+
+  final String fromId;
+  final String toId;
+  final int amount;
+
+  /// uid anggota yang menggeser.
+  final String by;
+  final DateTime at;
+
+  Map<String, dynamic> toMap() => {
+        'fromId': fromId,
+        'toId': toId,
+        'amount': amount,
+        'by': by,
+        'at': Timestamp.fromDate(at),
+      };
+
+  static BudgetMove fromMap(Map<String, dynamic> m) => BudgetMove(
+        fromId: m['fromId'] as String? ?? '',
+        toId: m['toId'] as String? ?? '',
+        amount: (m['amount'] as num?)?.toInt() ?? 0,
+        by: m['by'] as String? ?? '',
+        at: (m['at'] as Timestamp?)?.toDate() ?? DateTime.now(),
       );
 }
 
@@ -185,6 +230,10 @@ class Household {
   final List<Account> cashAccounts;
   final List<Account> savingsAccounts;
 
+  /// Log geser anggaran, terbaru di depan (maks 30 — lihat
+  /// `core/budget_move.dart`).
+  final List<BudgetMove> budgetMoves;
+
   const Household({
     required this.id,
     required this.name,
@@ -197,6 +246,7 @@ class Household {
     required this.categories,
     this.cashAccounts = const [],
     this.savingsAccounts = const [],
+    this.budgetMoves = const [],
   });
 
   /// Returns the account (cash OR savings) with the given id, or null.
@@ -229,6 +279,10 @@ class Household {
   Set<String> get investmentCategoryIds =>
       {for (final c in categories) if (c.isInvestment) c.id};
 
+  /// IDs of ZISWAF categories (see [Category.ziswaf]).
+  Set<String> get ziswafCategoryIds =>
+      {for (final c in categories) if (c.ziswaf) c.id};
+
   /// `memberAccess` is the uid→accessLevel map mirrored from `members[]`.
   /// Stored alongside members so Firestore rules can look up the caller's
   /// access level in O(1) without scanning the array.
@@ -250,6 +304,8 @@ class Household {
         'categories': categories.map((c) => c.toMap()).toList(),
         'cashAccounts': cashAccounts.map((a) => a.toMap()).toList(),
         'savingsAccounts': savingsAccounts.map((a) => a.toMap()).toList(),
+        if (budgetMoves.isNotEmpty)
+          'budgetMoves': budgetMoves.map((b) => b.toMap()).toList(),
         'schemaVersion': 2,
       };
 
@@ -276,6 +332,9 @@ class Household {
       savingsAccounts: ((m['savingsAccounts'] as List?) ?? const [])
           .map((e) => Account.fromMap(
               Map<String, dynamic>.from(e as Map), AccountKind.savings))
+          .toList(),
+      budgetMoves: ((m['budgetMoves'] as List?) ?? const [])
+          .map((e) => BudgetMove.fromMap(Map<String, dynamic>.from(e as Map)))
           .toList(),
     );
   }

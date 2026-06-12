@@ -81,5 +81,8 @@
 		</array>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		<!-- Kunci app dengan Face ID (local_auth). -->
+		<key>NSFaceIDUsageDescription</key>
+		<string>FinSist memakai Face ID untuk membuka kunci aplikasi.</string>
 	</dict>
 </plist>

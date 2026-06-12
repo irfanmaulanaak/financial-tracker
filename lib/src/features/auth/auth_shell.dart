@@ -266,25 +266,3 @@ class OrDivider extends StatelessWidget {
     );
   }
 }
-
-/// Kept for backwards-compat (sign-in/up/email-link migrated to FtInput).
-class LabeledField extends StatelessWidget {
-  const LabeledField({super.key, required this.label, required this.child});
-  final String label;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Eyebrow(label),
-          const SizedBox(height: 6),
-          child,
-        ],
-      ),
-    );
-  }
-}

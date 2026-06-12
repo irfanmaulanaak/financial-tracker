@@ -12,6 +12,28 @@ class Money {
   /// Formats integer rupiah as "Rp1.234.567".
   static String format(num amount) => _idr.format(amount);
 
+  /// Label ringkas id-ID: 25000 → "25rb", 1200000 → "1,2jt", 950 → "950".
+  /// Dipakai chip favorit & kalimat insight (bukan untuk angka resmi).
+  static String compact(num amount) {
+    final n = amount.abs();
+    final String s;
+    if (n >= 1000000000) {
+      s = '${_compactNum(n / 1000000000)}M';
+    } else if (n >= 1000000) {
+      s = '${_compactNum(n / 1000000)}jt';
+    } else if (n >= 1000) {
+      s = '${_compactNum(n / 1000)}rb';
+    } else {
+      s = n.toStringAsFixed(0);
+    }
+    return amount < 0 ? '-$s' : s;
+  }
+
+  static String _compactNum(double v) {
+    final fixed = v >= 100 ? v.toStringAsFixed(0) : v.toStringAsFixed(1);
+    return fixed.replaceFirst(RegExp(r'\.0$'), '').replaceAll('.', ',');
+  }
+
   /// Parses user input like "Rp 1.234.567" or "1234567" into an int (rupiah).
   /// Returns null if no digits found.
   static int? parse(String input) {
@@ -120,13 +142,11 @@ class Dates {
   static final _short = DateFormat('d MMM y', 'id_ID');
   static final _grouped = DateFormat('EEEE, d MMM y', 'id_ID');
   static final _monthYear = DateFormat('MMM y', 'id_ID');
-  static final _month = DateFormat('MMM', 'id_ID');
   static final _dayMonth = DateFormat('d MMM', 'id_ID');
 
   static String short(DateTime d) => _short.format(d);
   static String grouped(DateTime d) => _grouped.format(d);
   static String monthYear(DateTime d) => _monthYear.format(d);
-  static String month(DateTime d) => _month.format(d);
 
   /// "25 Apr" — used for compact cycle-range labels.
   static String dayMonth(DateTime d) => _dayMonth.format(d);

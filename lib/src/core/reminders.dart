@@ -25,6 +25,8 @@ class ReminderSettings {
     this.dailyMinute = 0,
     this.cardDue = false,
     this.recurringBills = false,
+    this.weeklyRecap = false,
+    this.moneyDate = false,
   });
 
   final bool daily;
@@ -33,7 +35,14 @@ class ReminderSettings {
   final bool cardDue;
   final bool recurringBills;
 
-  bool get anyEnabled => daily || cardDue || recurringBills;
+  /// Rekap mingguan ringan — 1× per minggu (Minggu 18.00), tanpa nag harian.
+  final bool weeklyRecap;
+
+  /// "Money date" — ajakan review bersama 2 hari sebelum gajian.
+  final bool moneyDate;
+
+  bool get anyEnabled =>
+      daily || cardDue || recurringBills || weeklyRecap || moneyDate;
 
   ReminderSettings copyWith({
     bool? daily,
@@ -41,6 +50,8 @@ class ReminderSettings {
     int? dailyMinute,
     bool? cardDue,
     bool? recurringBills,
+    bool? weeklyRecap,
+    bool? moneyDate,
   }) =>
       ReminderSettings(
         daily: daily ?? this.daily,
@@ -48,6 +59,8 @@ class ReminderSettings {
         dailyMinute: dailyMinute ?? this.dailyMinute,
         cardDue: cardDue ?? this.cardDue,
         recurringBills: recurringBills ?? this.recurringBills,
+        weeklyRecap: weeklyRecap ?? this.weeklyRecap,
+        moneyDate: moneyDate ?? this.moneyDate,
       );
 }
 
@@ -62,6 +75,8 @@ class ReminderSettingsNotifier extends Notifier<ReminderSettings> {
   static const _kDailyMinute = 'reminder_daily_minute';
   static const _kCardDue = 'reminder_card_due';
   static const _kRecurring = 'reminder_recurring';
+  static const _kWeeklyRecap = 'reminder_weekly_recap';
+  static const _kMoneyDate = 'reminder_money_date';
 
   @override
   ReminderSettings build() {
@@ -77,6 +92,8 @@ class ReminderSettingsNotifier extends Notifier<ReminderSettings> {
       dailyMinute: p.getInt(_kDailyMinute) ?? 0,
       cardDue: p.getBool(_kCardDue) ?? false,
       recurringBills: p.getBool(_kRecurring) ?? false,
+      weeklyRecap: p.getBool(_kWeeklyRecap) ?? false,
+      moneyDate: p.getBool(_kMoneyDate) ?? false,
     );
   }
 
@@ -88,6 +105,8 @@ class ReminderSettingsNotifier extends Notifier<ReminderSettings> {
     await p.setInt(_kDailyMinute, next.dailyMinute);
     await p.setBool(_kCardDue, next.cardDue);
     await p.setBool(_kRecurring, next.recurringBills);
+    await p.setBool(_kWeeklyRecap, next.weeklyRecap);
+    await p.setBool(_kMoneyDate, next.moneyDate);
   }
 }
 
@@ -174,6 +193,7 @@ class ReminderService {
     required ReminderSettings settings,
     required List<CardDueInput> cards,
     required List<BillInput> bills,
+    int? payday,
     DateTime? now,
   }) async {
     if (!await _ensureInitialized()) return;
@@ -184,6 +204,9 @@ class ReminderService {
       settings.dailyMinute,
       settings.cardDue,
       settings.recurringBills,
+      settings.weeklyRecap,
+      settings.moneyDate,
+      payday,
       for (final c in cards) '${c.label}|${c.dueDay}|${c.used}',
       for (final b in bills) '${b.title}|${b.nextDate}|${b.amount}',
     ].join(';');
@@ -192,6 +215,28 @@ class ReminderService {
 
     await _plugin.cancelAll();
     if (!settings.anyEnabled) return;
+
+    if (settings.weeklyRecap) {
+      // 1× per minggu (Minggu 18.00) — re-engagement tanpa nag harian.
+      await _zoned(
+        id: 2,
+        at: nextWeekdayTime(n, DateTime.sunday, 18, 0),
+        title: 'Rekap mingguan keluarga',
+        body: 'Luangkan 5 menit — lihat gimana minggu ini di halaman Rekap.',
+        matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+      );
+    }
+
+    if (settings.moneyDate && payday != null) {
+      // Sekali per siklus: 2 hari sebelum gajian, jam 19.30.
+      await _zoned(
+        id: 3,
+        at: nextMoneyDateMoment(n, payday),
+        title: 'Money date akhir siklus',
+        body:
+            'Gajian sebentar lagi. Duduk bareng 10 menit, review siklus ini di Rekap.',
+      );
+    }
 
     if (settings.daily) {
       final first = nextTimeOfDay(n, settings.dailyHour, settings.dailyMinute);

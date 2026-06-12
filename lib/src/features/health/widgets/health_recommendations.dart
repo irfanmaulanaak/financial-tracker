@@ -57,7 +57,7 @@ class HealthRecommendations extends StatelessWidget {
         icon: Icons.show_chart_rounded,
         label: 'Mulai diversifikasi ke investasi',
         detail: 'Tabungan cukup — sisipkan ke reksadana atau emas',
-        route: '/investments',
+        route: '/accounts',
       ));
     }
     if (score.score < 50) {

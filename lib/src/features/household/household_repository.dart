@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/budget_move.dart';
 import '../../core/ids.dart';
 import '../../core/invite_code.dart';
 import '../../core/providers.dart';
@@ -314,6 +315,43 @@ class HouseholdRepository {
     });
   }
 
+  /// Geser anggaran antar kategori (mid-cycle) + catat jejak siapa/kapan.
+  /// Validasi di `core/budget_move.dart`; gagal → StateError(kode).
+  Future<void> moveBudget({
+    required String householdId,
+    required String fromId,
+    required String toId,
+    required int amount,
+    required String by,
+    DateTime? now,
+  }) async {
+    final ts = now ?? DateTime.now();
+    await _db.runTransaction((tx) async {
+      final ref = _households.doc(householdId);
+      final snap = await tx.get(ref);
+      if (!snap.exists) throw StateError('household_missing');
+      final h = Household.fromSnapshot(snap);
+
+      final result = applyBudgetMove(
+        categories: h.categories,
+        fromId: fromId,
+        toId: toId,
+        amount: amount,
+      );
+      if (result.error != null) throw StateError(result.error!);
+
+      final moves = appendBudgetMove(
+        h.budgetMoves,
+        BudgetMove(
+            fromId: fromId, toId: toId, amount: amount, by: by, at: ts),
+      );
+      tx.update(ref, {
+        'categories': result.categories!.map((c) => c.toMap()).toList(),
+        'budgetMoves': moves.map((b) => b.toMap()).toList(),
+      });
+    });
+  }
+
   /// Adds a new user-defined category. Generates a short ID.
   Future<Category> addCategory({
     required String householdId,
@@ -322,6 +360,7 @@ class HouseholdRepository {
     required String color,
     required int monthlyBudget,
     bool isInvestment = false,
+    bool ziswaf = false,
   }) async {
     final household = await get(householdId);
     if (household == null) throw StateError('household_missing');
@@ -333,6 +372,7 @@ class HouseholdRepository {
       monthlyBudget: monthlyBudget,
       sortOrder: household.categories.length,
       isInvestment: isInvestment,
+      ziswaf: ziswaf,
     );
     await updateCategories(
       householdId: householdId,

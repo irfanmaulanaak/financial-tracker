@@ -13,7 +13,7 @@ import '../expenses/expense.dart';
 import '../expenses/expense_providers.dart';
 import '../household/household_providers.dart';
 import '../insights/insights_providers.dart';
-import '../investments/investments_screen.dart';
+import '../investments/investments_repository.dart' show investmentsProvider;
 import 'widgets/health_findings.dart';
 import 'widgets/health_hero.dart';
 import 'widgets/health_recommendations.dart';

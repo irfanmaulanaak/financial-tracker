@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/theme_provider.dart';
+import 'features/security/app_lock_gate.dart';
 import 'router.dart';
 import 'theme.dart';
 
@@ -49,7 +50,7 @@ class FinancialTrackerApp extends ConsumerWidget {
         );
         return MediaQuery(
           data: mq.copyWith(textScaler: clamped),
-          child: child ?? const SizedBox.shrink(),
+          child: AppLockGate(child: child ?? const SizedBox.shrink()),
         );
       },
     );

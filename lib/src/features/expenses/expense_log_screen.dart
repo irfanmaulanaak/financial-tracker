@@ -426,12 +426,36 @@ class _ExpenseTile extends ConsumerWidget {
             ),
           ),
           const SizedBox(width: 12),
-          Text(
-            Money.format(expense.amount),
-            style: TextStyle(
-              color: FtColors.ink,
-              fontWeight: FontWeight.bold,
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                Money.format(expense.amount),
+                style: TextStyle(
+                  color: FtColors.ink,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              // Tanda permintaan cek yang belum beres.
+              if (expense.review != null && !expense.review!.done) ...[
+                const SizedBox(height: 3),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.flag, size: 11, color: FtColors.ochre),
+                    const SizedBox(width: 3),
+                    Text(
+                      'minta dicek',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: FtColors.ochre,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
           ),
         ],
       ),

@@ -23,8 +23,11 @@ import '../record_common/meta_row.dart';
 import '../record_common/money_field.dart';
 import '../record_common/pay_type_toggle.dart';
 import 'expense.dart';
+import 'expense_favorites_row.dart';
 import 'expense_providers.dart';
 import 'expense_repository.dart';
+import 'favorite_expenses.dart';
+import 'split_expense_sheet.dart';
 
 const _kLastPayType = 'record_last_pay_type';
 const _kLastAccount = 'record_last_account';
@@ -183,7 +186,89 @@ class _RecordExpenseScreenState extends ConsumerState<RecordExpenseScreen> {
     if (picked != null) setState(() => _date = picked);
   }
 
-  Future<void> _submit(Household h, List<CreditCard> cards) async {
+  /// Isi form dari chip favorit (1-tap).
+  void _applyFavorite(FavoriteExpense f) {
+    setState(() {
+      _amount = f.amount;
+      _categoryId = f.categoryId;
+      _categoryTouched = true;
+      _suggestedCategoryId = null;
+      _note.text = f.note;
+    });
+  }
+
+  /// Simpan kombinasi saat ini sebagai favorit per-perangkat.
+  Future<void> _saveFavorite() async {
+    if (_amount <= 0 || _categoryId == null) return;
+    FtHaptics.success();
+    final label =
+        _note.text.trim().isEmpty ? 'Tanpa catatan' : _note.text.trim();
+    await ref.read(favoriteExpensesProvider.notifier).add(
+          FavoriteExpense(
+              note: label, amount: _amount, categoryId: _categoryId!),
+        );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('"$label" tersimpan di favorit.')),
+      );
+    }
+  }
+
+  /// Reset form untuk entri berikutnya (mode "Simpan & tambah lagi").
+  /// Tanggal & metode bayar dipertahankan — pola catat-rapel mingguan.
+  void _resetForNext() {
+    setState(() {
+      _amount = 0;
+      _note.clear();
+      _recurring = false;
+      _cicilan = false;
+      _categoryTouched = false;
+      _suggestedCategoryId = null;
+      _error = null;
+    });
+  }
+
+  /// Buka sheet split — validasi pembayaran dulu (sama seperti submit).
+  Future<void> _openSplit(Household h) async {
+    if (_payType == 'credit' && _cardId == null) {
+      FtHaptics.warning();
+      setState(() => _error = 'Pilih kartu kredit dulu');
+      return;
+    }
+    final hasAccounts =
+        h.cashAccounts.isNotEmpty || h.savingsAccounts.isNotEmpty;
+    if (_payType == 'cash' && hasAccounts && _sourceAccountId == null) {
+      FtHaptics.warning();
+      setState(() => _error = 'Pilih sumber dana dulu');
+      return;
+    }
+    final user = ref.read(firebaseAuthProvider).currentUser!;
+    final note = _note.text.trim().isEmpty ? null : _note.text.trim();
+    final ok = await SplitExpenseSheet.show(
+      context,
+      household: h,
+      total: _amount,
+      initialCategoryId: _categoryId,
+      payType: _payType,
+      sourceAccountId: _payType == 'cash' ? _sourceAccountId : null,
+      cardId: _payType == 'credit' ? _cardId : null,
+      spentBy: _spentBy ?? user.uid,
+      date: _date,
+      note: note,
+    );
+    if (ok == true && mounted) {
+      // ignore: discarded_futures
+      _saveLastPayment();
+      FtCelebrate.show(context, message: 'Split tersimpan');
+      context.pop();
+    }
+  }
+
+  Future<void> _submit(
+    Household h,
+    List<CreditCard> cards, {
+    bool addAnother = false,
+  }) async {
     if (_amount <= 0 || _categoryId == null) {
       FtHaptics.warning();
       setState(() => _error = 'Lengkapi jumlah & kategori');
@@ -266,8 +351,13 @@ class _RecordExpenseScreenState extends ConsumerState<RecordExpenseScreen> {
         _saveLastPayment();
       }
       if (mounted) {
-        FtCelebrate.show(context, message: 'Tersimpan');
-        context.pop();
+        if (addAnother) {
+          FtCelebrate.show(context, message: 'Tersimpan — lanjut');
+          _resetForNext();
+        } else {
+          FtCelebrate.show(context, message: 'Tersimpan');
+          context.pop();
+        }
       }
     } on StateError catch (e) {
       FtHaptics.error();
@@ -388,6 +478,11 @@ class _RecordExpenseScreenState extends ConsumerState<RecordExpenseScreen> {
                       _CicilanLockedBanner(),
                       const SizedBox(height: 16),
                     ],
+                    if (!widget.isEdit)
+                      ExpenseFavoritesRow(
+                        categories: categories,
+                        onPick: _applyFavorite,
+                      ),
                     AbsorbPointer(
                       absorbing: cicilanLock,
                       child: Opacity(
@@ -433,6 +528,22 @@ class _RecordExpenseScreenState extends ConsumerState<RecordExpenseScreen> {
                         });
                       },
                     ),
+                    // Split: belanja campur (struk supermarket dll) dibagi ke
+                    // beberapa kategori sekaligus.
+                    if (!widget.isEdit && !_cicilan && _amount > 0)
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton.icon(
+                          onPressed:
+                              _busy ? null : () => _openSplit(household),
+                          icon: const Icon(Icons.call_split_rounded,
+                              size: 15),
+                          label: const Text(
+                            'Split ke beberapa kategori',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                        ),
+                      ),
                     const SizedBox(height: 22),
                     const Eyebrow('Pembayaran'),
                     const SizedBox(height: 10),
@@ -531,10 +642,58 @@ class _RecordExpenseScreenState extends ConsumerState<RecordExpenseScreen> {
                               setState(() => _recurring = v);
                             },
                     ),
+                    if (!widget.isEdit) ...[
+                      const SizedBox(height: 10),
+                      _QuickDateChips(
+                        selected: _date,
+                        onPick: (d) {
+                          FtHaptics.select();
+                          setState(() => _date = d);
+                        },
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Tenang — kategori, tanggal & detail bisa diubah kapan saja.',
+                        style: TextStyle(
+                          color: FtColors.ink4,
+                          fontSize: 10.5,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ],
                     if (_error != null) ...[
                       const SizedBox(height: 14),
                       Text(
                         _error!,
+                      ),
+                    ],
+                    if (!widget.isEdit) ...[
+                      const SizedBox(height: 18),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: (canSubmit && !_busy)
+                                  ? () => _submit(household, cards,
+                                      addAnother: true)
+                                  : null,
+                              icon: const Icon(Icons.playlist_add_rounded,
+                                  size: 18),
+                              label: const Text('Simpan & tambah lagi'),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          IconButton(
+                            onPressed: (_amount > 0 && _categoryId != null)
+                                ? _saveFavorite
+                                : null,
+                            tooltip: 'Jadikan favorit',
+                            icon: Icon(
+                              Icons.star_border_rounded,
+                              color: FtColors.clay,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ],
@@ -545,6 +704,62 @@ class _RecordExpenseScreenState extends ConsumerState<RecordExpenseScreen> {
         ),
         ),
       ),
+    );
+  }
+}
+
+/// Chip tanggal cepat — Hari ini / Kemarin / 2 hari lalu. Desain
+/// "catch-up": kebanyakan orang mencatat rapel, bukan harian.
+class _QuickDateChips extends StatelessWidget {
+  const _QuickDateChips({required this.selected, required this.onPick});
+
+  final DateTime selected;
+  final ValueChanged<DateTime> onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final options = [
+      (label: 'Hari ini', date: now),
+      (label: 'Kemarin', date: now.subtract(const Duration(days: 1))),
+      (label: '2 hari lalu', date: now.subtract(const Duration(days: 2))),
+    ];
+    final selKey = DateTime(selected.year, selected.month, selected.day);
+    return Row(
+      children: [
+        for (final o in options) ...[
+          Expanded(
+            child: GestureDetector(
+              onTap: () => onPick(o.date),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 7),
+                decoration: BoxDecoration(
+                  color: DateTime(o.date.year, o.date.month, o.date.day) ==
+                          selKey
+                      ? FtColors.ink
+                      : FtColors.surfaceAlt,
+                  borderRadius: BorderRadius.circular(9),
+                  border: Border.all(color: FtColors.line, width: 0.5),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  o.label,
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: DateTime(
+                                o.date.year, o.date.month, o.date.day) ==
+                            selKey
+                        ? FtColors.bg
+                        : FtColors.ink2,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          if (o != options.last) const SizedBox(width: 8),
+        ],
+      ],
     );
   }
 }

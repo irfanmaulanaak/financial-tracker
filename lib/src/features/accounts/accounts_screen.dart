@@ -9,7 +9,6 @@ import '../household/household.dart';
 import '../household/household_providers.dart';
 import '../investments/investment.dart';
 import '../investments/investments_repository.dart';
-import '../investments/investments_screen.dart' show investmentsProvider;
 import 'account.dart';
 import 'accounts_repository.dart';
 import 'widgets/account_edit_sheet.dart';

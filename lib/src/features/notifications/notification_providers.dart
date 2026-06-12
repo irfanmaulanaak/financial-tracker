@@ -13,7 +13,7 @@ import '../goals/goals_screen.dart' show fundedGoalsProvider;
 import '../household/household_providers.dart';
 import '../insights/insights_providers.dart'
     show previousCyclesExpensesProvider;
-import '../investments/investments_screen.dart' show investmentsProvider;
+import '../investments/investments_repository.dart' show investmentsProvider;
 
 /// Notification kinds drive the icon + tone in the UI.
 enum NotificationKind {
@@ -223,7 +223,7 @@ final notificationsProvider = Provider<List<AppNotification>>((ref) {
       // threshold (updatedAt + 7d). Advances only when the user updates,
       // so "Bersihkan" works correctly.
       ts: inv.updatedAt.add(const Duration(days: 7)),
-      route: '/investments',
+      route: '/accounts',
     ));
   }
 

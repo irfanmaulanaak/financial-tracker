@@ -2,6 +2,60 @@ import 'package:financial_tracker/src/features/goals/goal.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  group('goalMilestoneCrossed', () {
+    test('melewati 50% → 50', () {
+      expect(
+        goalMilestoneCrossed(before: 400, after: 500, target: 1000),
+        50,
+      );
+      expect(
+        goalMilestoneCrossed(before: 499, after: 999, target: 1000),
+        50,
+      );
+    });
+
+    test('melewati 100% → 100 (prioritas di atas 50)', () {
+      expect(
+        goalMilestoneCrossed(before: 900, after: 1000, target: 1000),
+        100,
+      );
+      expect(
+        goalMilestoneCrossed(before: 100, after: 1500, target: 1000),
+        100,
+      );
+    });
+
+    test('tidak melewati apa-apa → null', () {
+      expect(
+        goalMilestoneCrossed(before: 500, after: 600, target: 1000),
+        isNull,
+      );
+      expect(
+        goalMilestoneCrossed(before: 0, after: 499, target: 1000),
+        isNull,
+      );
+    });
+
+    test('sudah lewat sebelumnya → tidak dirayakan ulang', () {
+      expect(
+        goalMilestoneCrossed(before: 1000, after: 1100, target: 1000),
+        isNull,
+      );
+      expect(
+        goalMilestoneCrossed(before: 500, after: 700, target: 1000),
+        isNull,
+      );
+    });
+
+    test('target nol / setoran mundur → null', () {
+      expect(goalMilestoneCrossed(before: 0, after: 10, target: 0), isNull);
+      expect(
+        goalMilestoneCrossed(before: 600, after: 500, target: 1000),
+        isNull,
+      );
+    });
+  });
+
   group('reorderIds', () {
     const ids = ['a', 'b', 'c', 'd'];
 

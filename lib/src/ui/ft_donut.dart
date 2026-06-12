@@ -13,7 +13,7 @@ class FtDonutSegment {
   final Color color;
 }
 
-/// Pie/donut chart with rounded segment ends and an optional center label.
+/// Pie/donut chart with rounded segment ends.
 /// Mirrors `Donut` in `claude-design/design/widgets.jsx`.
 ///
 /// Segments sweep from zero into place over [animationDuration] on first
@@ -24,18 +24,12 @@ class FtDonut extends StatefulWidget {
     required this.segments,
     this.size = 130,
     this.thickness = 16,
-    this.centerLabel,
-    this.centerValue,
-    this.trackColor,
     this.animationDuration = const Duration(milliseconds: 700),
   });
 
   final List<FtDonutSegment> segments;
   final double size;
   final double thickness;
-  final String? centerLabel;
-  final String? centerValue;
-  final Color? trackColor;
   final Duration animationDuration;
 
   @override
@@ -72,7 +66,6 @@ class _FtDonutState extends State<FtDonut> {
 
   @override
   Widget build(BuildContext context) {
-    final showCenter = widget.centerLabel != null || widget.centerValue != null;
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
     return SizedBox(
       width: widget.size,
@@ -81,47 +74,15 @@ class _FtDonutState extends State<FtDonut> {
         tween: Tween(begin: _start, end: _target),
         duration: reduceMotion ? Duration.zero : widget.animationDuration,
         curve: Curves.easeOutCubic,
-        builder: (_, t, child) {
+        builder: (_, t, _) {
           return CustomPaint(
             painter: _DonutPainter(
               segments: widget.segments,
               thickness: widget.thickness,
-              trackColor: widget.trackColor ?? FtColors.line,
               progress: t,
             ),
-            child: child,
           );
         },
-        child: showCenter
-            ? Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (widget.centerLabel != null)
-                      Text(
-                        widget.centerLabel!.toUpperCase(),
-                        style: TextStyle(
-                          fontSize: 9.5,
-                          letterSpacing: 1.4,
-                          color: FtColors.ink3,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    if (widget.centerValue != null) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        widget.centerValue!,
-                        style: TextStyle(
-                          fontSize: widget.size * 0.16,
-                          fontWeight: FontWeight.w500,
-                          color: FtColors.ink,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              )
-            : null,
       ),
     );
   }
@@ -131,13 +92,11 @@ class _DonutPainter extends CustomPainter {
   _DonutPainter({
     required this.segments,
     required this.thickness,
-    required this.trackColor,
     required this.progress,
   });
 
   final List<FtDonutSegment> segments;
   final double thickness;
-  final Color trackColor;
   final double progress;
 
   @override
@@ -148,7 +107,7 @@ class _DonutPainter extends CustomPainter {
     );
 
     final track = Paint()
-      ..color = trackColor
+      ..color = FtColors.line
       ..style = PaintingStyle.stroke
       ..strokeWidth = thickness;
     canvas.drawArc(rect, 0, math.pi * 2, false, track);
@@ -175,6 +134,5 @@ class _DonutPainter extends CustomPainter {
   bool shouldRepaint(_DonutPainter old) =>
       old.segments != segments ||
       old.thickness != thickness ||
-      old.trackColor != trackColor ||
       old.progress != progress;
 }

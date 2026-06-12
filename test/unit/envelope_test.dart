@@ -47,30 +47,4 @@ void main() {
       );
     });
   });
-
-  group('envelopeLeft', () {
-    test('remaining envelope', () {
-      expect(
-        envelopeLeft(
-          monthlyBudget: 1000000,
-          rollover: true,
-          prevCycleSpent: 800000,
-          spentThisCycle: 300000,
-        ),
-        900000,
-      );
-    });
-
-    test('floored at zero', () {
-      expect(
-        envelopeLeft(
-          monthlyBudget: 100000,
-          rollover: false,
-          prevCycleSpent: 0,
-          spentThisCycle: 250000,
-        ),
-        0,
-      );
-    });
-  });
 }

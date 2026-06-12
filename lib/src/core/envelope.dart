@@ -27,19 +27,3 @@ int effectiveBudget({
   return monthlyBudget +
       carryOver(monthlyBudget: monthlyBudget, prevCycleSpent: prevCycleSpent);
 }
-
-/// Remaining envelope this cycle (floored at 0 for display).
-int envelopeLeft({
-  required int monthlyBudget,
-  required bool rollover,
-  required int prevCycleSpent,
-  required int spentThisCycle,
-}) {
-  final left = effectiveBudget(
-        monthlyBudget: monthlyBudget,
-        rollover: rollover,
-        prevCycleSpent: prevCycleSpent,
-      ) -
-      spentThisCycle;
-  return left < 0 ? 0 : left;
-}

@@ -1,5 +1,39 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+/// Permintaan cek transaksi: satu anggota minta anggota lain meninjau.
+/// Disimpan inline di doc expense sebagai map `review` — satu permintaan
+/// aktif per transaksi (cukup untuk rumah tangga 2-5 orang).
+class ReviewRequest {
+  final String by;
+  final String to;
+  final bool done;
+  final DateTime at;
+
+  const ReviewRequest({
+    required this.by,
+    required this.to,
+    required this.done,
+    required this.at,
+  });
+
+  Map<String, dynamic> toMap() => {
+        'by': by,
+        'to': to,
+        'done': done,
+        'at': Timestamp.fromDate(at),
+      };
+
+  static ReviewRequest? fromMap(Map<String, dynamic>? m) {
+    if (m == null) return null;
+    return ReviewRequest(
+      by: m['by'] as String? ?? '',
+      to: m['to'] as String? ?? '',
+      done: m['done'] as bool? ?? false,
+      at: (m['at'] as Timestamp?)?.toDate() ?? DateTime.now(),
+    );
+  }
+}
+
 class Expense {
   final String id;
   final int amount;
@@ -31,6 +65,9 @@ class Expense {
   /// the doc itself (no subcollection read needed for list rows).
   final Map<String, String> reactions;
 
+  /// Permintaan cek aktif (null = tidak ada). Jangan hilangkan saat edit.
+  final ReviewRequest? review;
+
   const Expense({
     required this.id,
     required this.amount,
@@ -46,6 +83,7 @@ class Expense {
     required this.createdAt,
     required this.createdBy,
     this.reactions = const {},
+    this.review,
   });
 
   Map<String, dynamic> toMap() => {
@@ -62,6 +100,7 @@ class Expense {
         'createdAt': Timestamp.fromDate(createdAt),
         'createdBy': createdBy,
         if (reactions.isNotEmpty) 'reactions': reactions,
+        if (review != null) 'review': review!.toMap(),
       };
 
   static Expense fromSnapshot(DocumentSnapshot snap) {
@@ -82,6 +121,8 @@ class Expense {
       createdBy: m['createdBy'] as String,
       reactions: Map<String, String>.from(
           m['reactions'] as Map<String, dynamic>? ?? const {}),
+      review:
+          ReviewRequest.fromMap(m['review'] as Map<String, dynamic>?),
     );
   }
 }

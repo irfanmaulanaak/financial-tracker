@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers.dart';
@@ -76,11 +75,3 @@ final canRecordTxnProvider = Provider<bool>((ref) {
 final canWriteAllProvider = Provider<bool>((ref) {
   return ref.watch(myAccessLevelProvider) == AccessLevel.full;
 });
-
-/// Convenience: the current Firebase user (throws if absent — use in screens
-/// where auth is guaranteed by the router).
-User requireUser(WidgetRef ref) {
-  final user = ref.read(authStateProvider).value;
-  if (user == null) throw StateError('no_signed_in_user');
-  return user;
-}

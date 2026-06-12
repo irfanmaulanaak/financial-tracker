@@ -108,6 +108,7 @@ class CategoryManageScreen extends ConsumerWidget {
             color: saved.color,
             monthlyBudget: saved.budget,
             isInvestment: saved.isInvestment,
+            ziswaf: saved.ziswaf,
           );
     } catch (e) {
       if (context.mounted) {
@@ -137,6 +138,7 @@ class CategoryManageScreen extends ConsumerWidget {
                   color: saved.color,
                   monthlyBudget: saved.budget,
                   isInvestment: saved.isInvestment,
+                  ziswaf: saved.ziswaf,
                 )
               : x,
         )
@@ -228,12 +230,14 @@ class _CategoryDraft {
   final String color;
   final int budget;
   final bool isInvestment;
+  final bool ziswaf;
   const _CategoryDraft(
     this.label,
     this.icon,
     this.color,
     this.budget,
     this.isInvestment,
+    this.ziswaf,
   );
 }
 
@@ -257,6 +261,7 @@ class _CategoryEditSheetState extends State<_CategoryEditSheet> {
   String _color = '#5E7A64';
   String _icon = 'category';
   late bool _isInvestment = widget.initial?.isInvestment ?? false;
+  late bool _ziswaf = widget.initial?.ziswaf ?? false;
 
   static const _iconChoices = [
     'restaurant',
@@ -304,7 +309,7 @@ class _CategoryEditSheetState extends State<_CategoryEditSheet> {
     final budget = Money.parse(_budget.text) ?? 0;
     Navigator.pop(
       context,
-      _CategoryDraft(label, _icon, _color, budget, _isInvestment),
+      _CategoryDraft(label, _icon, _color, budget, _isInvestment, _ziswaf),
     );
   }
 
@@ -353,6 +358,17 @@ class _CategoryEditSheetState extends State<_CategoryEditSheet> {
               subtitle: const Text(
                 'Tetap tampil di daftar, tapi tidak dihitung '
                 'dalam total pengeluaran',
+                style: TextStyle(fontSize: 12),
+              ),
+            ),
+            SwitchListTile(
+              value: _ziswaf,
+              onChanged: (v) => setState(() => _ziswaf = v),
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Kategori ZISWAF'),
+              subtitle: const Text(
+                'Zakat, infak, sedekah, wakaf — total tahunannya '
+                'direkap di layar Rekap Siklus',
                 style: TextStyle(fontSize: 12),
               ),
             ),

@@ -92,6 +92,38 @@ class ExpenseSocialRepository {
           current == emoji ? FieldValue.delete() : emoji,
     });
   }
+
+  /// Minta anggota lain meninjau transaksi (menimpa permintaan sebelumnya).
+  Future<void> requestReview({
+    required String householdId,
+    required String expenseId,
+    required String by,
+    required String to,
+  }) {
+    return _expense(householdId, expenseId).update({
+      'review': ReviewRequest(
+        by: by,
+        to: to,
+        done: false,
+        at: DateTime.now(),
+      ).toMap(),
+    });
+  }
+
+  Future<void> resolveReview({
+    required String householdId,
+    required String expenseId,
+  }) {
+    return _expense(householdId, expenseId).update({'review.done': true});
+  }
+
+  Future<void> clearReview({
+    required String householdId,
+    required String expenseId,
+  }) {
+    return _expense(householdId, expenseId)
+        .update({'review': FieldValue.delete()});
+  }
 }
 
 final expenseSocialRepositoryProvider =

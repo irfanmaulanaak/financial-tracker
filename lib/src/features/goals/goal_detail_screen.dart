@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/formatters.dart';
 import '../../core/providers.dart';
 import '../../theme.dart';
+import '../../ui/ft_celebrate.dart';
 import '../../ui/ft_refresh.dart';
 import '../../ui/ft_ring.dart';
 import '../../ui/ft_ui.dart';
@@ -17,7 +18,7 @@ import '../goals/goals_screen.dart' show fundedGoalsProvider, goalsProvider;
 import '../home/widgets/home_formatters.dart';
 import '../household/household_providers.dart';
 import '../investments/investment.dart';
-import '../investments/investments_screen.dart' show investmentsProvider;
+import '../investments/investments_repository.dart' show investmentsProvider;
 import 'widgets/goal_funding_sheet.dart';
 
 class GoalDetailScreen extends ConsumerWidget {
@@ -464,6 +465,25 @@ class _Body extends ConsumerWidget {
               amount: amount,
               byUid: uid,
             );
+        // Perayaan milestone — sekali, tepat di momen terlewati.
+        final milestone = goalMilestoneCrossed(
+          before: goal.current,
+          after: goal.current + amount,
+          target: goal.target,
+        );
+        if (context.mounted) {
+          FtCelebrate.show(
+            context,
+            message: switch (milestone) {
+              100 => '"${goal.label}" tercapai! Selamat!',
+              50 => 'Setengah jalan ke "${goal.label}"!',
+              _ => 'Setoran tersimpan',
+            },
+            hold: milestone != null
+                ? const Duration(milliseconds: 1400)
+                : const Duration(milliseconds: 600),
+          );
+        }
       } catch (e) {
         if (context.mounted) {
           showFtErrorSnack(context, e, prefix: 'Gagal menyetor ke tujuan');

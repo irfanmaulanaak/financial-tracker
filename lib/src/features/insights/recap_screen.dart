@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../core/budget_move.dart';
 import '../../core/expense_aggregations.dart';
 import '../../core/formatters.dart';
 import '../../core/payday.dart';
@@ -131,6 +133,42 @@ class _RecapScreenState extends ConsumerState<RecapScreen> {
                     ],
                   ),
                 ),
+                if (_which == 0)
+                  FtCard(
+                    margin: const EdgeInsets.fromLTRB(22, 0, 22, 10),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                    onTap: () => context.push('/money-date'),
+                    child: Row(
+                      children: [
+                        Icon(Icons.favorite_rounded,
+                            size: 18, color: FtColors.clay),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Money Date',
+                                style: TextStyle(
+                                  color: FtColors.ink,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              Text(
+                                'Review bareng ±7 menit — 4 langkah, 1 keputusan',
+                                style: TextStyle(
+                                    color: FtColors.ink3, fontSize: 11),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(Icons.chevron_right_rounded,
+                            size: 18, color: FtColors.ink4),
+                      ],
+                    ),
+                  ),
                 FtCard(
                   margin: const EdgeInsets.fromLTRB(22, 0, 22, 16),
                   child: Row(
@@ -161,6 +199,42 @@ class _RecapScreenState extends ConsumerState<RecapScreen> {
                     ),
                   )
                 else ...[
+                  // Framing positif: rayakan dulu yang berhasil dihemat,
+                  // baru tampilkan daftar lengkap (riset churn: rasa
+                  // bersalah saat melihat overspend = pemicu berhenti).
+                  if (_biggestSaver(byCat, byCatBase) case final saver?)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(22, 0, 22, 10),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: FtColors.moss.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: FtColors.moss.withValues(alpha: 0.24),
+                            width: 0.5,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.celebration_rounded,
+                                size: 16, color: FtColors.moss),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'Paling hemat: ${household.categoryOf(saver.id)?.label ?? '-'} — turun ${Money.compact(saver.saved)} vs pembanding.',
+                                style: TextStyle(
+                                  color: FtColors.moss,
+                                  fontSize: 12,
+                                  height: 1.4,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   const Padding(
                     padding: EdgeInsets.fromLTRB(22, 4, 22, 8),
                     child: Eyebrow('Per kategori vs siklus sebelumnya'),
@@ -228,12 +302,78 @@ class _RecapScreenState extends ConsumerState<RecapScreen> {
                     ),
                   ),
                 ],
+                // ZISWAF: total siklus + total tahun berjalan (bantu hitung
+                // zakat & rekap niat sedekah). Hanya tampil bila ada
+                // kategori bertanda ZISWAF.
+                if (household.ziswafCategoryIds.isNotEmpty) ...[
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(22, 16, 22, 8),
+                    child: Eyebrow('ZISWAF'),
+                  ),
+                  _ZiswafCard(
+                    household: household,
+                    cycleTotal: expenses
+                        .where((e) =>
+                            household.ziswafCategoryIds.contains(e.categoryId))
+                        .fold(0, (a, e) => a + e.amount),
+                  ),
+                ],
+                if (movesInCycle(household.budgetMoves,
+                        start: window.start, endExclusive: window.endExclusive)
+                    case final moves when moves.isNotEmpty) ...[
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(22, 16, 22, 8),
+                    child: Eyebrow('Pergeseran anggaran'),
+                  ),
+                  FtCard(
+                    margin: const EdgeInsets.fromLTRB(22, 0, 22, 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        for (final m in moves)
+                          Padding(
+                            padding:
+                                const EdgeInsets.symmetric(vertical: 4),
+                            child: Text(
+                              '${prettyName(household.memberOf(m.by)?.displayName ?? 'Anggota')} '
+                              'menggeser ${Money.compact(m.amount)}: '
+                              '${household.categoryOf(m.fromId)?.label ?? '-'} → '
+                              '${household.categoryOf(m.toId)?.label ?? '-'} '
+                              '· ${Dates.dayMonth(m.at)}',
+                              style: TextStyle(
+                                color: FtColors.ink2,
+                                fontSize: 12,
+                                height: 1.4,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
         ),
       ),
     );
+  }
+
+  /// Kategori dengan penurunan terbesar vs baseline (null bila tak ada).
+  ({String id, int saved})? _biggestSaver(
+    Map<String, int> byCat,
+    Map<String, int> byCatBase,
+  ) {
+    String? id;
+    var saved = 0;
+    for (final e in byCatBase.entries) {
+      final s = e.value - (byCat[e.key] ?? 0);
+      if (s > saved) {
+        saved = s;
+        id = e.key;
+      }
+    }
+    return id == null ? null : (id: id, saved: saved);
   }
 
   String? _noteOf(List<Expense> source, ExpenseRecord r) {
@@ -441,6 +581,87 @@ class _BiggestTile extends StatelessWidget {
               fontWeight: FontWeight.bold,
               fontSize: 13,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Total ZISWAF: siklus terpilih + tahun berjalan.
+class _ZiswafCard extends ConsumerWidget {
+  const _ZiswafCard({required this.household, required this.cycleTotal});
+
+  final Household household;
+  final int cycleTotal;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final yearList =
+        ref.watch(ziswafYearExpensesProvider).value ?? const <Expense>[];
+    final yearTotal = yearList.fold<int>(0, (a, e) => a + e.amount);
+    final year = DateTime.now().year;
+    return FtCard(
+      margin: const EdgeInsets.fromLTRB(22, 0, 22, 8),
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.volunteer_activism_rounded,
+                  size: 18, color: FtColors.moss),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Zakat, infak, sedekah & wakaf',
+                  style: TextStyle(
+                    color: FtColors.ink,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Eyebrow('Siklus ini'),
+                    const SizedBox(height: 2),
+                    Text(
+                      Money.format(cycleTotal),
+                      style: TextStyle(
+                        color: FtColors.ink,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Eyebrow('Total $year'),
+                    const SizedBox(height: 2),
+                    Text(
+                      Money.format(yearTotal),
+                      style: TextStyle(
+                        color: FtColors.moss,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),

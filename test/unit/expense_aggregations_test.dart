@@ -56,27 +56,4 @@ void main() {
     expect(m['u1'], 200000);
     expect(m['u2'], 95000);
   });
-
-  test('groupByDay buckets by local day', () {
-    final groups = groupByDay(sample);
-    expect(groups.length, 3);
-    expect(groups[DateTime(2025, 10, 5)]!.length, 2);
-    expect(groups[DateTime(2025, 10, 4)]!.length, 1);
-    expect(groups[DateTime(2025, 10, 3)]!.length, 1);
-  });
-
-  test('topCategories returns sorted descending', () {
-    final top = topCategories(sample, limit: 2);
-    expect(top.length, 2);
-    expect(top[0].key, 'shopping');
-    expect(top[0].value, 150000);
-    expect(top[1].key, 'food');
-    expect(top[1].value, 125000);
-  });
-
-  test('dailyBudget rounds monthly / cycleDays', () {
-    expect(dailyBudget(monthlyBudget: 9000000, cycleDays: 30), 300000);
-    expect(dailyBudget(monthlyBudget: 1000000, cycleDays: 31), 32258);
-    expect(dailyBudget(monthlyBudget: 100, cycleDays: 0), 0);
-  });
 }

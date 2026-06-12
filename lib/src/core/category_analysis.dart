@@ -79,15 +79,3 @@ CategoryAnalysis analyseCategory({
     verdict: verdict,
   );
 }
-
-/// Daily pattern: spending bucketed by day-of-week (Mon=1..Sun=7), normalised
-/// to a 0..1 share. Returns a 7-element list indexed by weekday-1.
-List<double> dailyPattern(List<({DateTime date, int amount})> records) {
-  final buckets = List<int>.filled(7, 0);
-  for (final r in records) {
-    buckets[r.date.weekday - 1] += r.amount;
-  }
-  final total = buckets.fold<int>(0, (a, b) => a + b);
-  if (total == 0) return List<double>.filled(7, 0);
-  return [for (final b in buckets) b / total];
-}

@@ -2,8 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum GoalScope { shared, personal }
 
-String goalScopeLabel(GoalScope s) => s == GoalScope.shared ? 'Bersama' : 'Pribadi';
-
 GoalScope goalScopeFromString(String? s) =>
     s == 'shared' ? GoalScope.shared : GoalScope.personal;
 
@@ -148,6 +146,21 @@ int? monthsToGoal({
   if (monthlyContrib <= 0) return null;
   final remaining = target - current;
   return (remaining / monthlyContrib).ceil();
+}
+
+/// Milestone yang baru terlewati oleh sebuah setoran: 100 (target tercapai)
+/// atau 50 (setengah jalan). Null bila tidak ada yang terlewati.
+/// Riset retensi: rayakan progres otomatis (Monarch/Harmoney), sekali saja
+/// di momen terlewati — tanpa badge permanen.
+int? goalMilestoneCrossed({
+  required int before,
+  required int after,
+  required int target,
+}) {
+  if (target <= 0 || after <= before) return null;
+  if (before < target && after >= target) return 100;
+  if (before * 2 < target && after * 2 >= target) return 50;
+  return null;
 }
 
 /// Pure helper: monthly contribution required to reach `target` by `dueDate`

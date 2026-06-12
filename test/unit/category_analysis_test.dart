@@ -68,31 +68,4 @@ void main() {
       expect(r.verdict, 'Baru muncul siklus ini');
     });
   });
-
-  group('dailyPattern', () {
-    test('empty input → all zero', () {
-      expect(dailyPattern([]), List.filled(7, 0.0));
-    });
-
-    test('single day → 100% in that bucket', () {
-      // 2025-09-30 is Tue (weekday 2 → index 1).
-      final r = dailyPattern([
-        (date: DateTime(2025, 9, 30), amount: 50000),
-      ]);
-      expect(r[1], 1.0);
-      for (var i = 0; i < 7; i++) {
-        if (i != 1) expect(r[i], 0.0);
-      }
-    });
-
-    test('shares sum to 1.0', () {
-      final r = dailyPattern([
-        (date: DateTime(2025, 9, 29), amount: 30000), // Mon
-        (date: DateTime(2025, 9, 30), amount: 70000), // Tue
-      ]);
-      expect(r[0], closeTo(0.3, 0.001));
-      expect(r[1], closeTo(0.7, 0.001));
-      expect(r.fold<double>(0, (a, b) => a + b), closeTo(1.0, 0.001));
-    });
-  });
 }

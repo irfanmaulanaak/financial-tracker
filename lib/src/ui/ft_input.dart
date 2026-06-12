@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../theme.dart';
 
@@ -24,6 +25,7 @@ class FtInput extends StatefulWidget {
     this.enabled = true,
     this.maxLines = 1,
     this.minLines,
+    this.inputFormatters,
   });
 
   final String? label;
@@ -43,6 +45,7 @@ class FtInput extends StatefulWidget {
   final bool enabled;
   final int maxLines;
   final int? minLines;
+  final List<TextInputFormatter>? inputFormatters;
 
   @override
   State<FtInput> createState() => _FtInputState();
@@ -93,6 +96,7 @@ class _FtInputState extends State<FtInput> {
           maxLines: widget.maxLines,
           minLines: widget.minLines,
           keyboardType: widget.keyboardType,
+          inputFormatters: widget.inputFormatters,
           textInputAction: widget.textInputAction,
           obscureText: widget.obscureText,
           autocorrect: widget.autocorrect,

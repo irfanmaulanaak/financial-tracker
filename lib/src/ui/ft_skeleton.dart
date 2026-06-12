@@ -54,31 +54,6 @@ class FtSkeletonCircle extends StatelessWidget {
   }
 }
 
-class FtSkeletonBlock extends StatelessWidget {
-  const FtSkeletonBlock({
-    super.key,
-    this.width,
-    this.height = 64,
-    this.radius = 18,
-  });
-
-  final double? width;
-  final double height;
-  final double radius;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: width,
-      height: height,
-      decoration: BoxDecoration(
-        color: FtColors.surfaceAlt,
-        borderRadius: BorderRadius.circular(radius),
-      ),
-    );
-  }
-}
-
 /// Pre-shaped row silhouette matching the standard FtCard tile pattern:
 /// `[circle] [two stacked lines] [trailing amount line]`. Drop into a
 /// Column to fake the list while data resolves.

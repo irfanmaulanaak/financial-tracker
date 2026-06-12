@@ -55,6 +55,43 @@ void main() {
     });
   });
 
+  group('nextWeekdayTime', () {
+    test('minggu yang sama bila masih di depan', () {
+      // 11 Jun 2026 = Kamis. Minggu berikutnya = 14 Jun.
+      expect(
+        nextWeekdayTime(DateTime(2026, 6, 11), DateTime.sunday, 18, 0),
+        DateTime(2026, 6, 14, 18, 0),
+      );
+    });
+
+    test('hari sama tapi jam lewat → minggu depan', () {
+      // 14 Jun 2026 = Minggu, 19:00 sudah lewat 18:00.
+      expect(
+        nextWeekdayTime(DateTime(2026, 6, 14, 19), DateTime.sunday, 18, 0),
+        DateTime(2026, 6, 21, 18, 0),
+      );
+    });
+  });
+
+  group('nextMoneyDateMoment', () {
+    test('2 hari sebelum gajian berikutnya jam 19.30', () {
+      // Payday 25. Now 11 Jun → next payday 25 Jun (Kamis, bukan weekend).
+      expect(
+        nextMoneyDateMoment(DateTime(2026, 6, 11), 25),
+        DateTime(2026, 6, 23, 19, 30),
+      );
+    });
+
+    test('momen siklus ini lewat → siklus berikutnya', () {
+      // Now 24 Jun (sudah lewat 23 Jun 19.30) → payday berikutnya 24 Jul
+      // (24 Jul 2026 = Jumat) → momen 22 Jul 19.30.
+      final m = nextMoneyDateMoment(DateTime(2026, 6, 24), 25);
+      expect(m.isAfter(DateTime(2026, 6, 24)), isTrue);
+      expect(m.month, 7);
+      expect(m.hour, 19);
+    });
+  });
+
   group('reminderMoment', () {
     test('three days before at 09:00', () {
       expect(

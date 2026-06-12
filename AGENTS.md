@@ -78,6 +78,22 @@ Update this section as the project evolves.
 - Emulator tests: seed household HARUS menyertakan `memberAccess` (rules access-tier); jalankan via `npx firebase emulators:exec --only firestore --project financial-tracker-test 'npm test'` di `emulator_tests/`.
 - Utang kartu = 2 angka (Jun 2026): `used` = tampilan ala app BCA (cicilan tertagih belum dibayar; pre-block penuh sebelum tagihan pertama; lompat di `billingDay` — by design) untuk UI kartu/limit. `outstanding` = utang riil (SELURUH sisa cicilan + transaksi belum dibayar; bebas tanggal) — dipakai net worth + health score. `plainPaid` di doc kartu = akumulasi pembayaran transaksi reguler (cicilan via `monthsPaid`). Semua dihitung `cardDebtTotals()` di `core/cicilan.dart`, ditulis `recalcUsed`. Regression: `test/unit/cicilan_test.dart` group `cardDebtTotals`.
 
+### Fitur ronde 2 (riset Jun 2026 — semua terpasang)
+- Kunci app: `core/app_lock.dart` + `features/security/` — default OFF, toggle di Settings → Akun & Keamanan. PIN di-hash SHA-256+salt di `flutter_secure_storage`; biometrik via `local_auth` (Android perlu `FlutterFragmentActivity` + izin USE_BIOMETRIC; iOS NSFaceIDUsageDescription). Gate di `app.dart` (`AppLockGate`), kunci saat app paused.
+- Streak pemaaf: `recordingStreak(grace: 1)` — 1 hari bolong tidak putus (tidak menambah hitungan).
+- Favorit expense: `favorite_expenses.dart` (SharedPreferences, cap 6) + chip di form catat; "Simpan & tambah lagi" reset form tapi pertahankan tanggal+metode.
+- Geser anggaran: `core/budget_move.dart` + `Household.budgetMoves` (cap 30, jejak by/at) + `BudgetMoveSheet`; entry dari banner over-budget detail kategori, Money Date, recap.
+- Milestone goal 50%/100%: `goalMilestoneCrossed` di `goal.dart` → FtCelebrate di goal detail.
+- Notifikasi: rekap mingguan (Minggu 18:00) + money date (2 hari sebelum gajian 19:30) — `core/reminder_times.dart`, toggle di Settings.
+- Money Date `/money-date`: 4 langkah (rayakan → sorotan → tagihan 7 hari → 1 keputusan), data delta dari `core/money_date.dart`.
+- Minta-cek transaksi: `Expense.review` map `{by,to,done,at}` (JANGAN hilangkan saat edit — sudah di-carry di repo), tombol di detail sheet, badge "minta dicek" di daftar. Repo: `ExpenseSocialRepository.requestReview/resolveReview/clearReview`.
+- Kalender tagihan `/calendar` (menu ⋯): jatuh tempo kartu + tagihan rutin s/d akhir siklus (`core/upcoming.dart`) + proyeksi sisa kas (`core/cash_projection.dart` — kas − tagihan − rata² harian × sisa hari).
+- Split transaksi: `core/split_expense.dart` + `SplitExpenseSheet` — N pengeluaran biasa per bagian (tanpa perubahan model), tombol di form catat saat amount > 0.
+- ZISWAF: `Category.ziswaf` (toggle di kelola kategori) → kartu total siklus + total tahun berjalan di `/recap` (`ziswafYearExpensesProvider`).
+- Insight harian: `core/daily_insight.dart` (aturan berprioritas, pure) + `DailyInsightLine` di home — maks 1 kalimat/hari, dikunci via SharedPreferences (`insight_day/text`).
+- Hero "aman dibelanjakan": slide pertama carousel home — `core/safe_to_spend.dart` (sisa budget+carry ÷ hari tersisa) dengan anotasi cara hitung.
+- Banner home (`AlertBand`) sekarang punya aksi opsional (`actionLabel`/`onAction`) — peringatan selalu berpasangan langkah berikutnya; copy non-blaming.
+
 ### Build commands
 - Standard run/build: `flutter run` / `flutter build {ios|apk|appbundle|web}`.
 - The Settings → Tentang card surfaces the app version via the `APP_VERSION`

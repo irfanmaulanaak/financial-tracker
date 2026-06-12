@@ -13,7 +13,7 @@ import '../../ui/ft_ui.dart';
 import '../household/household_providers.dart';
 import '../household/name_format.dart';
 import '../investments/investment.dart';
-import '../investments/investments_screen.dart' show investmentsProvider;
+import '../investments/investments_repository.dart' show investmentsProvider;
 import 'goal.dart';
 import 'goal_repository.dart';
 import 'widgets/goal_card.dart';

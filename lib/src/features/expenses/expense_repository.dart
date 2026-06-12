@@ -435,6 +435,7 @@ class ExpenseRepository {
           createdAt: old.createdAt,
           createdBy: old.createdBy,
           reactions: old.reactions,
+          review: old.review,
         ).toMap(),
       );
       touchedCardId = old.cardId;
@@ -558,6 +559,7 @@ class ExpenseRepository {
         createdAt: old.createdAt,
         createdBy: old.createdBy,
         reactions: old.reactions,
+        review: old.review,
       );
       tx.set(expenseRef, updated.toMap());
 

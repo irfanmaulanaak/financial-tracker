@@ -2,13 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/daily_insight.dart';
 import '../../core/envelope.dart';
 import '../../core/expense_aggregations.dart';
+import '../../core/formatters.dart';
 import '../../core/health_score.dart';
 import '../../core/in_app_indicators.dart';
 import '../../core/net_worth.dart';
+import '../../core/payday.dart';
 import '../../core/providers.dart';
 import '../../core/recurring_runner.dart';
+import '../../core/safe_to_spend.dart';
 import '../../core/streak.dart';
 import '../../theme.dart';
 import '../../ui/ft_refresh.dart';
@@ -27,7 +31,7 @@ import '../incomes/income.dart';
 import '../incomes/income_providers.dart';
 import '../insights/insights_providers.dart';
 import '../investments/investment.dart';
-import '../investments/investments_screen.dart';
+import '../investments/investments_repository.dart' show investmentsProvider;
 import '../notifications/reminder_scheduler.dart';
 import '../onboarding/onboarding_state.dart';
 import '../onboarding/widgets/onboarding_checklist.dart';
@@ -36,6 +40,7 @@ import 'net_worth_snapshot.dart';
 import 'net_worth_snapshot_repository.dart';
 import 'widgets/banners.dart';
 import 'widgets/category_grid.dart';
+import 'widgets/daily_insight_line.dart';
 import 'widgets/goals_preview.dart';
 import 'widgets/home_header.dart';
 import 'widgets/home_hero_carousel.dart';
@@ -251,6 +256,31 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ];
           final streak = ref.watch(recordingStreakProvider);
 
+          // Insight 1 kalimat/hari — kandidat dihitung dari data terkini,
+          // dikunci per-hari oleh DailyInsightLine.
+          final cycleNow = currentCycle(now, payday: household.payday);
+          final yesterdayKey = Dates.dayKey(now)
+              .subtract(const Duration(days: 1));
+          final insightCandidate = dailyInsight(
+            categories: [
+              for (final c in categories)
+                (
+                  id: c.id,
+                  label: c.label,
+                  budget: c.monthlyBudget + (carries[c.id] ?? 0),
+                  spent: byCat[c.id] ?? 0,
+                ),
+            ],
+            prevSpentById: prevByCat,
+            totalSpent: totalSpentValue,
+            totalBudget: household.monthlyBudgetTotal,
+            daysElapsed:
+                Dates.dayKey(now).difference(cycleNow.start).inDays + 1,
+            cycleLength: cycleLengthDays(cycleNow),
+            noSpendYesterday: !cycleNow.start.isAfter(yesterdayKey) &&
+                expenses.every((e) => Dates.dayKey(e.date) != yesterdayKey),
+          );
+
           Widget section(Widget child, {int index = 0}) => FtFadeUp(
                 duration: const Duration(milliseconds: 340),
                 delay: Duration(milliseconds: index * 60),
@@ -265,6 +295,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           // income so it matches the ratio slide (and what the user really
           // means by "earnings this cycle").
           final cycleNet = gajiIncome - totalSpentValue;
+
+          // Slide "aman dibelanjakan": budget total (termasuk carry amplop)
+          // − terpakai, dibagi hari tersisa sampai gajian.
+          final carryTotal =
+              carries.values.fold<int>(0, (a, b) => a + b);
+          final budgetTotal = household.monthlyBudgetTotal + carryTotal;
+          final daysLeftCycle = cycleNow.endExclusive
+              .difference(Dates.dayKey(now))
+              .inDays;
+          final sts = safeToSpend(
+            totalBudget: budgetTotal,
+            spent: totalSpentValue,
+            daysLeft: daysLeftCycle,
+          );
+          final safe = (
+            perDay: sts.perDay,
+            remaining: sts.remaining,
+            daysLeft: daysLeftCycle,
+            nextPayday: cycleNow.endExclusive,
+            hasBudget: household.monthlyBudgetTotal > 0,
+          );
 
           return FtAppChrome(
             current: FtTab.home,
@@ -314,6 +365,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       gajiIncome: gajiIncome,
                       cards: cards,
                       health: health,
+                      safe: safe,
                     ),
                     index: 1,
                   ),
@@ -324,6 +376,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       StreakBanner(streak: streak),
                       index: 2 + dueBanners.length,
                     ),
+                  section(
+                    DailyInsightLine(candidate: insightCandidate),
+                    index: 3,
+                  ),
                   section(
                     CategoryGrid(
                       categories: categories.take(4).toList(),
@@ -370,6 +426,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         context.push('/categories');
       case 'subscriptions':
         context.push('/subscriptions');
+      case 'calendar':
+        context.push('/calendar');
       case 'debts':
         context.push('/debts');
       case 'members':
