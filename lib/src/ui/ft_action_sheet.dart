@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../features/household/household_providers.dart';
 import '../theme.dart';
 import 'ft_breakpoints.dart';
+import 'ft_glass.dart';
 import 'ft_haptics.dart';
 import 'ft_motion.dart';
 
@@ -24,7 +25,8 @@ Future<T?> showFtActionSheet<T>({
   if (context.isAtLeastMedium) {
     return showDialog<T>(
       context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.32),
+      // Liquid: scrim tipis supaya wallpaper tetap hidup di balik kaca.
+      barrierColor: Colors.black.withValues(alpha: FtColors.liquid ? 0.18 : 0.32),
       builder: (ctx) {
         return Center(
           child: ConstrainedBox(
@@ -33,20 +35,19 @@ Future<T?> showFtActionSheet<T>({
               padding: const EdgeInsets.all(24),
               child: Material(
                 color: Colors.transparent,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: FtColors.bg,
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: FtColors.line, width: 0.5),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x1A000000),
-                        blurRadius: 32,
-                        offset: Offset(0, 12),
-                      ),
-                    ],
-                  ),
+                child: FtGlass(
+                  borderRadius: BorderRadius.circular(24),
+                  baseColor: FtColors.bg,
+                  fallbackBorderColor: FtColors.line,
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x1A000000),
+                      blurRadius: 32,
+                      offset: Offset(0, 12),
+                    ),
+                  ],
                   padding: const EdgeInsets.fromLTRB(0, 14, 0, 18),
+                  animateIn: true,
                   child: FtFadeUp(
                     duration: const Duration(milliseconds: 260),
                     distance: 8,
@@ -66,7 +67,7 @@ Future<T?> showFtActionSheet<T>({
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    barrierColor: Colors.black.withValues(alpha: 0.32),
+    barrierColor: Colors.black.withValues(alpha: FtColors.liquid ? 0.18 : 0.32),
     builder: (ctx) {
       final viewInsets = MediaQuery.viewInsetsOf(ctx);
       final padding = MediaQuery.paddingOf(ctx);
@@ -74,12 +75,12 @@ Future<T?> showFtActionSheet<T>({
         duration: const Duration(milliseconds: 180),
         curve: Curves.easeOutCubic,
         padding: EdgeInsets.only(bottom: viewInsets.bottom),
-        child: Container(
-          decoration: BoxDecoration(
-            color: FtColors.bg,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-          ),
+        child: FtGlass(
+          borderRadius:
+              const BorderRadius.vertical(top: Radius.circular(28)),
+          baseColor: FtColors.bg,
           padding: EdgeInsets.only(top: 10, bottom: padding.bottom + 18),
+          animateIn: true,
           child: SafeArea(
             top: false,
             bottom: false,

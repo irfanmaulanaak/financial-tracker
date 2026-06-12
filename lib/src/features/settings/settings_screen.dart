@@ -204,6 +204,7 @@ class _DisplaySection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef _) {
+    final liquid = ref.watch(liquidThemeProvider);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -239,10 +240,47 @@ class _DisplaySection extends ConsumerWidget {
                   ],
                 ),
               ),
+              const Divider(height: 1),
+              SettingsSwitchRow(
+                label: 'Liquid Glass',
+                detail: 'Tampilan kaca + background hidup (eksperimen)',
+                value: liquid,
+                trailing: const _BetaBadge(),
+                onChanged: (v) =>
+                    ref.read(liquidThemeProvider.notifier).setLiquid(v),
+              ),
             ],
           ),
         ),
       ],
+    );
+  }
+}
+
+class _BetaBadge extends StatelessWidget {
+  const _BetaBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: FtColors.clay.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: FtColors.clay.withValues(alpha: 0.3),
+          width: 0.5,
+        ),
+      ),
+      child: Text(
+        'BETA',
+        style: TextStyle(
+          fontSize: 9,
+          letterSpacing: 1,
+          fontWeight: FontWeight.w600,
+          color: FtColors.clay,
+        ),
+      ),
     );
   }
 }

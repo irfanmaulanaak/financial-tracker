@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -12,6 +13,7 @@ import 'features/cards/cards_screen.dart';
 import 'features/categories/category_detail_screen.dart';
 import 'features/categories/category_manage_screen.dart';
 import 'features/debts/debts_screen.dart';
+import 'features/dev/liquid_preview_screen.dart';
 import 'features/expenses/edit_expense_screen.dart';
 import 'features/expenses/expense_log_screen.dart';
 import 'features/expenses/record_expense_screen.dart';
@@ -43,15 +45,25 @@ import 'ui/ft_motion.dart';
 import 'core/providers.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
-  final auth = ref.watch(authStateProvider);
-  final userDoc = ref.watch(currentUserDocProvider);
   final refresh = _ProviderRefreshNotifier(ref);
+  ref.onDispose(refresh.dispose);
 
   return GoRouter(
     initialLocation: '/',
     refreshListenable: refresh,
     redirect: (context, state) {
+      // PENTING: baca via ref.read, BUKAN ref.watch di body provider —
+      // watch membuat GoRouter dibangun ulang tiap stream emit (auth token,
+      // perubahan user doc) dan navigasi mental balik ke '/'.
+      // refreshListenable di atas yang memicu evaluasi ulang redirect.
+      final auth = ref.read(authStateProvider);
+      final userDoc = ref.read(currentUserDocProvider);
       final loc = state.matchedLocation;
+      // Lab tampilan liquid — debug only, lewati seluruh guard auth.
+      if (kDebugMode &&
+          (loc == '/dev/liquid' || state.uri.path == '/dev/liquid')) {
+        return null;
+      }
       final signedIn = auth.value != null;
       final loadingAuth = auth.isLoading;
       final hid = userDoc.value?['householdId'] as String?;
@@ -132,6 +144,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       _fadeRoute('/calendar', (_) => const BillCalendarScreen()),
       _fadeRoute('/debts', (_) => const DebtsScreen()),
       _fadeRoute('/settings', (_) => const SettingsScreen()),
+      if (kDebugMode)
+        _fadeRoute('/dev/liquid', (_) => const LiquidPreviewScreen()),
     ],
   );
 });

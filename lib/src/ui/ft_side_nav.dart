@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../theme.dart';
 import 'ft_breakpoints.dart';
+import 'ft_glass.dart';
 import 'ft_haptics.dart';
 import 'ft_motion.dart';
 import 'ft_ui.dart' show FtTab;
@@ -37,11 +38,10 @@ class FtSideNav extends StatelessWidget {
         // ellipsis; 84 truncated it to "Pengeluar…".
         width: extended ? 200 : 96,
         margin: const EdgeInsets.fromLTRB(12, 12, 0, 12),
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
-        decoration: BoxDecoration(
-          color: FtColors.surface.withValues(alpha: 0.88),
+        child: FtGlass(
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: FtColors.lineStrong, width: 0.5),
+          fallbackAlpha: 0.88,
+          fallbackBorderColor: FtColors.lineStrong,
           boxShadow: const [
             BoxShadow(
               color: Color(0x14000000),
@@ -49,19 +49,20 @@ class FtSideNav extends StatelessWidget {
               offset: Offset(0, 8),
             ),
           ],
-        ),
-        child: Column(
-          children: [
-            for (final item in items)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 3),
-                child: _SideButton(
-                  item: item,
-                  active: current == item.tab,
-                  extended: extended,
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+          child: Column(
+            children: [
+              for (final item in items)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 3),
+                  child: _SideButton(
+                    item: item,
+                    active: current == item.tab,
+                    extended: extended,
+                  ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -99,8 +100,18 @@ class _SideButton extends StatelessWidget {
           horizontal: extended ? 14 : 4,
         ),
         decoration: BoxDecoration(
-          color: active ? FtColors.bg : Colors.transparent,
+          color: active
+              ? (FtColors.liquid
+                  ? FtColors.bg.withValues(alpha: 0.78)
+                  : FtColors.bg)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(16),
+          border: active && FtColors.liquid
+              ? Border.all(
+                  color: Colors.white.withValues(alpha: 0.35),
+                  width: 0.8,
+                )
+              : null,
         ),
         child: extended
             ? Row(

@@ -1,6 +1,9 @@
+import 'dart:ui' show lerpDouble;
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../theme.dart';
 import 'ft_haptics.dart';
 
 /// Entry animation: fades + translates up. Matches the design's `ft-fadeup`.
@@ -116,13 +119,37 @@ class _FtTapScaleState extends State<FtTapScale> {
               if (widget.haptic) FtHaptics.warning();
               widget.onLongPress!();
             },
-      child: AnimatedScale(
+      child: _pressEffect(context),
+    );
+  }
+
+  Widget _pressEffect(BuildContext context) {
+    final jelly = FtColors.liquid && !MediaQuery.disableAnimationsOf(context);
+    if (!jelly) {
+      return AnimatedScale(
         scale: _down ? widget.scale : 1.0,
         duration: const Duration(milliseconds: 140),
         // Slight overshoot on release for an iOS-like spring feel.
         curve: const Cubic(0.34, 1.36, 0.64, 1),
         child: widget.child,
-      ),
+      );
+    }
+    // Liquid: squash & stretch — turun cepat agak gepeng, lepas membal
+    // (elasticOut melewati 0 → sumbu X/Y bergoyang bergantian).
+    return TweenAnimationBuilder<double>(
+      tween: Tween(end: _down ? 1.0 : 0.0),
+      duration: Duration(milliseconds: _down ? 90 : 440),
+      curve: _down ? Curves.easeOut : Curves.elasticOut,
+      builder: (_, p, child) {
+        final sx = lerpDouble(1, widget.scale * 1.015, p)!;
+        final sy = lerpDouble(1, widget.scale * 0.985, p)!;
+        return Transform(
+          transform: Matrix4.diagonal3Values(sx, sy, 1),
+          alignment: Alignment.center,
+          child: child,
+        );
+      },
+      child: widget.child,
     );
   }
 }

@@ -8,6 +8,14 @@ class FtColors {
   static void setBrightness(Brightness b) => _brightness = b;
   static bool get _dark => _brightness == Brightness.dark;
 
+  /// Beta "Liquid Glass": saat ON, chrome (nav/sheet) dirender sebagai kaca
+  /// buram dan background memakai blob gradient (FtLiquidBackground).
+  /// Konsumsi statis mengikuti pola [_brightness]; flip via Settings memicu
+  /// `ftRebuildAllWidgets()`.
+  static bool _liquid = false;
+  static void setLiquid(bool on) => _liquid = on;
+  static bool get liquid => _liquid;
+
   // Backgrounds & surfaces
   static Color get bg => _dark ? const Color(0xFF14130f) : const Color(0xFFF1EDE4);
   static Color get bgAlt => _dark ? const Color(0xFF1c1a15) : const Color(0xFFE9E4D7);
@@ -67,8 +75,9 @@ void ftRebuildAllWidgets() {
   WidgetsBinding.instance.rootElement?.visitChildren(rebuild);
 }
 
-ThemeData buildTheme(Brightness brightness) {
+ThemeData buildTheme(Brightness brightness, {bool liquid = false}) {
   FtColors.setBrightness(brightness);
+  FtColors.setLiquid(liquid);
   final isDark = brightness == Brightness.dark;
 
   final scheme = ColorScheme(
@@ -133,7 +142,9 @@ ThemeData buildTheme(Brightness brightness) {
     useMaterial3: true,
     brightness: brightness,
     colorScheme: scheme,
-    scaffoldBackgroundColor: FtColors.bg,
+    // Liquid: scaffold tembus pandang supaya FtLiquidBackground (dipasang
+    // global di app.dart) kelihatan di belakang semua layar.
+    scaffoldBackgroundColor: liquid ? Colors.transparent : FtColors.bg,
     textTheme: textTheme,
     primaryTextTheme: textTheme,
     // Defer to FtTapScale for pressed feedback; bare InkWell instances opt in

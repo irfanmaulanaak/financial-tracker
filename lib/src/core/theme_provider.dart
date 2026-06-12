@@ -30,3 +30,30 @@ class ThemeModeNotifier extends Notifier<ThemeMode> {
     });
   }
 }
+
+/// Beta "Liquid Glass" — lapisan tampilan opsional di atas tema terang/gelap.
+/// OFF (default) = tampilan klasik persis seperti sebelumnya.
+final liquidThemeProvider = NotifierProvider<LiquidThemeNotifier, bool>(
+  LiquidThemeNotifier.new,
+);
+
+class LiquidThemeNotifier extends Notifier<bool> {
+  static const _key = 'liquid_theme';
+
+  @override
+  bool build() {
+    _load();
+    return false;
+  }
+
+  Future<void> _load() async {
+    final prefs = await SharedPreferences.getInstance();
+    state = prefs.getBool(_key) ?? false;
+  }
+
+  Future<void> setLiquid(bool on) async {
+    state = on;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_key, on);
+  }
+}

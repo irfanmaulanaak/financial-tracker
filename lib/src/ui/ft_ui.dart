@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,12 +6,14 @@ import '../features/household/household_providers.dart';
 import '../theme.dart';
 import 'ft_action_sheet.dart';
 import 'ft_breakpoints.dart';
+import 'ft_glass.dart';
 import 'ft_haptics.dart';
 import 'ft_motion.dart';
 import 'ft_page_container.dart';
 import 'ft_side_nav.dart';
 
 export 'ft_breakpoints.dart';
+export 'ft_glass.dart';
 export 'ft_motion.dart';
 export 'ft_page_container.dart';
 export 'ft_skeleton.dart';
@@ -45,19 +45,32 @@ class FtCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final card = AnimatedContainer(
-      duration: const Duration(milliseconds: 160),
-      padding: padding,
-      decoration: BoxDecoration(
-        color: backgroundColor ?? FtColors.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: FtColors.line, width: 0.5),
-        boxShadow: const [
-          BoxShadow(color: Color(0x05000000), offset: Offset(0, 1)),
-        ],
-      ),
-      child: child,
-    );
+    // Liquid: kartu jadi kaca versi lite — wallpaper terlihat menembus
+    // (lensa prosedural, tanpa BackdropFilter per kartu yang mahal di list).
+    // Kartu dengan backgroundColor eksplisit (aksen) tetap solid.
+    final liquid = FtColors.liquid &&
+        backgroundColor == null &&
+        !MediaQuery.highContrastOf(context);
+    final Widget card = liquid
+        ? FtGlass(
+            lite: true,
+            borderRadius: BorderRadius.circular(18),
+            padding: padding,
+            child: child,
+          )
+        : AnimatedContainer(
+            duration: const Duration(milliseconds: 160),
+            padding: padding,
+            decoration: BoxDecoration(
+              color: backgroundColor ?? FtColors.surface,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: FtColors.line, width: 0.5),
+              boxShadow: const [
+                BoxShadow(color: Color(0x05000000), offset: Offset(0, 1)),
+              ],
+            ),
+            child: child,
+          );
 
     final maybeHero = heroTag == null
         ? card
@@ -459,68 +472,73 @@ class FtBottomNav extends StatelessWidget {
         ? -1.0
         : (activeIndex / (items.length - 1)) * 2 - 1;
 
-    return ClipRRect(
+    final liquid = FtColors.liquid;
+    return FtGlass(
       borderRadius: BorderRadius.circular(28),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-        child: Container(
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            color: FtColors.surface.withValues(alpha: 0.88),
-            borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: FtColors.lineStrong, width: 0.5),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x1A000000),
-                blurRadius: 24,
-                offset: Offset(0, 8),
-              ),
-            ],
-          ),
-          // IntrinsicHeight forces the Stack to size to the Row's natural
-          // height (icon + label + padding ≈ 48). Without it the Stack would
-          // try to be 0 high because the AnimatedAlign pill has no intrinsic
-          // height of its own.
-          child: IntrinsicHeight(
-            child: Stack(
-              children: [
-                // Floating pill — fractionally 1/N wide so it lands under one
-                // cell regardless of available width. Positioned.fill gives
-                // it the full Stack to align within.
-                Positioned.fill(
-                  child: AnimatedAlign(
-                    duration: const Duration(milliseconds: 280),
-                    curve: Curves.easeOutCubic,
-                    alignment: Alignment(align, 0),
-                    child: FractionallySizedBox(
-                      widthFactor: 1.0 / items.length,
-                      heightFactor: 1.0,
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 2),
-                        decoration: BoxDecoration(
-                          color: FtColors.bg,
-                          borderRadius: BorderRadius.circular(22),
-                        ),
-                      ),
+      fallbackAlpha: 0.88,
+      fallbackBlurSigma: 18,
+      fallbackBorderColor: FtColors.lineStrong,
+      boxShadow: const [
+        BoxShadow(
+          color: Color(0x1A000000),
+          blurRadius: 24,
+          offset: Offset(0, 8),
+        ),
+      ],
+      padding: const EdgeInsets.all(6),
+      sweep: true,
+      // IntrinsicHeight forces the Stack to size to the Row's natural
+      // height (icon + label + padding ≈ 48). Without it the Stack would
+      // try to be 0 high because the AnimatedAlign pill has no intrinsic
+      // height of its own.
+      child: IntrinsicHeight(
+        child: Stack(
+          children: [
+            // Floating pill — fractionally 1/N wide so it lands under one
+            // cell regardless of available width. Positioned.fill gives
+            // it the full Stack to align within.
+            Positioned.fill(
+              child: AnimatedAlign(
+                // Liquid: spring dengan overshoot kecil biar pill terasa
+                // membal; klasik tetap easeOutCubic.
+                duration: Duration(milliseconds: liquid ? 420 : 280),
+                curve: liquid ? Curves.easeOutBack : Curves.easeOutCubic,
+                alignment: Alignment(align, 0),
+                child: FractionallySizedBox(
+                  widthFactor: 1.0 / items.length,
+                  heightFactor: 1.0,
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 2),
+                    decoration: BoxDecoration(
+                      color: liquid
+                          ? FtColors.bg.withValues(alpha: 0.78)
+                          : FtColors.bg,
+                      borderRadius: BorderRadius.circular(22),
+                      border: liquid
+                          ? Border.all(
+                              color: Colors.white.withValues(alpha: 0.35),
+                              width: 0.8,
+                            )
+                          : null,
                     ),
                   ),
                 ),
-                Row(
-                  children: [
-                    for (final item in items)
-                      Expanded(
-                        child: _FtNavButton(
-                          item: item,
-                          active: current == item.tab,
-                          labelSize: labelSize,
-                          iconSize: iconSize,
-                        ),
-                      ),
-                  ],
-                ),
+              ),
+            ),
+            Row(
+              children: [
+                for (final item in items)
+                  Expanded(
+                    child: _FtNavButton(
+                      item: item,
+                      active: current == item.tab,
+                      labelSize: labelSize,
+                      iconSize: iconSize,
+                    ),
+                  ),
               ],
             ),
-          ),
+          ],
         ),
       ),
     );
