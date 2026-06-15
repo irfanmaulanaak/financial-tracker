@@ -13,7 +13,7 @@ import 'ft_liquid_background.dart';
 /// - seluruh bidang diperbesar ~1.10 (lensa dasar), dan
 /// - cincin tepi diperbesar ~1.35 → background tampak membelok ke dalam di
 ///   tepi, persis perilaku lensa cembung (tengah datar, tepi menekuk kuat).
-class GlassLensLayer extends StatefulWidget {
+class GlassLensLayer extends StatelessWidget {
   const GlassLensLayer({
     super.key,
     required this.borderRadius,
@@ -27,30 +27,9 @@ class GlassLensLayer extends StatefulWidget {
   final bool lite;
 
   @override
-  State<GlassLensLayer> createState() => _GlassLensLayerState();
-}
-
-class _GlassLensLayerState extends State<GlassLensLayer> {
-  Offset? _origin;
-
-  void _measure() {
-    if (!mounted) return;
-    final box = context.findRenderObject() as RenderBox?;
-    if (box == null || !box.hasSize || !box.attached) return;
-    final o = box.localToGlobal(Offset.zero);
-    if (o != _origin) setState(() => _origin = o);
-  }
-
-  @override
   Widget build(BuildContext context) {
     final scene = LiquidScene.maybeOf(context);
     if (scene == null) return const SizedBox.shrink();
-
-    // Posisi global dibutuhkan untuk memetakan wallpaper layar-penuh ke
-    // koordinat lokal kaca; diukur ulang tiap frame layout (konvergen sekali
-    // chrome diam — hanya berubah saat sheet meluncur/resize).
-    WidgetsBinding.instance.addPostFrameCallback((_) => _measure());
-    if (_origin == null) return const SizedBox.shrink();
 
     final dark = Theme.of(context).brightness == Brightness.dark;
     final screen = MediaQuery.sizeOf(context);
@@ -58,17 +37,13 @@ class _GlassLensLayerState extends State<GlassLensLayer> {
       child: AnimatedBuilder(
         animation: scene.controller,
         builder: (_, _) {
-          // Ukur ulang tiap tick — posisi berubah saat sheet meluncur naik
-          // tanpa memicu rebuild widget ini.
-          WidgetsBinding.instance.addPostFrameCallback((_) => _measure());
           return CustomPaint(
             painter: _LensPainter(
               t: scene.controller.value,
               dark: dark,
-              origin: _origin!,
               screen: screen,
-              borderRadius: widget.borderRadius,
-              lite: widget.lite,
+              borderRadius: borderRadius,
+              lite: lite,
             ),
           );
         },
@@ -81,7 +56,6 @@ class _LensPainter extends CustomPainter {
   const _LensPainter({
     required this.t,
     required this.dark,
-    required this.origin,
     required this.screen,
     required this.borderRadius,
     this.lite = false,
@@ -89,13 +63,14 @@ class _LensPainter extends CustomPainter {
 
   final double t;
   final bool dark;
-  final Offset origin;
   final Size screen;
   final BorderRadius borderRadius;
   final bool lite;
 
   @override
   void paint(Canvas canvas, Size size) {
+    final transform = canvas.getTransform();
+    final origin = Offset(transform[12], transform[13]);
     final rect = Offset.zero & size;
     final rrect = borderRadius.toRRect(rect);
     final center = origin + Offset(size.width / 2, size.height / 2);
@@ -153,7 +128,6 @@ class _LensPainter extends CustomPainter {
   bool shouldRepaint(_LensPainter old) =>
       old.t != t ||
       old.dark != dark ||
-      old.origin != origin ||
       old.screen != screen ||
       old.borderRadius != borderRadius ||
       old.lite != lite;

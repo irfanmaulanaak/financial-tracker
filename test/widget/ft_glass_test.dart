@@ -1,5 +1,7 @@
 import 'package:financial_tracker/src/theme.dart';
 import 'package:financial_tracker/src/ui/ft_glass.dart';
+import 'package:financial_tracker/src/ui/ft_glass_fx.dart';
+import 'package:financial_tracker/src/ui/ft_liquid_background.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -64,5 +66,29 @@ void main() {
       highContrast: true,
     ));
     expect(find.byType(BackdropFilter), findsNothing);
+  });
+
+  testWidgets('lens paints on first frame without deferred origin state',
+      (tester) async {
+    final controller = AnimationController(
+      vsync: const TestVSync(),
+      duration: const Duration(seconds: 20),
+    );
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(_host(
+      LiquidScene(
+        controller: controller,
+        child: GlassLensLayer(borderRadius: BorderRadius.circular(20)),
+      ),
+    ));
+
+    expect(
+      find.descendant(
+        of: find.byType(GlassLensLayer),
+        matching: find.byType(CustomPaint),
+      ),
+      findsOneWidget,
+    );
   });
 }
