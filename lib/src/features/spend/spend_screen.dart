@@ -18,6 +18,7 @@ import '../household/household_providers.dart';
 import '../insights/insights_providers.dart';
 import 'budget_edit_sheet.dart';
 import 'spend_activity_list.dart';
+import 'spend_calendar.dart';
 
 /// "Pengeluaran Bulanan" — donut + category breakdown drilldown.
 /// Mirrors `claude-design/screens-deep.jsx` `SpendScreen`. Tapping a category
@@ -208,6 +209,11 @@ class _SpendScreenState extends ConsumerState<SpendScreen> {
                 ],
               ),
             ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(22, 14, 22, 8),
+              child: Eyebrow('Belanja Harian'),
+            ),
+            const SpendCalendar(),
             SpendActivityList(expenses: active, household: household),
           ],
         ),

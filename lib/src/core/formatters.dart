@@ -142,11 +142,15 @@ class Dates {
   static final _short = DateFormat('d MMM y', 'id_ID');
   static final _grouped = DateFormat('EEEE, d MMM y', 'id_ID');
   static final _monthYear = DateFormat('MMM y', 'id_ID');
+  static final _monthLong = DateFormat('MMMM y', 'id_ID');
   static final _dayMonth = DateFormat('d MMM', 'id_ID');
 
   static String short(DateTime d) => _short.format(d);
   static String grouped(DateTime d) => _grouped.format(d);
   static String monthYear(DateTime d) => _monthYear.format(d);
+
+  /// "Juni 2026" — full month name + year, used as the spend-calendar header.
+  static String monthLong(DateTime d) => _monthLong.format(d);
 
   /// "25 Apr" — used for compact cycle-range labels.
   static String dayMonth(DateTime d) => _dayMonth.format(d);

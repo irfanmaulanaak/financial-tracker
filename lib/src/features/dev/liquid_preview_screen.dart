@@ -140,8 +140,9 @@ class _DummySheet extends StatelessWidget {
           const Eyebrow('Sheet kaca'),
           const SizedBox(height: 10),
           Text(
-            'Sheet ini memakai FtGlass dengan animateIn — blur dan tint '
-            'naik saat muncul, wallpaper terlihat menekuk di tepinya.',
+            'Sheet ini memakai FtGlass dengan animateIn — tint menyetel '
+            'halus saat muncul (blur konstan biar mulus), wallpaper terlihat '
+            'menekuk di tepinya.',
             style: TextStyle(color: FtColors.ink2, height: 1.5),
           ),
           const SizedBox(height: 16),

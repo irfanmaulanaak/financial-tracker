@@ -20,6 +20,21 @@ final cycleExpensesProvider = StreamProvider<List<Expense>>((ref) {
       );
 });
 
+/// Expenses within a calendar month — `[month-1st 00:00, next-month-1st 00:00)`.
+/// Source for the spend-screen daily calendar. Key on a first-of-month
+/// `DateTime` so equality is stable across rebuilds (always pass
+/// `DateTime(y, m, 1)`).
+final monthExpensesProvider =
+    StreamProvider.family<List<Expense>, DateTime>((ref, month) {
+  final household = ref.watch(currentHouseholdProvider).value;
+  if (household == null) return Stream.value(const []);
+  return ref.watch(expenseRepositoryProvider).watchInRange(
+        householdId: household.id,
+        startInclusive: DateTime(month.year, month.month, 1),
+        endExclusive: DateTime(month.year, month.month + 1, 1),
+      );
+});
+
 /// Recent N expenses (used by home dashboard).
 final recentExpensesProvider =
     StreamProvider.family<List<Expense>, int>((ref, limit) {

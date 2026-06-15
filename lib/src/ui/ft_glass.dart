@@ -110,7 +110,10 @@ class FtGlass extends StatelessWidget {
 
   Widget _glass(BuildContext context, double t, bool reduceMotion) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final sigma = 26.0 * t;
+    // Blur KONSTAN — animasi sigma bikin BackdropFilter "chunky"/nge-lag
+    // (flutter#165422); entrance datang dari slide sheet + FtFadeUp, bukan
+    // blur naik. `t` hanya menggerakkan lapisan murah (tint/sheen/rim).
+    const sigma = 26.0;
     // Tint tipis — biarkan warna background tembus; vibrancy datang dari
     // boost saturasi di filter + lapisan lensa, bukan permukaan yang pekat.
     // Kartu (lite) menampung angka/teks utama → tint lebih pekat.
@@ -120,10 +123,11 @@ class FtGlass extends StatelessWidget {
     final layers = Stack(
       children: [
         // 2) Lensing: wallpaper diproyeksi membesar, menekuk di tepi.
-        if (t > 0.6)
-          Positioned.fill(
-            child: GlassLensLayer(borderRadius: borderRadius, lite: lite),
-          ),
+        // Hadir sejak frame pertama — dulu di-gate `t > 0.6` sehingga "pop"
+        // di tengah slide (spike 2 saveLayer + repaint scene); sekarang mulus.
+        Positioned.fill(
+          child: GlassLensLayer(borderRadius: borderRadius, lite: lite),
+        ),
         // 3) Tint + sheen.
         Positioned.fill(
           child: IgnorePointer(
