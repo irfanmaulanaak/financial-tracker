@@ -372,6 +372,93 @@ void main() {
     });
   });
 
+  group('billedPlainDue', () {
+    // Regression (Jul 2026): a "Lunas" (plain) card purchase made AFTER the
+    // statement close was treated as already billed, inflating "Bayar
+    // Tagihan Bulan Ini" — users worked around it by recording plain
+    // purchases as cicilan. Plain charges must follow the same
+    // computeMonthsBilled rule as cicilan.
+    test('purchase after statement close is NOT in this month\'s bill', () {
+      // Billing day 12. Bought May 16 → first billed on Jun 12.
+      expect(
+        billedPlainDue(
+          charges: [(amount: 500000, date: DateTime(2026, 5, 16))],
+          plainPaid: 0,
+          today: DateTime(2026, 5, 20),
+          billingDay: 12,
+        ),
+        0,
+      );
+    });
+
+    test('purchase becomes due once the statement close passes', () {
+      expect(
+        billedPlainDue(
+          charges: [(amount: 500000, date: DateTime(2026, 5, 16))],
+          plainPaid: 0,
+          today: DateTime(2026, 6, 12),
+          billingDay: 12,
+        ),
+        500000,
+      );
+    });
+
+    test('mixed billed + unbilled: only billed charges count', () {
+      // Today May 20, billing 12: May 5 charge billed May 12; May 16 not.
+      expect(
+        billedPlainDue(
+          charges: [
+            (amount: 300000, date: DateTime(2026, 5, 5)),
+            (amount: 500000, date: DateTime(2026, 5, 16)),
+          ],
+          plainPaid: 0,
+          today: DateTime(2026, 5, 20),
+          billingDay: 12,
+        ),
+        300000,
+      );
+    });
+
+    test('payments settle billed charges first (plainPaid subtracts)', () {
+      expect(
+        billedPlainDue(
+          charges: [
+            (amount: 300000, date: DateTime(2026, 5, 5)),
+            (amount: 500000, date: DateTime(2026, 5, 16)),
+          ],
+          plainPaid: 200000,
+          today: DateTime(2026, 5, 20),
+          billingDay: 12,
+        ),
+        100000,
+      );
+    });
+
+    test('overpayment (ahead of billing) clamps to zero', () {
+      expect(
+        billedPlainDue(
+          charges: [(amount: 300000, date: DateTime(2026, 5, 5))],
+          plainPaid: 900000,
+          today: DateTime(2026, 5, 20),
+          billingDay: 12,
+        ),
+        0,
+      );
+    });
+
+    test('charge on the billing day itself is billed same day', () {
+      expect(
+        billedPlainDue(
+          charges: [(amount: 250000, date: DateTime(2026, 5, 12))],
+          plainPaid: 0,
+          today: DateTime(2026, 5, 12),
+          billingDay: 12,
+        ),
+        250000,
+      );
+    });
+  });
+
   group('minimumPayment', () {
     test('returns 0 for non-positive balance', () {
       expect(minimumPayment(balance: 0, minPaymentPct: 0.1), 0);

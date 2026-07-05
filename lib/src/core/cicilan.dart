@@ -216,6 +216,36 @@ int cicilanBlocked({
   return unpaidBilled <= 0 ? 0 : unpaidBilled * monthly;
 }
 
+/// Plain (non-cicilan) charges that are already DUE on the statement:
+/// a charge is billed once at least one statement close has passed since
+/// its transaction date (same [computeMonthsBilled] rule cicilan uses).
+/// Payments booked to `plainPaid` settle oldest-first, and billed charges
+/// are by definition older than unbilled ones, so the amount still due is
+/// simply `billedTotal - plainPaid` (clamped ≥ 0).
+///
+/// A "Lunas" purchase made after the statement close therefore does NOT
+/// appear in this month's bill — it rolls into the next one, matching the
+/// bank. (It still counts against the limit in `used` immediately, which
+/// is also what the bank does.)
+int billedPlainDue({
+  required Iterable<({int amount, DateTime date})> charges,
+  required int plainPaid,
+  required DateTime today,
+  required int billingDay,
+}) {
+  var billedTotal = 0;
+  for (final c in charges) {
+    final billed = computeMonthsBilled(
+      startedAt: c.date,
+      today: today,
+      billingDay: billingDay,
+    );
+    if (billed >= 1) billedTotal += c.amount;
+  }
+  final due = billedTotal - plainPaid;
+  return due < 0 ? 0 : due;
+}
+
 DateTime _clampToMonth(int year, int month, int day) {
   // 0th day of next month == last day of `month`. Used to clamp billingDay
   // for short months (Feb 30 -> Feb 28/29).

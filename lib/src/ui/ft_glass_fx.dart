@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui';
 
@@ -7,9 +8,9 @@ import 'ft_liquid_background.dart';
 
 /// Lapisan "lensing" — inti tampilan Liquid Glass.
 ///
-/// Wallpaper liquid bersifat prosedural (posisi blob diketahui tiap frame),
-/// jadi alih-alih sampling backdrop (butuh shader, tak jalan di web), kaca
-/// melukis ulang scene yang sama dengan dua proyeksi:
+/// Wallpaper liquid sudah dirender sekali per langkah (~15 fps) ke image
+/// bersama di [LiquidFrame], jadi kaca tinggal men-blit image itu dengan
+/// dua proyeksi (drawImageRect — murah, tanpa shader/saveLayer per frame):
 /// - seluruh bidang diperbesar ~1.10 (lensa dasar), dan
 /// - cincin tepi diperbesar ~1.35 → background tampak membelok ke dalam di
 ///   tepi, persis perilaku lensa cembung (tengah datar, tepi menekuk kuat).
@@ -22,7 +23,7 @@ class GlassLensLayer extends StatelessWidget {
 
   final BorderRadius borderRadius;
 
-  /// Versi murah untuk kartu: satu proyeksi tanpa saveLayer/cincin tepi —
+  /// Versi murah untuk kartu: satu proyeksi tanpa cincin tepi/vignette —
   /// aman dipakai berulang dalam list panjang.
   final bool lite;
 
@@ -32,77 +33,79 @@ class GlassLensLayer extends StatelessWidget {
     if (scene == null) return const SizedBox.shrink();
 
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final screen = MediaQuery.sizeOf(context);
     return IgnorePointer(
-      child: AnimatedBuilder(
-        animation: scene.controller,
-        builder: (_, _) {
-          return CustomPaint(
-            painter: _LensPainter(
-              t: scene.controller.value,
-              dark: dark,
-              screen: screen,
-              borderRadius: borderRadius,
-              lite: lite,
-            ),
-          );
-        },
+      child: CustomPaint(
+        painter: _LensPainter(
+          frame: scene.frame,
+          dark: dark,
+          borderRadius: borderRadius,
+          lite: lite,
+        ),
       ),
     );
   }
 }
 
 class _LensPainter extends CustomPainter {
-  const _LensPainter({
-    required this.t,
+  _LensPainter({
+    required this.frame,
     required this.dark,
-    required this.screen,
     required this.borderRadius,
     this.lite = false,
-  });
+  }) : super(repaint: frame);
 
-  final double t;
+  final LiquidFrame frame;
   final bool dark;
-  final Size screen;
   final BorderRadius borderRadius;
   final bool lite;
 
   @override
   void paint(Canvas canvas, Size size) {
+    // Image dibaca DI SINI (bukan saat construct) supaya selalu memegang
+    // frame terkini — frame lama sudah di-dispose oleh LiquidFrame.
+    final image = frame.image;
+    final logical = frame.logicalSize;
+    if (image == null || logical.isEmpty) return;
+
     final transform = canvas.getTransform();
     final origin = Offset(transform[12], transform[13]);
     final rect = Offset.zero & size;
     final rrect = borderRadius.toRRect(rect);
     final center = origin + Offset(size.width / 2, size.height / 2);
+    // Skala px image per px logis (image bisa beresolusi lebih rendah).
+    final k = image.width / logical.width;
 
-    void drawZone(Path clip, double magnify, {double? alpha}) {
+    // Blit wallpaper diperbesar [magnify] di sekitar pusat kartu; alpha
+    // pada paint menggantikan saveLayer lama (image sudah flat, jadi
+    // group-alpha == per-image alpha).
+    void drawZone(Path clip, double magnify, double alpha) {
       canvas.save();
       canvas.clipPath(clip);
-      // saveLayer hanya saat butuh meredupkan scene (jalur chrome) — mahal,
-      // dilewati di jalur lite.
-      if (alpha != null) {
-        canvas.saveLayer(
-          rect,
-          Paint()..color = Colors.white.withValues(alpha: alpha),
-        );
-      }
-      canvas.translate(size.width / 2, size.height / 2);
-      canvas.scale(magnify);
-      canvas.translate(-center.dx, -center.dy);
-      LiquidScene.paintScene(canvas, screen, t, dark);
-      if (alpha != null) canvas.restore();
+      final src = Rect.fromCenter(
+        center: Offset(center.dx * k, center.dy * k),
+        width: size.width / magnify * k,
+        height: size.height / magnify * k,
+      );
+      canvas.drawImageRect(
+        image,
+        src,
+        rect,
+        Paint()
+          ..filterQuality = FilterQuality.low
+          ..color = Colors.white.withValues(alpha: alpha),
+      );
       canvas.restore();
     }
 
     if (lite) {
       // Kartu: satu proyeksi penuh; tint pekat dari FtGlass yang menjaga
       // keterbacaan teks di atasnya.
-      drawZone(Path()..addRRect(rrect), 1.07);
+      drawZone(Path()..addRRect(rrect), 1.07, 1.0);
       return;
     }
 
     // Lensa dasar — seluruh bidang sedikit diperbesar.
-    drawZone(Path()..addRRect(rrect), 1.10, alpha: 0.55);
+    drawZone(Path()..addRRect(rrect), 1.10, 0.55);
 
     // Cincin tepi — pembesaran kuat = background "menekuk" masuk.
     final inset = math.min(size.shortestSide * 0.20, 16.0);
@@ -111,7 +114,7 @@ class _LensPainter extends CustomPainter {
       Path()..addRRect(rrect),
       Path()..addRRect(rrect.deflate(inset)),
     );
-    drawZone(ring, 1.35, alpha: 0.70);
+    drawZone(ring, 1.35, 0.70);
 
     // Vignette tipis di dalam tepi — kesan ketebalan kaca.
     canvas.drawRRect(
@@ -126,15 +129,17 @@ class _LensPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_LensPainter old) =>
-      old.t != t ||
+      old.frame != frame ||
       old.dark != dark ||
-      old.screen != screen ||
       old.borderRadius != borderRadius ||
       old.lite != lite;
 }
 
 /// Touch-point illumination: kaca menyala di titik sentuh/hover dan meredup
-/// saat dilepas — meniru perilaku interaktif Liquid Glass.
+/// saat dilepas — meniru perilaku interaktif Liquid Glass. Hanya dipakai
+/// jalur chrome (nav/sheet); kartu list dilewati — Listener per kartu ikut
+/// menerima tiap pointer-move saat drag-scroll dan memicu repaint kartu di
+/// frekuensi input (120 Hz), penyumbang jank scroll.
 class GlassTouchGlow extends StatefulWidget {
   const GlassTouchGlow({super.key, required this.dark});
 
@@ -219,8 +224,10 @@ class _GlowPainter extends CustomPainter {
       old.pos != pos || old.opacity != opacity || old.dark != dark;
 }
 
-/// Pita highlight diagonal yang menyapu permukaan tiap ~7 detik, lalu parkir
-/// di luar bidang (tak terlihat) sampai siklus berikutnya.
+/// Pita highlight diagonal yang menyapu permukaan (~1.6 dtk) lalu benar-
+/// benar diam sampai jadwal berikutnya — controller hanya berjalan SELAMA
+/// sapuan (dulu repeat() 7 dtk nonstop: 78% waktunya tick sia-sia yang
+/// menahan compositor tetap bangun).
 class GlassSweep extends StatefulWidget {
   const GlassSweep({super.key, required this.dark});
 
@@ -234,11 +241,28 @@ class _GlassSweepState extends State<GlassSweep>
     with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl = AnimationController(
     vsync: this,
-    duration: const Duration(seconds: 7),
-  )..repeat();
+    duration: const Duration(milliseconds: 1600),
+  );
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _schedule();
+  }
+
+  void _schedule() {
+    _timer = Timer(const Duration(milliseconds: 5400), () {
+      if (!mounted) return;
+      // Ticker bisa sedang muted (route tertutup) — forward tetap aman:
+      // ia melanjutkan saat visible lagi, lalu menjadwalkan ulang.
+      _ctrl.forward(from: 0).whenComplete(_schedule);
+    });
+  }
 
   @override
   void dispose() {
+    _timer?.cancel();
     _ctrl.dispose();
     super.dispose();
   }
@@ -266,9 +290,7 @@ class _GlassSweepState extends State<GlassSweep>
       child: AnimatedBuilder(
         animation: _ctrl,
         builder: (_, _) {
-          // Sapuan terjadi di 22% pertama siklus; sisanya idle di luar tepi.
-          final t = const Interval(0, 0.22, curve: Curves.easeInOut)
-              .transform(_ctrl.value);
+          final t = Curves.easeInOut.transform(_ctrl.value);
           return Align(
             alignment: Alignment(lerpDouble(-3.0, 3.0, t)!, 0),
             child: band,

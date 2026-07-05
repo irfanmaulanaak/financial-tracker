@@ -7,11 +7,24 @@ import '../../theme.dart';
 import '../../ui/ft_haptics.dart';
 import '../../ui/ft_keypad.dart';
 import '../../ui/ft_ui.dart';
+import '../expenses/expense.dart';
+import '../expenses/expense_repository.dart';
 import '../household/household_providers.dart';
 import '../record_common/account_picker.dart';
 import 'card_repository.dart';
 import 'credit_card.dart';
 import 'widgets/installment_list.dart';
+
+/// Every plain (non-cicilan) charge ever made on the card — the statement
+/// math needs the all-time sum because `plainPaid` is an all-time figure.
+final _cardPlainChargesProvider =
+    StreamProvider.family<List<Expense>, ({String hid, String cardId})>(
+  (ref, p) => ref.watch(expenseRepositoryProvider).watchByCard(
+        householdId: p.hid,
+        cardId: p.cardId,
+        limit: null,
+      ),
+);
 
 enum _PayMode { min, monthly, custom }
 
@@ -57,18 +70,19 @@ class _PayCardSheetState extends ConsumerState<PayCardSheet> {
       );
 
   /// This month's bill, statement-style: one `monthly` per cicilan that has
-  /// been billed but not yet paid, plus unpaid plain CC charges. Plain =
-  /// `card.outstanding - sum(active remaining)` (exact, since outstanding =
-  /// plain + remaining). Mirrors [CardRepository.payMonthlyBill]; cicilan
-  /// list comes from the shared installments stream so the figure matches
-  /// the in-flight Firestore data the repo will see.
-  int _monthlyBillAmount(List<Installment> installments) {
+  /// been billed but not yet paid, plus plain CC charges that have crossed
+  /// a statement close ([billedPlainDue]) — a "Lunas" purchase made after
+  /// the close belongs to next month's bill, so it's excluded here.
+  /// Mirrors [CardRepository.payMonthlyBill]; installments + charges come
+  /// from shared streams so the figure matches what the repo will see.
+  int _monthlyBillAmount(
+    List<Installment> installments,
+    List<({int amount, DateTime date})> plainCharges,
+  ) {
     final now = DateTime.now();
     var monthlyDue = 0;
-    var remainingDue = 0;
     for (final i in installments) {
       if (i.isComplete) continue;
-      remainingDue += i.remainingAmount;
       final billed = computeMonthsBilled(
         startedAt: i.startedAt,
         today: now,
@@ -77,19 +91,47 @@ class _PayCardSheetState extends ConsumerState<PayCardSheet> {
       if (billed <= i.monthsPaid) continue;
       monthlyDue += i.monthly;
     }
-    final plain = (widget.card.outstanding - remainingDue)
-        .clamp(0, widget.card.outstanding);
-    return monthlyDue + plain;
+    final plainDue = billedPlainDue(
+      charges: plainCharges,
+      plainPaid: widget.card.plainPaid,
+      today: now,
+      billingDay: widget.card.billingDay,
+    );
+    return monthlyDue + plainDue;
   }
 
-  int _amount(List<Installment> installments) => switch (_mode) {
+  /// Plain charges not yet on any statement — they'll appear on the next
+  /// bill. Shown as a note so "Bayar Tagihan Bulan Ini" being smaller than
+  /// "Sisa" is explainable.
+  int _unbilledPlain(List<({int amount, DateTime date})> plainCharges) {
+    final now = DateTime.now();
+    final plainTotal = plainCharges.fold<int>(0, (a, c) => a + c.amount);
+    final outstanding =
+        (plainTotal - widget.card.plainPaid).clamp(0, plainTotal);
+    final due = billedPlainDue(
+      charges: plainCharges,
+      plainPaid: widget.card.plainPaid,
+      today: now,
+      billingDay: widget.card.billingDay,
+    );
+    return outstanding - due;
+  }
+
+  int _amount(
+    List<Installment> installments,
+    List<({int amount, DateTime date})> plainCharges,
+  ) =>
+      switch (_mode) {
         _PayMode.min => _minAmount,
-        _PayMode.monthly => _monthlyBillAmount(installments),
+        _PayMode.monthly => _monthlyBillAmount(installments, plainCharges),
         _PayMode.custom => _custom,
       };
 
-  Future<void> _pay(List<Installment> installments) async {
-    final amount = _amount(installments);
+  Future<void> _pay(
+    List<Installment> installments,
+    List<({int amount, DateTime date})> plainCharges,
+  ) async {
+    final amount = _amount(installments, plainCharges);
     final sourceId = _sourceAccountId;
     // Cap vs `outstanding` (true debt): the monthly bill can legitimately
     // exceed `used` when cicilan months haven't rolled into the statement
@@ -141,6 +183,14 @@ class _PayCardSheetState extends ConsumerState<PayCardSheet> {
             .watch(cardInstallmentsProvider((hid: widget.hid, cardId: card.id)))
             .value ??
         const [];
+    final plainCharges = [
+      for (final e in ref
+              .watch(
+                  _cardPlainChargesProvider((hid: widget.hid, cardId: card.id)))
+              .value ??
+          const <Expense>[])
+        (amount: e.amount, date: e.date),
+    ];
     final accounts = household == null
         ? const <RecordAccountChoice>[]
         : recordAccountChoices(
@@ -150,8 +200,9 @@ class _PayCardSheetState extends ConsumerState<PayCardSheet> {
     if (_sourceAccountId == null && accounts.isNotEmpty) {
       _sourceAccountId = accounts.first.id;
     }
-    final monthlyBill = _monthlyBillAmount(installments);
-    final amount = _amount(installments);
+    final monthlyBill = _monthlyBillAmount(installments, plainCharges);
+    final unbilled = _unbilledPlain(plainCharges);
+    final amount = _amount(installments, plainCharges);
     return SafeArea(
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 8),
@@ -205,10 +256,19 @@ class _PayCardSheetState extends ConsumerState<PayCardSheet> {
                 mode: _PayMode.monthly,
                 groupValue: _mode,
                 label: 'Bayar Tagihan Bulan Ini',
-                detail: 'Cicilan bulan ini + transaksi non-cicilan',
+                detail: 'Cicilan & transaksi yang sudah tertagih',
                 amount: monthlyBill,
                 onTap: () => setState(() => _mode = _PayMode.monthly),
               ),
+              if (unbilled > 0)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6, left: 4, right: 4),
+                  child: Text(
+                    '${Money.format(unbilled)} belum tertagih — masuk '
+                    'tagihan berikutnya (tutup tgl ${card.billingDay}).',
+                    style: TextStyle(color: FtColors.ink3, fontSize: 11),
+                  ),
+                ),
               const SizedBox(height: 8),
               _OptionRow(
                 mode: _PayMode.custom,
@@ -270,7 +330,7 @@ class _PayCardSheetState extends ConsumerState<PayCardSheet> {
                               amount <= 0 ||
                               _sourceAccountId == null
                           ? null
-                          : () => _pay(installments),
+                          : () => _pay(installments, plainCharges),
                       child: _busy
                           ? SizedBox(
                               width: 16,

@@ -62,7 +62,8 @@ class FtGlass extends StatelessWidget {
   final bool animateIn;
 
   /// Mode ringan untuk kartu konten: tanpa BackdropFilter (mahal di list),
-  /// lensa wallpaper versi sederhana + tint lebih pekat agar teks terbaca.
+  /// tanpa touch glow (Listener per kartu bikin jank scroll), lensa
+  /// wallpaper versi sederhana + tint lebih pekat agar teks terbaca.
   final bool lite;
 
   @override
@@ -161,7 +162,11 @@ class FtGlass extends StatelessWidget {
         ),
         // Glow interaktif paling atas: cahaya jatuh di muka kaca, event
         // tetap tembus ke tombol di bawahnya (listener translucent).
-        if (!reduceMotion) Positioned.fill(child: GlassTouchGlow(dark: dark)),
+        // Chrome saja — di kartu list, Listener-nya ikut menangkap tiap
+        // pointer-move saat drag-scroll dan me-repaint kartu di frekuensi
+        // input (jank scroll).
+        if (!reduceMotion && !lite)
+          Positioned.fill(child: GlassTouchGlow(dark: dark)),
       ],
     );
 

@@ -66,11 +66,12 @@ class ExpenseRepository {
   /// with `orderBy('date')` would require a deployed composite index and
   /// the stream silently stalls until the index is built. Sort + slice
   /// happen client-side; for a 2–5 person household the per-card row count
-  /// is small enough that this is cheap.
+  /// is small enough that this is cheap. `limit: null` returns every row
+  /// (the pay sheet needs the all-time plain sum for statement math).
   Stream<List<Expense>> watchByCard({
     required String householdId,
     required String cardId,
-    int limit = 20,
+    int? limit = 20,
   }) {
     return _col(householdId)
         .where('cardId', isEqualTo: cardId)
@@ -81,7 +82,9 @@ class ExpenseRepository {
               .where((e) => e.installmentPlanId == null)
               .toList()
             ..sort((a, b) => b.date.compareTo(a.date));
-          return rows.length > limit ? rows.sublist(0, limit) : rows;
+          return limit != null && rows.length > limit
+              ? rows.sublist(0, limit)
+              : rows;
         });
   }
 

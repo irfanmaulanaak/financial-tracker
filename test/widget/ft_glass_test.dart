@@ -68,17 +68,35 @@ void main() {
     expect(find.byType(BackdropFilter), findsNothing);
   });
 
+  testWidgets('lite (kartu) → tanpa GlassTouchGlow (regresi jank scroll)',
+      (tester) async {
+    FtColors.setLiquid(true);
+    await tester.pumpWidget(_host(
+      FtGlass(
+        lite: true,
+        borderRadius: BorderRadius.circular(18),
+        child: const SizedBox(width: 100, height: 40),
+      ),
+    ));
+    expect(find.byType(GlassTouchGlow), findsNothing);
+    // Chrome (non-lite) tetap punya glow.
+    await tester.pumpWidget(_host(
+      FtGlass(
+        borderRadius: BorderRadius.circular(18),
+        child: const SizedBox(width: 100, height: 40),
+      ),
+    ));
+    expect(find.byType(GlassTouchGlow), findsOneWidget);
+  });
+
   testWidgets('lens paints on first frame without deferred origin state',
       (tester) async {
-    final controller = AnimationController(
-      vsync: const TestVSync(),
-      duration: const Duration(seconds: 20),
-    );
-    addTearDown(controller.dispose);
+    final frame = LiquidFrame();
+    addTearDown(frame.dispose);
 
     await tester.pumpWidget(_host(
       LiquidScene(
-        controller: controller,
+        frame: frame,
         child: GlassLensLayer(borderRadius: BorderRadius.circular(20)),
       ),
     ));

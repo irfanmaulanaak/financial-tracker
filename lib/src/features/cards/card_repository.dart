@@ -209,11 +209,14 @@ class CardRepository {
 
   /// Pays this month's bill the way the bank statement does: one `monthly`
   /// per cicilan that has been BILLED but not yet paid (a cicilan opened
-  /// after the last statement date isn't charged yet) plus the card's plain
-  /// (non-cicilan) unpaid charges. Debits the chosen account, advances each
-  /// billed installment's `monthsPaid` by one, and books the plain portion
-  /// to `plainPaid` — all in a single transaction. [recalcUsed] runs post-tx
-  /// to reconcile both totals. Returns the total amount paid.
+  /// after the last statement date isn't charged yet) plus the plain
+  /// (non-cicilan) charges that have crossed a statement close — a "Lunas"
+  /// purchase made after the close rolls into NEXT month's bill, exactly
+  /// like a cicilan would (see [billedPlainDue]). Debits the chosen
+  /// account, advances each billed installment's `monthsPaid` by one, and
+  /// books the plain portion to `plainPaid` — all in a single transaction.
+  /// [recalcUsed] runs post-tx to reconcile both totals. Returns the total
+  /// amount paid.
   Future<int> payMonthlyBill({
     required String hid,
     required String cardId,
@@ -226,11 +229,26 @@ class CardRepository {
     // Installment docs can't be queried inside a transaction (no
     // collection reads), so we list active plans up front and then
     // re-read each by reference inside the txn for the consistent view.
+    // Plain charges are likewise listed up front (same acceptable race
+    // surface as recalcUsed for a 2–5 user household).
     final instSnap = await _installments(hid, cardId).get();
     final activeRefs = <DocumentReference<Map<String, dynamic>>>[];
     for (final d in instSnap.docs) {
       final inst = Installment.fromSnapshot(d, cardId);
       if (!inst.isComplete) activeRefs.add(d.reference);
+    }
+    final expensesSnap = await _db
+        .collection('households')
+        .doc(hid)
+        .collection('expenses')
+        .where('cardId', isEqualTo: cardId)
+        .get();
+    final plainCharges = <({int amount, DateTime date})>[];
+    for (final d in expensesSnap.docs) {
+      final exp = Expense.fromSnapshot(d);
+      if (exp.installmentPlanId == null) {
+        plainCharges.add((amount: exp.amount, date: exp.date));
+      }
     }
     final amount = await _db.runTransaction<int>((tx) async {
       final cardSnap = await tx.get(cardRef);
@@ -238,14 +256,12 @@ class CardRepository {
       final card = CreditCard.fromSnapshot(cardSnap);
 
       var monthlyDue = 0;
-      var remainingDue = 0;
       final billedPlans = <(DocumentReference<Map<String, dynamic>>, Installment)>[];
       for (final ref in activeRefs) {
         final snap = await tx.get(ref);
         if (!snap.exists) continue;
         final inst = Installment.fromSnapshot(snap, cardId);
         if (inst.isComplete) continue;
-        remainingDue += inst.remainingAmount;
         final billed = computeMonthsBilled(
           startedAt: inst.startedAt,
           today: now,
@@ -256,12 +272,13 @@ class CardRepository {
         monthlyDue += inst.monthly;
         billedPlans.add((ref, inst));
       }
-      // `outstanding` = plain + Σ remaining, so this subtraction is exact.
-      // (The old `used`-based math under-counted plain charges whenever a
-      // cicilan month hadn't been billed yet.)
-      final plainCharges =
-          (card.outstanding - remainingDue).clamp(0, card.outstanding);
-      final amount = monthlyDue + plainCharges;
+      final plainDue = billedPlainDue(
+        charges: plainCharges,
+        plainPaid: card.plainPaid,
+        today: now,
+        billingDay: card.billingDay,
+      );
+      final amount = monthlyDue + plainDue;
       if (amount <= 0) return 0;
 
       final hSnap = await tx.get(householdRef);
@@ -277,8 +294,8 @@ class CardRepository {
       for (final (ref, inst) in billedPlans) {
         tx.update(ref, {'monthsPaid': inst.monthsPaid + 1});
       }
-      if (plainCharges > 0) {
-        tx.update(cardRef, {'plainPaid': card.plainPaid + plainCharges});
+      if (plainDue > 0) {
+        tx.update(cardRef, {'plainPaid': card.plainPaid + plainDue});
       }
       return amount;
     });
