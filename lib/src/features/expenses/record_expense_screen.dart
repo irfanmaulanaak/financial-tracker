@@ -310,7 +310,10 @@ class _RecordExpenseScreenState extends ConsumerState<RecordExpenseScreen> {
           newNote: note,
           newRecurring: _recurring,
         );
-      } else if (_payType == 'credit' && _cicilan) {
+      } else if (_payType == 'credit' && (_cicilan || !_recurring)) {
+        // "Lunas" purchases also run through the plan path as a 1-month
+        // cicilan, so every card charge sits in "Cicilan aktif" until its
+        // bill is paid and only then rolls into the card history.
         await repo.addCicilanExpense(
           householdId: h.id,
           principal: _amount,
@@ -318,11 +321,13 @@ class _RecordExpenseScreenState extends ConsumerState<RecordExpenseScreen> {
           spentBy: spentBy,
           date: _date,
           cardId: _cardId!,
-          months: _cicilanMonths,
-          apr: _cicilanApr,
+          months: _cicilan ? _cicilanMonths : 1,
+          apr: _cicilan ? _cicilanApr : 0.0,
           note: note,
         );
       } else if (_payType == 'credit') {
+        // Lunas + rutin: the recurring runner respawns plain rows, so the
+        // seed row must stay plain too.
         await repo.addCardExpense(
           householdId: h.id,
           amount: _amount,

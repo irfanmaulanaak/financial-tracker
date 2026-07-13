@@ -158,10 +158,12 @@ class ExpenseDetailSheet extends ConsumerWidget {
                   ],
                   if (expense.installmentPlanId != null) ...[
                     const _Divider(),
+                    // The sheet only has the expense row, not the plan doc,
+                    // so it can't tell active from settled — keep it neutral.
                     _DetailRow(
                       icon: Icons.timeline,
                       label: 'Cicilan',
-                      value: 'Aktif',
+                      value: 'Lewat tagihan kartu',
                       valueColor: FtColors.plum,
                     ),
                   ],

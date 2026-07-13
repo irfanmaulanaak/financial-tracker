@@ -27,14 +27,16 @@ final _cardProvider =
           .watchOne(hid: p.hid, cardId: p.cardId);
     });
 
-/// Latest 20 non-cicilan expenses charged to a single card. Used by the
-/// "Pengeluaran kartu" section on [CardDetailScreen]. Cicilan rows are
-/// filtered out client-side and shown via the cicilan section instead.
+/// Latest 20 expenses charged to a single card, cicilan rows included. Used
+/// by the "Pengeluaran kartu" section on [CardDetailScreen]: settled cicilan
+/// show up as history rows there, while unfinished plans are filtered out in
+/// the widget (they live in the "Cicilan aktif" section instead).
 final cardExpensesProvider =
     StreamProvider.family<List<Expense>, ({String hid, String cardId})>(
   (ref, p) => ref.watch(expenseRepositoryProvider).watchByCard(
         householdId: p.hid,
         cardId: p.cardId,
+        includeCicilan: true,
       ),
 );
 
@@ -207,12 +209,15 @@ class CardDetailScreen extends ConsumerWidget {
                   const FtSectionHeader(title: 'Cicilan aktif'),
                   ...installmentsAsync.maybeWhen(
                     data: (items) {
-                      if (items.isEmpty) {
+                      // Settled plans move down into "Pengeluaran kartu".
+                      final active =
+                          items.where((i) => !i.isComplete).toList();
+                      if (active.isEmpty) {
                         return [
                           FtCard(
                             child: Center(
                               child: Text(
-                                'Belum ada cicilan.',
+                                'Belum ada cicilan aktif.',
                                 style: TextStyle(color: FtColors.ink3),
                               ),
                             ),
@@ -220,7 +225,7 @@ class CardDetailScreen extends ConsumerWidget {
                         ];
                       }
                       final canEdit = ref.watch(canRecordTxnProvider);
-                      return items
+                      return active
                           .map(
                             (i) => CardInstallmentTile(
                               inst: i,
@@ -405,6 +410,13 @@ class _CardExpensesList extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final household = ref.watch(currentHouseholdProvider).value;
     final async = ref.watch(cardExpensesProvider((hid: hid, cardId: cardId)));
+    final plans = {
+      for (final i in ref
+              .watch(cardInstallmentsProvider((hid: hid, cardId: cardId)))
+              .value ??
+          const <Installment>[])
+        i.id: i,
+    };
     return async.when(
       loading: () => const Padding(
         padding: EdgeInsets.all(16),
@@ -417,7 +429,15 @@ class _CardExpensesList extends ConsumerWidget {
         ),
       ),
       data: (items) {
-        if (items.isEmpty) {
+        // Plain charges plus settled cicilan; unfinished plans stay in the
+        // "Cicilan aktif" section above.
+        final rows = [
+          for (final e in items)
+            if (e.installmentPlanId == null ||
+                (plans[e.installmentPlanId]?.isComplete ?? false))
+              e,
+        ];
+        if (rows.isEmpty) {
           return FtCard(
             child: Center(
               child: Text(
@@ -429,9 +449,10 @@ class _CardExpensesList extends ConsumerWidget {
         }
         return Column(
           children: [
-            for (final e in items)
+            for (final e in rows)
               _CardExpenseRow(
                 expense: e,
+                plan: plans[e.installmentPlanId],
                 category: household?.categoryOf(e.categoryId),
                 onTap: () => ExpenseDetailSheet.show(
                   context: context,
@@ -450,11 +471,16 @@ class _CardExpenseRow extends StatelessWidget {
     required this.expense,
     required this.category,
     required this.onTap,
+    this.plan,
   });
 
   final Expense expense;
   final Category? category;
   final VoidCallback onTap;
+
+  /// Settled installment plan behind this row, when the expense was a
+  /// cicilan. Drives the "lunas" hint in the subtitle.
+  final Installment? plan;
 
   @override
   Widget build(BuildContext context) {
@@ -500,6 +526,10 @@ class _CardExpenseRow extends StatelessWidget {
                 Text(
                   [
                     Dates.short(expense.date),
+                    if (plan != null)
+                      plan!.monthsTotal > 1
+                          ? 'Cicilan ${plan!.monthsTotal}× lunas'
+                          : 'Lunas',
                     if (expense.note != null && expense.note!.isNotEmpty)
                       expense.note!,
                   ].join(' · '),

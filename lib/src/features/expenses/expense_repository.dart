@@ -59,7 +59,11 @@ class ExpenseRepository {
         .map((s) => s.docs.map(Expense.fromSnapshot).toList());
   }
 
-  /// Watches the most recent **non-cicilan** expenses for a single card.
+  /// Watches the most recent expenses for a single card. By default cicilan
+  /// rows are excluded (`includeCicilan: false`) — the pay sheet's statement
+  /// math must only see plain charges. The card-detail history passes
+  /// `includeCicilan: true` and joins against the installments stream to
+  /// show settled cicilan alongside plain charges.
   ///
   /// Server-side query is just `where('cardId', isEqualTo: cardId)` so we
   /// only need Firestore's auto-created single-field index — combining it
@@ -72,6 +76,7 @@ class ExpenseRepository {
     required String householdId,
     required String cardId,
     int? limit = 20,
+    bool includeCicilan = false,
   }) {
     return _col(householdId)
         .where('cardId', isEqualTo: cardId)
@@ -79,7 +84,7 @@ class ExpenseRepository {
         .map((s) {
           final rows = s.docs
               .map(Expense.fromSnapshot)
-              .where((e) => e.installmentPlanId == null)
+              .where((e) => includeCicilan || e.installmentPlanId == null)
               .toList()
             ..sort((a, b) => b.date.compareTo(a.date));
           return limit != null && rows.length > limit
@@ -352,7 +357,7 @@ class ExpenseRepository {
       tx.set(expenseRef, exp.toMap());
       tx.set(installmentRef, {
         'expenseId': expenseRef.id,
-        'label': note ?? 'Cicilan ${months}x',
+        'label': note ?? (months == 1 ? 'Pembelian penuh' : 'Cicilan ${months}x'),
         'total': plan.total,
         'monthly': plan.monthly,
         'monthsTotal': months,
