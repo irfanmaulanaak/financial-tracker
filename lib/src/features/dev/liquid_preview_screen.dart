@@ -24,8 +24,10 @@ class LiquidPreviewScreen extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(22, 60, 22, 140),
           children: [
-            Text('Liquid Glass Lab',
-                style: Theme.of(context).textTheme.headlineMedium),
+            Text(
+              'Liquid Glass Lab',
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
             const SizedBox(height: 16),
             FtCard(
               child: Column(
@@ -36,23 +38,26 @@ class LiquidPreviewScreen extends ConsumerWidget {
                   Row(
                     children: [
                       Expanded(
-                        child: Text('Liquid Glass',
-                            style: TextStyle(color: FtColors.ink)),
+                        child: Text(
+                          'Liquid Glass',
+                          style: TextStyle(color: FtColors.ink),
+                        ),
                       ),
                       Switch.adaptive(
                         value: liquid,
                         activeTrackColor: FtColors.clay,
-                        onChanged: (v) => ref
-                            .read(liquidThemeProvider.notifier)
-                            .setLiquid(v),
+                        onChanged: (v) =>
+                            ref.read(liquidThemeProvider.notifier).setLiquid(v),
                       ),
                     ],
                   ),
                   Row(
                     children: [
                       Expanded(
-                        child: Text('Mode gelap',
-                            style: TextStyle(color: FtColors.ink)),
+                        child: Text(
+                          'Mode gelap',
+                          style: TextStyle(color: FtColors.ink),
+                        ),
                       ),
                       Switch.adaptive(
                         value: mode == ThemeMode.dark,
@@ -75,42 +80,20 @@ class LiquidPreviewScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 16),
-            for (var i = 0; i < 12; i++) ...[
-              FtCard(
-                child: Row(
-                  children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: _accent(i).withValues(alpha: 0.18),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      alignment: Alignment.center,
-                      child: Icon(Icons.auto_awesome, color: _accent(i)),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Konten dummy ${i + 1}',
-                              style: TextStyle(
-                                  color: FtColors.ink,
-                                  fontWeight: FontWeight.w600)),
-                          Text('Scroll aku ke bawah nav kaca',
-                              style: TextStyle(
-                                  color: FtColors.ink3, fontSize: 12)),
-                        ],
-                      ),
-                    ),
-                    Text('Rp${(i + 1) * 25}rb',
-                        style: TextStyle(color: _accent(i))),
-                  ],
-                ),
+            Container(
+              decoration: BoxDecoration(
+                color: FtColors.surface,
+                border: Border.all(color: FtColors.line),
+                borderRadius: BorderRadius.circular(12),
               ),
-              const SizedBox(height: 10),
-            ],
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                children: [
+                  for (var i = 0; i < 12; i++)
+                    _DummyRow(index: i, accent: _accent(i)),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -118,12 +101,59 @@ class LiquidPreviewScreen extends ConsumerWidget {
   }
 
   Color _accent(int i) => [
-        FtColors.clay,
-        FtColors.sky,
-        FtColors.ochre,
-        FtColors.sage,
-        FtColors.plum,
-      ][i % 5];
+    FtColors.clay,
+    FtColors.sky,
+    FtColors.ochre,
+    FtColors.sage,
+    FtColors.plum,
+  ][i % 5];
+}
+
+class _DummyRow extends StatelessWidget {
+  const _DummyRow({required this.index, required this.accent});
+
+  final int index;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        border: index == 0
+            ? null
+            : Border(top: BorderSide(color: FtColors.line)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.auto_awesome_outlined, color: accent, size: 21),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Konten dummy ${index + 1}',
+                  style: TextStyle(
+                    color: FtColors.ink,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  'Scroll aku ke bawah nav kaca',
+                  style: TextStyle(color: FtColors.ink3, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            'Rp${(index + 1) * 25}rb',
+            style: TextStyle(color: accent, fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _DummySheet extends StatelessWidget {

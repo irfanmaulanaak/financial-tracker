@@ -15,11 +15,10 @@ import '../household/household_repository.dart';
 import '../household/name_format.dart';
 import 'widgets/edit_profile_parts.dart';
 
-/// Edit Profile screen — `claude-design/screens-profile.jsx > EditProfileScreen`.
-/// Lets the signed-in user edit their display name + accent color (mirrored
-/// to `households/{hid}.members[<self>]`). Email/phone fields render as
-/// info-only rows since the auth provider is the source of truth there.
-/// Security rows render as static UI for MVP.
+/// Edit Profile screen. Lets the signed-in user edit their display name +
+/// accent color (mirrored to `households/{hid}.members[<self>]`). Email/phone
+/// fields render as info-only rows since the auth provider is the source of
+/// truth there. Security rows render as static UI for MVP.
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
 

@@ -4,7 +4,7 @@ import '../../theme.dart';
 
 /// Shown while Firebase Auth + the user doc are still loading so the user
 /// never lands on a half-resolved screen. Pairs with the native splash
-/// (same cream background + same logo) so the hand-off is seamless.
+/// (same background + same logo) so the hand-off is seamless.
 ///
 /// The logo breathes (scale 0.96 ↔ 1.0, opacity 0.85 ↔ 1.0) over a 1.6 s
 /// loop so cold launches read as a deliberate reveal instead of a paused

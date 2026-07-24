@@ -6,7 +6,7 @@ import '../../../theme.dart';
 import '../../../ui/ft_ui.dart';
 import '../../home/widgets/home_formatters.dart';
 
-/// Top "Total Aset" card on the Aset screen — big serif total, divider,
+/// Top "Total Aset" card on the Aset screen — big total, divider,
 /// 3-segment composition bar, and a 3-column breakdown row beneath it.
 class AssetsHero extends ConsumerWidget {
   const AssetsHero({

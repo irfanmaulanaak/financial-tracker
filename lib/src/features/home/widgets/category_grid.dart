@@ -31,28 +31,18 @@ class CategoryGrid extends StatelessWidget {
           title: 'Pengeluaran Siklus Ini',
           actionLabel: 'Lihat semua',
           onAction: onTap,
+          prominent: true,
         ),
-        FtCard(
-          margin: const EdgeInsets.fromLTRB(22, 0, 22, 16),
-          child: GridView.count(
-            crossAxisCount: context.isAtLeastExpanded
-                ? 4
-                : context.isAtLeastMedium
-                    ? 3
-                    : 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            // 1.45 left cells ~1px short of the content's min height at
-            // some widths (debug "BOTTOM OVERFLOWED BY 0.8 PIXELS" stripes).
-            childAspectRatio: 1.38,
+        Padding(
+          padding: const EdgeInsets.fromLTRB(22, 0, 22, 16),
+          child: Column(
             children: [
-              for (final c in categories)
+              for (var i = 0; i < categories.length; i++)
                 _CategoryCell(
-                  category: c,
-                  spent: totals[c.id] ?? 0,
-                  carry: carries[c.id] ?? 0,
+                  category: categories[i],
+                  spent: totals[categories[i].id] ?? 0,
+                  carry: carries[categories[i].id] ?? 0,
+                  showDivider: i > 0,
                 ),
             ],
           ),
@@ -67,74 +57,89 @@ class _CategoryCell extends StatelessWidget {
     required this.category,
     required this.spent,
     this.carry = 0,
+    this.showDivider = false,
   });
 
   final Category category;
   final int spent;
   final int carry;
+  final bool showDivider;
 
   @override
   Widget build(BuildContext context) {
     final color = parseColor(category.color);
     final budget = category.monthlyBudget + carry;
     final pct = budget > 0 ? (spent / budget * 100).round() : 0;
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: FtColors.surfaceAlt,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: FtColors.line, width: 0.5),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    return Column(
+      children: [
+        if (showDivider)
+          Divider(height: 1, thickness: 0.5, indent: 30, color: FtColors.line),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 13),
+          child: Row(
             children: [
-              Icon(iconFor(category.icon), size: 15, color: color),
-              const SizedBox(width: 7),
+              Icon(iconFor(category.icon), size: 18, color: color),
+              const SizedBox(width: 12),
               Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            category.label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: FtColors.ink,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12.5,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          budget > 0 ? '$pct%' : 'Tanpa budget',
+                          style: TextStyle(
+                            color: budget > 0 && spent > budget
+                                ? FtColors.danger
+                                : FtColors.ink3,
+                            fontSize: 10.5,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    FtProgressBar(
+                      value: spent,
+                      max: budget <= 0 ? 1 : budget,
+                      color: color,
+                      overflowColor: FtColors.danger,
+                      height: 3,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 14),
+              SizedBox(
+                width: 72,
                 child: Text(
-                  category.label,
+                  compactMoney(spent),
+                  textAlign: TextAlign.end,
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: FtColors.ink2,
+                    color: FtColors.ink,
                     fontWeight: FontWeight.w600,
-                    fontSize: 11,
+                    fontSize: 14.5,
+                    fontFeatures: const [FontFeature.tabularFigures()],
                   ),
                 ),
               ),
             ],
           ),
-          const Spacer(),
-          Text(
-            compactMoney(spent),
-            style: TextStyle(
-              color: FtColors.ink,
-              fontWeight: FontWeight.w700,
-              fontSize: 14,
-            ),
-          ),
-          const SizedBox(height: 8),
-          FtProgressBar(
-            value: spent,
-            max: budget <= 0 ? 1 : budget,
-            color: color,
-            overflowColor: FtColors.danger,
-            height: 3,
-          ),
-          const SizedBox(height: 5),
-          Text(
-            budget > 0 ? '$pct% terpakai' : 'tanpa budget',
-            style: TextStyle(
-              color: budget > 0 && spent > budget
-                  ? FtColors.danger
-                  : FtColors.ink3,
-              fontSize: 10,
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

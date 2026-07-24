@@ -8,8 +8,8 @@ import '../credit_card.dart';
 import '../pay_card_sheet.dart';
 import 'installment_list.dart';
 
-/// Per-card tile shown on the Cards screen — gradient card visual with
-/// label/last4, used amount, usage bar, owner/limit/due grid, active
+/// Per-card tile shown on the Cards screen with label/last4, used amount,
+/// usage bar, owner/limit/due grid, active
 /// installments list, and pay actions.
 class CardTile extends StatelessWidget {
   const CardTile({
@@ -28,8 +28,9 @@ class CardTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = _parseColor(card.accent);
-    final pct =
-        card.limit == 0 ? 0.0 : (card.used / card.limit).clamp(0.0, 1.0);
+    final pct = card.limit == 0
+        ? 0.0
+        : (card.used / card.limit).clamp(0.0, 1.0);
     return FtCard(
       padding: EdgeInsets.zero,
       onTap: onTap,
@@ -42,11 +43,6 @@ class CardTile extends StatelessWidget {
             decoration: BoxDecoration(
               color: color,
               borderRadius: BorderRadius.circular(14),
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [color, FtColors.plum],
-              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -55,12 +51,11 @@ class CardTile extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        card.label.toUpperCase(),
+                        card.label,
                         style: const TextStyle(
                           color: Colors.white70,
-                          fontSize: 10,
+                          fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          letterSpacing: 1.1,
                         ),
                       ),
                     ),
@@ -77,6 +72,7 @@ class CardTile extends StatelessWidget {
                   style: const TextStyle(
                     color: Colors.white,
                     letterSpacing: 2,
+                    fontFeatures: [FontFeature.tabularFigures()],
                   ),
                 ),
                 const SizedBox(height: 26),
@@ -86,10 +82,13 @@ class CardTile extends StatelessWidget {
                     Expanded(
                       child: Text(
                         Money.format(card.used),
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleLarge
-                            ?.copyWith(color: Colors.white, fontSize: 22),
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: -0.5,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
                       ),
                     ),
                   ],
@@ -136,8 +135,7 @@ class _CardActions extends ConsumerWidget {
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       child: FtTapScale(
         scale: 0.97,
-        onTap: () =>
-            PayCardSheet.show(context: context, hid: hid, card: card),
+        onTap: () => PayCardSheet.show(context: context, hid: hid, card: card),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(

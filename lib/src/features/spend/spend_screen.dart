@@ -21,8 +21,7 @@ import 'spend_activity_list.dart';
 import 'spend_calendar.dart';
 
 /// "Pengeluaran Bulanan" — donut + category breakdown drilldown.
-/// Mirrors `claude-design/screens-deep.jsx` `SpendScreen`. Tapping a category
-/// row navigates to that category's detail page.
+/// Tapping a category row navigates to that category's detail page.
 class SpendScreen extends ConsumerStatefulWidget {
   const SpendScreen({super.key});
 

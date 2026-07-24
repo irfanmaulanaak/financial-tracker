@@ -6,7 +6,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import '../../theme.dart';
 import 'auth_repository.dart';
 
-/// "Lanjutkan dengan Google" — outlined button on cream surface with the
+/// "Lanjutkan dengan Google" — outlined button on surface with the
 /// official 4-color "G" mark drawn via [CustomPaint] (no extra asset needed).
 class GoogleSignInButton extends ConsumerStatefulWidget {
   const GoogleSignInButton({

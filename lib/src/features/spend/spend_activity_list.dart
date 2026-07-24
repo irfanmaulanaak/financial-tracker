@@ -66,7 +66,7 @@ class _SpendActivityListState extends State<SpendActivityList> {
           child: Row(
             children: [
               Expanded(
-                child: Eyebrow('Aktivitas · ${filtered.length} Transaksi'),
+                child: Eyebrow('Aktivitas · ${filtered.length} transaksi'),
               ),
               _MemberFilter(
                 members: widget.household.members,

@@ -196,7 +196,7 @@ class AuthErrorBanner extends StatelessWidget {
   }
 }
 
-/// Inline success/info band (cream/sage), used by passwordless link flow.
+/// Inline success/info band, used by passwordless link flow.
 class AuthInfoBanner extends StatelessWidget {
   const AuthInfoBanner({
     super.key,

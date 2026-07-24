@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../theme.dart';
 
-/// Editorial text input. Eyebrow label above (optional), warm surface fill,
+/// Editorial text input. Eyebrow label above (optional), surface fill,
 /// 0.5px border that thickens to 1px on focus. Plays well inside a Form.
 class FtInput extends StatefulWidget {
   const FtInput({

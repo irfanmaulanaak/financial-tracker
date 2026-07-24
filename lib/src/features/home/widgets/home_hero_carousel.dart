@@ -109,56 +109,35 @@ class _HomeHeroCarouselState extends State<HomeHeroCarousel> {
                 },
               ),
               child: PageView.builder(
-              controller: _controller,
-              itemCount: 5,
-              onPageChanged: (i) {
-                FtHaptics.select();
-                setState(() => _page = i);
-              },
-              itemBuilder: (_, index) {
-                final slide = switch (index) {
-                  0 => _AsetSlide(
-                      nw: widget.nw,
-                      trend: widget.trend,
-                      trendDates: widget.trendDates,
-                      cycleNet: widget.cycleNet,
-                    ),
-                  1 => SafeToSpendSlide(
-                      perDay: widget.safe.perDay,
-                      remaining: widget.safe.remaining,
-                      daysLeft: widget.safe.daysLeft,
-                      nextPayday: widget.safe.nextPayday,
-                      hasBudget: widget.safe.hasBudget,
-                    ),
-                  2 => _RatioSlide(
-                      spend: widget.spend,
-                      gajiIncome: widget.gajiIncome,
-                    ),
-                  3 => _KartuSlide(cards: widget.cards),
-                  _ => _KesehatanSlide(score: widget.health),
-                };
-                return AnimatedBuilder(
-                  animation: _controller,
-                  builder: (_, child) {
-                    // PageController.page may be null until first scroll.
-                    final page = _controller.hasClients &&
-                            _controller.position.hasContentDimensions
-                        ? (_controller.page ?? _controller.initialPage.toDouble())
-                        : index.toDouble();
-                    final offset = (page - index).abs().clamp(0.0, 1.0);
-                    final scale = 1 - 0.06 * offset;
-                    final opacity = 1 - 0.35 * offset;
-                    return Opacity(
-                      opacity: opacity,
-                      child: Transform.scale(
-                        scale: scale,
-                        child: child,
+                controller: _controller,
+                itemCount: 5,
+                onPageChanged: (i) {
+                  FtHaptics.select();
+                  setState(() => _page = i);
+                },
+                itemBuilder: (_, index) {
+                  return switch (index) {
+                    0 => SafeToSpendSlide(
+                        perDay: widget.safe.perDay,
+                        remaining: widget.safe.remaining,
+                        daysLeft: widget.safe.daysLeft,
+                        nextPayday: widget.safe.nextPayday,
+                        hasBudget: widget.safe.hasBudget,
                       ),
-                    );
-                  },
-                  child: slide,
-                );
-              },
+                    1 => _AsetSlide(
+                        nw: widget.nw,
+                        trend: widget.trend,
+                        trendDates: widget.trendDates,
+                        cycleNet: widget.cycleNet,
+                      ),
+                    2 => _RatioSlide(
+                        spend: widget.spend,
+                        gajiIncome: widget.gajiIncome,
+                      ),
+                    3 => _KartuSlide(cards: widget.cards),
+                    _ => _KesehatanSlide(score: widget.health),
+                  };
+                },
               ),
             ),
           ),
@@ -203,8 +182,7 @@ class _Dots extends StatelessWidget {
               onTap: i == active ? null : () => onSelect(i),
               // Padding widens the tap target around the 6px dot.
               child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 3, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 8),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 220),
                   width: i == active ? 18 : 6,
@@ -295,7 +273,10 @@ class _AsetSlideState extends ConsumerState<_AsetSlide> {
                     hidden
                         ? Text(
                             maskMoney(),
-                            style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                            style: Theme.of(context)
+                                .textTheme
+                                .displayLarge
+                                ?.copyWith(
                                   fontSize: 32,
                                   height: 1,
                                   letterSpacing: -1,
@@ -306,7 +287,10 @@ class _AsetSlideState extends ConsumerState<_AsetSlide> {
                         : FtAnimatedNumber(
                             value: nw.total,
                             formatter: compactMoney,
-                            style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                            style: Theme.of(context)
+                                .textTheme
+                                .displayLarge
+                                ?.copyWith(
                                   fontSize: 32,
                                   height: 1,
                                   letterSpacing: -1,
@@ -481,7 +465,9 @@ class _DeltaPill extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            positive ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
+            positive
+                ? Icons.arrow_upward_rounded
+                : Icons.arrow_downward_rounded,
             size: 11,
             color: color,
           ),
@@ -551,9 +537,8 @@ class _RatioSlide extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.w600,
-                              color: overBudget
-                                  ? FtColors.danger
-                                  : FtColors.ink,
+                              color:
+                                  overBudget ? FtColors.danger : FtColors.ink,
                               letterSpacing: -0.5,
                             ),
                           ),
@@ -584,7 +569,8 @@ class _RatioSlide extends StatelessWidget {
                       _Legend(
                         color: FtColors.moss,
                         label: 'Gaji',
-                        value: hasGaji ? compactMoney(gajiIncome) : 'Catat gaji',
+                        value:
+                            hasGaji ? compactMoney(gajiIncome) : 'Catat gaji',
                       ),
                       if (!hasGaji) ...[
                         const SizedBox(height: 8),
@@ -715,13 +701,7 @@ class _RatioRingPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = _thickness
         ..strokeCap = StrokeCap.round;
-      canvas.drawArc(
-        rect,
-        -math.pi / 2,
-        math.pi * 2 * spendShare,
-        false,
-        red,
-      );
+      canvas.drawArc(rect, -math.pi / 2, math.pi * 2 * spendShare, false, red);
     }
   }
 
@@ -752,8 +732,8 @@ class _KartuSlide extends StatelessWidget {
     int? soonestDays;
     for (final c in cards) {
       if (c.used <= 0) continue;
-      final d = daysUntilDue(dueDay: c.dueDay, now: now, warnWithinDays: 365)
-          ?? 30;
+      final d =
+          daysUntilDue(dueDay: c.dueDay, now: now, warnWithinDays: 365) ?? 30;
       if (soonestDays == null || d < soonestDays) {
         soonestDays = d;
         soonest = c;
@@ -829,8 +809,11 @@ class _KartuSlide extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          _dueLabel(soonest.dueDay, soonestDays ?? 0,
-                              soonest.label),
+                          _dueLabel(
+                            soonest.dueDay,
+                            soonestDays ?? 0,
+                            soonest.label,
+                          ),
                           style: TextStyle(
                             color: FtColors.ink,
                             fontSize: 12,
@@ -895,10 +878,7 @@ class _SegmentedLimitBar extends StatelessWidget {
           for (var i = 0; i < cards.length; i++) ...[
             Expanded(
               flex: (cards[i].limit / totalLimit * 1000).round().clamp(1, 1000),
-              child: _SegmentTrack(
-                used: cards[i].used,
-                limit: cards[i].limit,
-              ),
+              child: _SegmentTrack(used: cards[i].used, limit: cards[i].limit),
             ),
             if (i != cards.length - 1) const SizedBox(width: 4),
           ],

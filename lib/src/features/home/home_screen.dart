@@ -43,7 +43,7 @@ import 'widgets/category_grid.dart';
 import 'widgets/daily_insight_line.dart';
 import 'widgets/goals_preview.dart';
 import 'widgets/home_header.dart';
-import 'widgets/home_hero_carousel.dart';
+import 'widgets/home_overview.dart';
 import 'widgets/recent_list.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -136,13 +136,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           // Totals count consumption only — investment-category expenses
           // are savings, not spending. Per-category grid stays complete.
           final invCatIds = household.investmentCategoryIds;
-          final totalSpentValue =
-              totalSpent(consumptionOnly(records, invCatIds));
+          final totalSpentValue = totalSpent(
+            consumptionOnly(records, invCatIds),
+          );
           final income = ref.watch(currentCycleIncomeTotalProvider);
-          final gajiIncome = (ref.watch(cycleIncomesProvider).value ??
-                  const <Income>[])
-              .where((i) => i.source == IncomeSource.salary)
-              .fold<int>(0, (a, b) => a + b.amount);
+          final gajiIncome =
+              (ref.watch(cycleIncomesProvider).value ?? const <Income>[])
+                  .where((i) => i.source == IncomeSource.salary)
+                  .fold<int>(0, (a, b) => a + b.amount);
           final byCat = spentByCategory(records);
           final categories =
               household.categories.where((c) => !c.archived).toList()
@@ -180,13 +181,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           final avgPrev = prevCycles.isEmpty
               ? 0
               : prevCycles
-                        .map((w) => w
-                            .where((e) => !invCatIds.contains(e.categoryId))
-                            .fold<int>(0, (a, b) => a + b.amount))
+                        .map(
+                          (w) => w
+                              .where((e) => !invCatIds.contains(e.categoryId))
+                              .fold<int>(0, (a, b) => a + b.amount),
+                        )
                         .fold<int>(0, (a, b) => a + b) ~/
                     prevCycles.length;
-          final invTotal =
-              investments.fold<int>(0, (a, i) => a + i.currentValue);
+          final invTotal = investments.fold<int>(
+            0,
+            (a, i) => a + i.currentValue,
+          );
           final nw = computeNetWorth(
             cash: [
               for (final a in household.cashAccounts)
@@ -229,7 +234,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 );
           }
           final history =
-              ref.watch(netWorthHistoryProvider(14)).value ?? const <NetWorthSnapshot>[];
+              ref.watch(netWorthHistoryProvider(14)).value ??
+              const <NetWorthSnapshot>[];
           // One point per calendar day (carry-forward over unopened days) so
           // the sparkline's x-axis is real time and scrubbing maps to dates.
           final dailySeries = fillDailyNetWorthSeries(history);
@@ -259,8 +265,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           // Insight 1 kalimat/hari — kandidat dihitung dari data terkini,
           // dikunci per-hari oleh DailyInsightLine.
           final cycleNow = currentCycle(now, payday: household.payday);
-          final yesterdayKey = Dates.dayKey(now)
-              .subtract(const Duration(days: 1));
+          final yesterdayKey = Dates.dayKey(
+            now,
+          ).subtract(const Duration(days: 1));
           final insightCandidate = dailyInsight(
             categories: [
               for (final c in categories)
@@ -277,19 +284,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             daysElapsed:
                 Dates.dayKey(now).difference(cycleNow.start).inDays + 1,
             cycleLength: cycleLengthDays(cycleNow),
-            noSpendYesterday: !cycleNow.start.isAfter(yesterdayKey) &&
+            noSpendYesterday:
+                !cycleNow.start.isAfter(yesterdayKey) &&
                 expenses.every((e) => Dates.dayKey(e.date) != yesterdayKey),
           );
 
           Widget section(Widget child, {int index = 0}) => FtFadeUp(
-                duration: const Duration(milliseconds: 340),
-                delay: Duration(milliseconds: index * 60),
-                distance: 10,
-                child: child,
-              );
+            duration: const Duration(milliseconds: 340),
+            delay: Duration(milliseconds: index * 60),
+            distance: 10,
+            child: child,
+          );
 
           final displayName = prettyName(
-              user?.displayName ?? user?.email ?? 'Keluarga');
+            user?.displayName ?? user?.email ?? 'Keluarga',
+          );
 
           // Cycle net used by the asset slide's delta pill. Use Gaji-only
           // income so it matches the ratio slide (and what the user really
@@ -298,8 +307,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
           // Slide "aman dibelanjakan": budget total (termasuk carry amplop)
           // − terpakai, dibagi hari tersisa sampai gajian.
-          final carryTotal =
-              carries.values.fold<int>(0, (a, b) => a + b);
+          final carryTotal = carries.values.fold<int>(0, (a, b) => a + b);
           final budgetTotal = household.monthlyBudgetTotal + carryTotal;
           final daysLeftCycle = cycleNow.endExclusive
               .difference(Dates.dayKey(now))
@@ -342,7 +350,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     HomeHeader(
                       household: household,
                       displayName: displayName,
-                      onMembers: () => context.push('/members'),
                       onSelected: _handleMenu,
                     ),
                     index: 0,
@@ -350,13 +357,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   section(
                     OnboardingChecklist(
                       household: household,
-                      hasExpense: expenses.isNotEmpty ||
+                      hasExpense:
+                          expenses.isNotEmpty ||
                           (recentAsync.value?.isNotEmpty ?? false),
                     ),
                     index: 1,
                   ),
                   section(
-                    HomeHeroCarousel(
+                    HomeOverview(
                       nw: nw,
                       trend: trend,
                       trendDates: trendDates,

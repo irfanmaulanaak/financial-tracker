@@ -11,16 +11,14 @@ import 'ft_glass_fx.dart';
 /// - Liquid OFF (default) atau high-contrast aktif → fallback solid yang
 ///   mereplikasi tampilan klasik persis (warna + alpha + blur opsional),
 ///   jadi zero regression saat beta dimatikan.
-/// - Liquid ON → tumpukan lapisan ala material iOS 26:
-///   1. blur backdrop + boost saturasi (vibrancy),
+/// - Liquid ON → lapisan ringan untuk chrome:
+///   1. satu blur backdrop + vibrancy ringan,
 ///   2. lensing — wallpaper liquid dilukis ulang dengan proyeksi membesar,
 ///      menekuk kuat di tepi (lihat `GlassLensLayer`),
 ///   3. tint tipis + sheen,
-///   4. kilau sweep periodik + touch-point glow interaktif,
-///   5. rim specular + fringe kromatik di tepi.
+///   4. rim specular + fringe kromatik di tepi.
 ///
-/// Chrome (nav/sheet) pakai jalur penuh; kartu konten pakai [lite] supaya
-/// list panjang tetap ringan (tanpa BackdropFilter per kartu).
+/// Kartu konten tidak memakai widget ini; glass hanya untuk nav dan sheet.
 class FtGlass extends StatelessWidget {
   const FtGlass({
     super.key,
@@ -32,9 +30,7 @@ class FtGlass extends StatelessWidget {
     this.fallbackBorderColor,
     this.boxShadow,
     this.padding,
-    this.sweep = false,
     this.animateIn = false,
-    this.lite = false,
   });
 
   final Widget child;
@@ -55,16 +51,8 @@ class FtGlass extends StatelessWidget {
   final List<BoxShadow>? boxShadow;
   final EdgeInsetsGeometry? padding;
 
-  /// Kilau specular berjalan (liquid saja; hormati reduce-motion).
-  final bool sweep;
-
-  /// Animasi masuk: blur + tint naik 0→penuh saat mount (liquid saja).
+  /// Animasi masuk rim saat mount (liquid saja).
   final bool animateIn;
-
-  /// Mode ringan untuk kartu konten: tanpa BackdropFilter (mahal di list),
-  /// tanpa touch glow (Listener per kartu bikin jank scroll), lensa
-  /// wallpaper versi sederhana + tint lebih pekat agar teks terbaca.
-  final bool lite;
 
   @override
   Widget build(BuildContext context) {
@@ -72,15 +60,7 @@ class FtGlass extends StatelessWidget {
     if (!liquid) return _fallback();
 
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
-    if (animateIn && !reduceMotion) {
-      return TweenAnimationBuilder<double>(
-        tween: Tween(begin: 0, end: 1),
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOutCubic,
-        builder: (context, t, _) => _glass(context, t, reduceMotion),
-      );
-    }
-    return _glass(context, 1, reduceMotion);
+    return _glass(context, animateRim: animateIn && !reduceMotion);
   }
 
   Widget _fallback() {
@@ -109,116 +89,132 @@ class FtGlass extends StatelessWidget {
     );
   }
 
-  Widget _glass(BuildContext context, double t, bool reduceMotion) {
+  Widget _glass(BuildContext context, {required bool animateRim}) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    // Blur KONSTAN — animasi sigma bikin BackdropFilter "chunky"/nge-lag
-    // (flutter#165422); entrance datang dari slide sheet + FtFadeUp, bukan
-    // blur naik. `t` hanya menggerakkan lapisan murah (tint/sheen/rim).
-    const sigma = 26.0;
-    // Tint tipis — biarkan warna background tembus; vibrancy datang dari
-    // boost saturasi di filter + lapisan lensa, bukan permukaan yang pekat.
-    // Kartu (lite) menampung angka/teks utama → tint lebih pekat.
-    final tintAlpha = (lite ? (dark ? 0.50 : 0.58) : (dark ? 0.26 : 0.30)) * t;
-    final sheenAlpha = (dark ? 0.10 : 0.18) * t;
+    const sigma = 18.0;
+    // Keep the material visibly transparent. The blur and rim provide
+    // separation; tint is only a legibility assist.
+    final tintAlpha = dark ? 0.18 : 0.12;
+    final sheenAlpha = dark ? 0.08 : 0.14;
 
-    final layers = Stack(
-      children: [
-        // 2) Lensing: wallpaper diproyeksi membesar, menekuk di tepi.
-        // Hadir sejak frame pertama — dulu di-gate `t > 0.6` sehingga "pop"
-        // di tengah slide (spike 2 saveLayer + repaint scene); sekarang mulus.
-        Positioned.fill(
-          child: GlassLensLayer(borderRadius: borderRadius, lite: lite),
-        ),
-        // 3) Tint + sheen.
-        Positioned.fill(
-          child: IgnorePointer(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color:
-                    (baseColor ?? FtColors.surface).withValues(alpha: tintAlpha),
-                borderRadius: borderRadius,
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Colors.white.withValues(alpha: sheenAlpha),
-                    (baseColor ?? FtColors.surface)
-                        .withValues(alpha: tintAlpha * 0.6),
-                  ],
-                  stops: const [0, 0.5],
+    // The backdrop subtree is isolated from the animated lens. A LiquidFrame
+    // tick can now repaint the lens without invalidating the blur.
+    final backdrop = RepaintBoundary(
+      child: ClipRRect(
+        borderRadius: borderRadius,
+        child: BackdropFilter(
+          filter: ImageFilter.compose(
+            outer: const ColorFilter.matrix(_saturation118),
+            inner: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
+          ),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: (baseColor ?? FtColors.surface).withValues(
+                        alpha: tintAlpha,
+                      ),
+                      borderRadius: borderRadius,
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Colors.white.withValues(alpha: sheenAlpha),
+                          (baseColor ?? FtColors.surface).withValues(
+                            alpha: tintAlpha * 0.6,
+                          ),
+                        ],
+                        stops: const [0, 0.5],
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            ),
+              Padding(padding: padding ?? EdgeInsets.zero, child: child),
+            ],
           ),
         ),
-        // 4) Kilau periodik.
-        if (sweep && !reduceMotion)
-          Positioned.fill(
-            child: IgnorePointer(child: GlassSweep(dark: dark)),
+      ),
+    );
+
+    final surface = Stack(
+      children: [
+        backdrop,
+        Positioned.fill(
+          child: RepaintBoundary(
+            child: GlassLensLayer(borderRadius: borderRadius),
           ),
-        Padding(
-          padding: padding ?? EdgeInsets.zero,
-          child: child,
         ),
-        // Glow interaktif paling atas: cahaya jatuh di muka kaca, event
-        // tetap tembus ke tombol di bawahnya (listener translucent).
-        // Chrome saja — di kartu list, Listener-nya ikut menangkap tiap
-        // pointer-move saat drag-scroll dan me-repaint kartu di frekuensi
-        // input (jank scroll).
-        if (!reduceMotion && !lite)
-          Positioned.fill(child: GlassTouchGlow(dark: dark)),
       ],
     );
 
-    // 1) Blur + saturasi pada konten nyata yang lewat di belakang kaca.
-    // Lite: lewati BackdropFilter — di belakang kartu hanya ada wallpaper,
-    // dan lapisan lensa sudah melukisnya ulang, jadi visual tetap "kaca".
-    Widget glass = ClipRRect(
-      borderRadius: borderRadius,
-      child: lite
-          ? layers
-          : BackdropFilter(
-              filter: ImageFilter.compose(
-                outer: const ColorFilter.matrix(_saturation135),
-                inner: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
-              ),
-              child: layers,
-            ),
-    );
+    Widget glass;
+    if (animateRim) {
+      glass = TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0, end: 1),
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
+        builder: (context, opacity, staticSurface) => CustomPaint(
+          foregroundPainter: _SpecularRimPainter(
+            borderRadius: borderRadius,
+            dark: dark,
+            opacity: opacity,
+          ),
+          child: staticSurface,
+        ),
+        child: surface,
+      );
+    } else {
+      glass = CustomPaint(
+        foregroundPainter: _SpecularRimPainter(
+          borderRadius: borderRadius,
+          dark: dark,
+          opacity: 1,
+        ),
+        child: surface,
+      );
+    }
 
-    // 5) Rim specular + fringe kromatik.
-    glass = CustomPaint(
-      foregroundPainter: _SpecularRimPainter(
-        borderRadius: borderRadius,
-        dark: dark,
-        opacity: t,
-      ),
-      child: glass,
-    );
-
-    if (boxShadow == null) return glass;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: borderRadius,
-        boxShadow: boxShadow,
-      ),
-      child: glass,
-    );
+    if (boxShadow != null) {
+      glass = DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: borderRadius,
+          boxShadow: boxShadow,
+        ),
+        child: glass,
+      );
+    }
+    return RepaintBoundary(child: glass);
   }
 }
 
-/// Matriks saturasi 1.35 (preserve luminance Rec. 709); tiap baris RGB
-/// berjumlah 1 supaya abu-abu tetap abu-abu.
-const List<double> _saturation135 = [
-  1.275590, -0.250320, -0.025270, 0, 0, //
-  -0.074410, 1.099680, -0.025270, 0, 0, //
-  -0.074410, -0.250320, 1.324730, 0, 0, //
-  0, 0, 0, 1, 0,
+/// Mild vibrancy. Each RGB row sums to 1, so neutral content stays neutral.
+const List<double> _saturation118 = [
+  1.14172,
+  -0.128736,
+  -0.012984,
+  0,
+  0,
+  -0.038268,
+  1.051252,
+  -0.012984,
+  0,
+  0,
+  -0.038268,
+  -0.128736,
+  1.167004,
+  0,
+  0,
+  0,
+  0,
+  0,
+  1,
+  0,
 ];
 
-/// Rim specular: stroke gradient terang di kiri-atas → gelap di kanan-bawah,
-/// meniru pantulan cahaya di tepi kaca, plus fringe kromatik tipis
-/// (hangat di luar, dingin di dalam) sebagai ilusi dispersi lensa.
+/// Specular rim: light catches the top-left edge and fades across the surface.
 class _SpecularRimPainter extends CustomPainter {
   const _SpecularRimPainter({
     required this.borderRadius,
@@ -234,36 +230,38 @@ class _SpecularRimPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
 
-    // Fringe hangat di tepi terluar.
+    // Cool outer edge picks up the app's action color very subtly.
     canvas.drawRRect(
       borderRadius.toRRect(rect).deflate(0.2),
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 0.8
-        ..color = const Color(0xFFFFB478)
-            .withValues(alpha: (dark ? 0.10 : 0.16) * opacity),
+        ..strokeWidth = 0.7
+        ..color = FtColors.clay.withValues(
+          alpha: (dark ? 0.12 : 0.08) * opacity,
+        ),
     );
     // Fringe dingin sedikit ke dalam.
     canvas.drawRRect(
       borderRadius.toRRect(rect).deflate(1.6),
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 0.8
-        ..color = const Color(0xFF78B4FF)
-            .withValues(alpha: (dark ? 0.09 : 0.14) * opacity),
+        ..strokeWidth = 0.7
+        ..color = Colors.white.withValues(
+          alpha: (dark ? 0.16 : 0.42) * opacity,
+        ),
     );
 
     // Rim specular utama.
     final paint = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.2
+      ..strokeWidth = 1.0
       ..shader = LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          Colors.white.withValues(alpha: (dark ? 0.55 : 0.95) * opacity),
-          Colors.white.withValues(alpha: 0.08 * opacity),
-          Colors.white.withValues(alpha: (dark ? 0.30 : 0.55) * opacity),
+          Colors.white.withValues(alpha: (dark ? 0.62 : 0.92) * opacity),
+          Colors.white.withValues(alpha: 0.06 * opacity),
+          Colors.white.withValues(alpha: (dark ? 0.24 : 0.36) * opacity),
         ],
         stops: const [0, 0.55, 1],
       ).createShader(rect);

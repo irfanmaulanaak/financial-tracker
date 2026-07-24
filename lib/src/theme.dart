@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Warm editorial palette. Supports both light and dark modes via a static
-/// brightness toggle so existing widgets don't need to change.
+/// FinSist palette: neutral financial canvas, one blue action color, and
+/// semantic colors reserved for meaning. Supports light and dark modes via a
+/// static brightness toggle so existing widgets don't need to change.
 class FtColors {
   static Brightness _brightness = Brightness.light;
   static void setBrightness(Brightness b) => _brightness = b;
@@ -17,45 +18,72 @@ class FtColors {
   static bool get liquid => _liquid;
 
   // Backgrounds & surfaces
-  static Color get bg => _dark ? const Color(0xFF14130f) : const Color(0xFFF1EDE4);
-  static Color get bgAlt => _dark ? const Color(0xFF1c1a15) : const Color(0xFFE9E4D7);
-  static Color get surface => _dark ? const Color(0xFF1f1d18) : const Color(0xFFFBF8F1);
-  static Color get surfaceAlt => _dark ? const Color(0xFF26231d) : const Color(0xFFF6F2E8);
+  static Color get bg =>
+      _dark ? const Color(0xFF0A0B0D) : const Color(0xFFF6F7F9);
+  static Color get bgAlt =>
+      _dark ? const Color(0xFF111419) : const Color(0xFFF0F2F5);
+  static Color get surface =>
+      _dark ? const Color(0xFF16181D) : const Color(0xFFFFFFFF);
+  static Color get surfaceAlt =>
+      _dark ? const Color(0xFF20242B) : const Color(0xFFF2F4F7);
 
   // Text
-  static Color get ink => _dark ? const Color(0xFFf1ede4) : const Color(0xFF1A1814);
-  static Color get ink2 => _dark ? const Color(0xFFc8c0b0) : const Color(0xFF4B463D);
-  static Color get ink3 => _dark ? const Color(0xFF8a8272) : const Color(0xFF807868);
-  static Color get ink4 => _dark ? const Color(0xFF56514a) : const Color(0xFFB8B0A0);
+  static Color get ink =>
+      _dark ? const Color(0xFFF7F9FC) : const Color(0xFF0A0B0D);
+  static Color get ink2 =>
+      _dark ? const Color(0xFFC7CDD6) : const Color(0xFF3F4652);
+  static Color get ink3 =>
+      _dark ? const Color(0xFF9098A5) : const Color(0xFF68707D);
+  static Color get ink4 =>
+      _dark ? const Color(0xFF5E6672) : const Color(0xFFA7ADB7);
 
   // Lines
-  static Color get line => _dark ? const Color(0x14f1ede4) : const Color(0x141A1814);
-  static Color get lineStrong => _dark ? const Color(0x29f1ede4) : const Color(0x291A1814);
+  static Color get line =>
+      _dark ? const Color(0xFF2A3038) : const Color(0xFFE2E6EC);
+  static Color get lineStrong =>
+      _dark ? const Color(0xFF3B434F) : const Color(0xFFCDD2DB);
 
   // Accents
-  static Color get clay => _dark ? const Color(0xFFe08a4a) : const Color(0xFFC4612A);
-  static Color get sage => _dark ? const Color(0xFF8aab92) : const Color(0xFF5E7A64);
-  static Color get moss => _dark ? const Color(0xFF6ea088) : const Color(0xFF2D5040);
-  static Color get plum => _dark ? const Color(0xFFb56f80) : const Color(0xFF7A3F4E);
-  static Color get ochre => _dark ? const Color(0xFFd4ab55) : const Color(0xFFB89030);
-  static Color get danger => _dark ? const Color(0xFFd56a6a) : const Color(0xFF9A2F2F);
-  static Color get sky => _dark ? const Color(0xFF7aa3bd) : const Color(0xFF3A6075);
-  static Color get blush => _dark ? const Color(0xFFE8A8B8) : const Color(0xFFE8B4C0);
+  static Color get clay =>
+      _dark ? const Color(0xFF5C86FF) : const Color(0xFF0052FF);
+  static Color get sage =>
+      _dark ? const Color(0xFF45C783) : const Color(0xFF138A52);
+  static Color get moss =>
+      _dark ? const Color(0xFF43C982) : const Color(0xFF087A46);
+  static Color get plum =>
+      _dark ? const Color(0xFFA38BFF) : const Color(0xFF6E55D9);
+  static Color get ochre =>
+      _dark ? const Color(0xFFF3B340) : const Color(0xFFB76E00);
+  static Color get danger =>
+      _dark ? const Color(0xFFFF6B73) : const Color(0xFFC9363E);
+  static Color get sky =>
+      _dark ? const Color(0xFF70A0FF) : const Color(0xFF2E6BFF);
+  static Color get blush =>
+      _dark ? const Color(0xFFF0AFC0) : const Color(0xFFD989A0);
 
   // Health
-  static Color get healthOk => _dark ? const Color(0xFF8aab92) : const Color(0xFF5E7A64);
-  static Color get healthWarn => _dark ? const Color(0xFFd4ab55) : const Color(0xFFB89030);
-  static Color get healthBad => _dark ? const Color(0xFFd56a6a) : const Color(0xFF9A2F2F);
+  static Color get healthOk =>
+      _dark ? const Color(0xFF45C783) : const Color(0xFF138A52);
+  static Color get healthWarn =>
+      _dark ? const Color(0xFFF3B340) : const Color(0xFFB76E00);
+  static Color get healthBad =>
+      _dark ? const Color(0xFFFF6B73) : const Color(0xFFC9363E);
 
-  // Category palette (used by donut + category chips). Light/dark pairs taken
-  // from `claude-design/design/theme.jsx`.
-  static Color get catFood => _dark ? const Color(0xFFe08a4a) : const Color(0xFFC4612A);
-  static Color get catTransport => _dark ? const Color(0xFF8aab92) : const Color(0xFF5E7A64);
-  static Color get catBills => _dark ? const Color(0xFFd4ab55) : const Color(0xFFB89030);
-  static Color get catShopping => _dark ? const Color(0xFFb56f80) : const Color(0xFF7A3F4E);
-  static Color get catEntertainment => _dark ? const Color(0xFF7aa3bd) : const Color(0xFF3A6075);
-  static Color get catHealth => _dark ? const Color(0xFF6ea088) : const Color(0xFF2D5040);
-  static Color get catOther => _dark ? const Color(0xFF807668) : const Color(0xFFA89880);
+  // Category palette (used by donut + category chips).
+  static Color get catFood =>
+      _dark ? const Color(0xFFFF9B73) : const Color(0xFFD85C2F);
+  static Color get catTransport =>
+      _dark ? const Color(0xFF45C783) : const Color(0xFF138A52);
+  static Color get catBills =>
+      _dark ? const Color(0xFFF3B340) : const Color(0xFFB76E00);
+  static Color get catShopping =>
+      _dark ? const Color(0xFFA38BFF) : const Color(0xFF6E55D9);
+  static Color get catEntertainment =>
+      _dark ? const Color(0xFF70A0FF) : const Color(0xFF2E6BFF);
+  static Color get catHealth =>
+      _dark ? const Color(0xFF36C2B4) : const Color(0xFF078478);
+  static Color get catOther =>
+      _dark ? const Color(0xFF8E96A3) : const Color(0xFF747C88);
 }
 
 /// Marks every element dirty so the whole tree rebuilds on the next frame.
@@ -84,15 +112,21 @@ ThemeData buildTheme(Brightness brightness, {bool liquid = false}) {
     brightness: brightness,
     primary: FtColors.clay,
     onPrimary: Colors.white,
-    primaryContainer: isDark ? const Color(0xFF3a2818) : const Color(0xFFE9D9C8),
+    primaryContainer: isDark
+        ? const Color(0xFF18264A)
+        : const Color(0xFFE8EFFF),
     onPrimaryContainer: FtColors.ink,
     secondary: FtColors.sage,
     onSecondary: Colors.white,
-    secondaryContainer: isDark ? const Color(0xFF2a3a2e) : const Color(0xFFD9E2DC),
+    secondaryContainer: isDark
+        ? const Color(0xFF123526)
+        : const Color(0xFFDDF4E8),
     onSecondaryContainer: FtColors.ink,
     tertiary: FtColors.sky,
     onTertiary: Colors.white,
-    tertiaryContainer: isDark ? const Color(0xFF253540) : const Color(0xFFD6E2EA),
+    tertiaryContainer: isDark
+        ? const Color(0xFF182A4D)
+        : const Color(0xFFE5EDFF),
     onTertiaryContainer: FtColors.ink,
     error: FtColors.danger,
     onError: Colors.white,
@@ -106,36 +140,69 @@ ThemeData buildTheme(Brightness brightness, {bool liquid = false}) {
     outlineVariant: FtColors.line,
   );
 
-  // Geist (sans) + Newsreader (serif) match the new design tokens.
-  // Both ship through google_fonts; Geist replaces the previous Inter family.
-  final sans = GoogleFonts.geistTextTheme();
-  final serif = GoogleFonts.newsreaderTextTheme();
+  // Inter is neutral and highly legible across Android, iOS, and web. Tabular
+  // figures keep rupiah columns and changing balances visually stable.
+  final sans = GoogleFonts.interTextTheme().apply(
+    bodyColor: FtColors.ink2,
+    displayColor: FtColors.ink,
+  );
+  const numbers = [FontFeature.tabularFigures()];
 
   final textTheme = sans.copyWith(
-    displayLarge: serif.displayLarge?.copyWith(
-        color: FtColors.ink, fontWeight: FontWeight.w500, letterSpacing: -1.5),
-    displayMedium: serif.displayMedium?.copyWith(
-        color: FtColors.ink, fontWeight: FontWeight.w500, letterSpacing: -1.0),
-    displaySmall: serif.displaySmall?.copyWith(
-        color: FtColors.ink, fontWeight: FontWeight.w500, letterSpacing: -0.5),
-    headlineLarge: serif.headlineLarge?.copyWith(
-        color: FtColors.ink, fontWeight: FontWeight.w500, letterSpacing: -0.5),
-    headlineMedium: serif.headlineMedium?.copyWith(
-        color: FtColors.ink, fontWeight: FontWeight.w500, letterSpacing: -0.3),
-    headlineSmall: serif.headlineSmall?.copyWith(
-        color: FtColors.ink, fontWeight: FontWeight.w500, letterSpacing: -0.3),
-    titleLarge: serif.titleLarge?.copyWith(
-        color: FtColors.ink, fontWeight: FontWeight.w500),
+    displayLarge: sans.displayLarge?.copyWith(
+      color: FtColors.ink,
+      fontWeight: FontWeight.w600,
+      letterSpacing: -1.4,
+      fontFeatures: numbers,
+    ),
+    displayMedium: sans.displayMedium?.copyWith(
+      color: FtColors.ink,
+      fontWeight: FontWeight.w600,
+      letterSpacing: -1.0,
+      fontFeatures: numbers,
+    ),
+    displaySmall: sans.displaySmall?.copyWith(
+      color: FtColors.ink,
+      fontWeight: FontWeight.w600,
+      letterSpacing: -0.7,
+      fontFeatures: numbers,
+    ),
+    headlineLarge: sans.headlineLarge?.copyWith(
+      color: FtColors.ink,
+      fontWeight: FontWeight.w600,
+      letterSpacing: -0.7,
+    ),
+    headlineMedium: sans.headlineMedium?.copyWith(
+      color: FtColors.ink,
+      fontWeight: FontWeight.w600,
+      letterSpacing: -0.5,
+    ),
+    headlineSmall: sans.headlineSmall?.copyWith(
+      color: FtColors.ink,
+      fontWeight: FontWeight.w600,
+      letterSpacing: -0.4,
+    ),
+    titleLarge: sans.titleLarge?.copyWith(
+      color: FtColors.ink,
+      fontWeight: FontWeight.w600,
+    ),
     titleMedium: sans.titleMedium?.copyWith(
-        color: FtColors.ink, fontWeight: FontWeight.w500),
-    bodyLarge: sans.bodyLarge?.copyWith(color: FtColors.ink2),
-    bodyMedium: sans.bodyMedium?.copyWith(color: FtColors.ink2),
-    bodySmall: sans.bodySmall?.copyWith(color: FtColors.ink3),
+      color: FtColors.ink,
+      fontWeight: FontWeight.w600,
+    ),
+    bodyLarge: sans.bodyLarge?.copyWith(color: FtColors.ink2, height: 1.45),
+    bodyMedium: sans.bodyMedium?.copyWith(color: FtColors.ink2, height: 1.45),
+    bodySmall: sans.bodySmall?.copyWith(color: FtColors.ink3, height: 1.4),
     labelLarge: sans.labelLarge?.copyWith(
-        color: FtColors.ink, fontWeight: FontWeight.w500),
+      color: FtColors.ink,
+      fontWeight: FontWeight.w600,
+    ),
     labelMedium: sans.labelMedium?.copyWith(color: FtColors.ink2),
     labelSmall: sans.labelSmall?.copyWith(
-        color: FtColors.ink3, letterSpacing: 1.4, fontWeight: FontWeight.w500),
+      color: FtColors.ink3,
+      letterSpacing: 0,
+      fontWeight: FontWeight.w600,
+    ),
   );
 
   return ThemeData(
@@ -174,15 +241,15 @@ ThemeData buildTheme(Brightness brightness, {bool liquid = false}) {
       thickness: WidgetStateProperty.all(6),
     ),
     appBarTheme: AppBarTheme(
-      backgroundColor: FtColors.bg,
+      backgroundColor: liquid ? Colors.transparent : FtColors.bg,
       surfaceTintColor: Colors.transparent,
       foregroundColor: FtColors.ink,
       elevation: 0,
       centerTitle: false,
-      titleTextStyle: serif.titleLarge?.copyWith(
+      titleTextStyle: sans.titleLarge?.copyWith(
         color: FtColors.ink,
-        fontWeight: FontWeight.w500,
-        letterSpacing: -0.3,
+        fontWeight: FontWeight.w600,
+        letterSpacing: -0.4,
       ),
     ),
     cardTheme: CardThemeData(
@@ -190,8 +257,8 @@ ThemeData buildTheme(Brightness brightness, {bool liquid = false}) {
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: BorderSide(color: FtColors.line, width: 0.5),
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: FtColors.line, width: 1),
       ),
     ),
     dividerTheme: DividerThemeData(
@@ -213,7 +280,7 @@ ThemeData buildTheme(Brightness brightness, {bool liquid = false}) {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: FtColors.ink, width: 1),
+        borderSide: BorderSide(color: FtColors.clay, width: 1.5),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -227,57 +294,67 @@ ThemeData buildTheme(Brightness brightness, {bool liquid = false}) {
       hintStyle: sans.bodyMedium?.copyWith(color: FtColors.ink4),
     ),
     filledButtonTheme: FilledButtonThemeData(
-      style: FilledButton.styleFrom(
-        backgroundColor: FtColors.ink,
-        foregroundColor: FtColors.bg,
-        minimumSize: const Size.fromHeight(52),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        textStyle: sans.labelLarge
-            ?.copyWith(fontWeight: FontWeight.w500, fontSize: 14),
-      ).copyWith(
-        overlayColor: WidgetStateProperty.resolveWith((s) {
-          if (s.contains(WidgetState.pressed)) {
-            return FtColors.bg.withValues(alpha: 0.12);
-          }
-          if (s.contains(WidgetState.hovered) ||
-              s.contains(WidgetState.focused)) {
-            return FtColors.bg.withValues(alpha: 0.08);
-          }
-          return null;
-        }),
-      ),
+      style:
+          FilledButton.styleFrom(
+            backgroundColor: FtColors.clay,
+            foregroundColor: Colors.white,
+            minimumSize: const Size.fromHeight(52),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            textStyle: sans.labelLarge?.copyWith(
+              fontWeight: FontWeight.w500,
+              fontSize: 14,
+            ),
+          ).copyWith(
+            overlayColor: WidgetStateProperty.resolveWith((s) {
+              if (s.contains(WidgetState.pressed)) {
+                return Colors.white.withValues(alpha: 0.16);
+              }
+              if (s.contains(WidgetState.hovered) ||
+                  s.contains(WidgetState.focused)) {
+                return Colors.white.withValues(alpha: 0.10);
+              }
+              return null;
+            }),
+          ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
-      style: OutlinedButton.styleFrom(
-        foregroundColor: FtColors.ink,
-        backgroundColor: FtColors.surface,
-        minimumSize: const Size.fromHeight(52),
-        side: BorderSide(color: FtColors.lineStrong, width: 0.5),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        textStyle: sans.labelLarge
-            ?.copyWith(fontWeight: FontWeight.w500, fontSize: 14),
-      ).copyWith(
-        overlayColor: WidgetStateProperty.resolveWith((s) {
-          if (s.contains(WidgetState.pressed)) {
-            return FtColors.ink.withValues(alpha: 0.06);
-          }
-          if (s.contains(WidgetState.hovered) ||
-              s.contains(WidgetState.focused)) {
-            return FtColors.ink.withValues(alpha: 0.04);
-          }
-          return null;
-        }),
-      ),
+      style:
+          OutlinedButton.styleFrom(
+            foregroundColor: FtColors.ink,
+            backgroundColor: FtColors.surface,
+            minimumSize: const Size.fromHeight(52),
+            side: BorderSide(color: FtColors.lineStrong, width: 0.5),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            textStyle: sans.labelLarge?.copyWith(
+              fontWeight: FontWeight.w500,
+              fontSize: 14,
+            ),
+          ).copyWith(
+            overlayColor: WidgetStateProperty.resolveWith((s) {
+              if (s.contains(WidgetState.pressed)) {
+                return FtColors.ink.withValues(alpha: 0.06);
+              }
+              if (s.contains(WidgetState.hovered) ||
+                  s.contains(WidgetState.focused)) {
+                return FtColors.ink.withValues(alpha: 0.04);
+              }
+              return null;
+            }),
+          ),
     ),
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
-        foregroundColor: FtColors.ink2,
+        foregroundColor: FtColors.clay,
         textStyle: sans.labelLarge?.copyWith(fontWeight: FontWeight.w500),
       ),
     ),
     floatingActionButtonTheme: FloatingActionButtonThemeData(
-      backgroundColor: FtColors.ink,
-      foregroundColor: FtColors.bg,
+      backgroundColor: FtColors.clay,
+      foregroundColor: Colors.white,
     ),
   );
 }
@@ -315,7 +392,7 @@ class _FtFadeUpTransitionsBuilder extends PageTransitionsBuilder {
   }
 }
 
-/// Small uppercase "eyebrow" label used above sections + form fields.
+/// Compact section label used above grouped content and form fields.
 class Eyebrow extends StatelessWidget {
   const Eyebrow(this.text, {super.key, this.color});
   final String text;
@@ -324,12 +401,12 @@ class Eyebrow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Text(
-      text.toUpperCase(),
+      text,
       style: TextStyle(
-        fontSize: 10.5,
-        letterSpacing: 1.4,
+        fontSize: 12,
+        letterSpacing: 0,
         color: color ?? FtColors.ink3,
-        fontWeight: FontWeight.w500,
+        fontWeight: FontWeight.w600,
       ),
     );
   }

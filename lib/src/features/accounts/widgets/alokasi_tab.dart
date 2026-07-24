@@ -13,8 +13,7 @@ import '../../investments/investment.dart';
 import 'rebalance_moves.dart';
 
 /// Allocation tab body: market context card → current/target donut +
-/// breakdown + summary → rebalancing moves list. Mirrors `AllocationView`
-/// in `claude-design/screens-assets.jsx`.
+/// breakdown + summary → rebalancing moves list.
 class AlokasiTab extends ConsumerStatefulWidget {
   const AlokasiTab({
     super.key,

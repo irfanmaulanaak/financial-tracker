@@ -60,7 +60,6 @@ List<GoalPreset> goalPresets() => [
 
 /// 3×2 grid of preset goal templates. Tap fires [onSelect] with the chosen
 /// preset; the active preset shows a tinted background + colored border.
-/// Mirrors the "Template Tujuan" block in `claude-design/screens-extras.jsx`.
 class GoalPresetGrid extends StatelessWidget {
   const GoalPresetGrid({
     super.key,

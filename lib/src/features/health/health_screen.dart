@@ -20,7 +20,6 @@ import 'widgets/health_recommendations.dart';
 
 /// `/health` — full-screen kesehatan-finansial detector. Vertical traffic
 /// light hero, factor breakdown, spending findings, recommendations.
-/// Mirrors `HealthScreen` in `claude-design/screens-rest.jsx`.
 class HealthScreen extends ConsumerWidget {
   const HealthScreen({super.key});
 
