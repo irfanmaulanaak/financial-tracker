@@ -193,7 +193,10 @@ class _ExpenseLogScreenState extends ConsumerState<ExpenseLogScreen> {
                   await ftRefreshDelay();
                 },
                 child: expensesStream.when(
-                  loading: () => const FtSkeletonListView(count: 6),
+                  loading: () => const FtSkeletonListView(
+                    count: 6,
+                    padding: EdgeInsets.only(bottom: kFtFabClearance),
+                  ),
                   error: (e, _) => Center(child: Text('Gagal: $e')),
                   data: (all) {
                     final filtered = all.where((e) {

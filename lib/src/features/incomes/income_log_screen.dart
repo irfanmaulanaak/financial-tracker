@@ -45,7 +45,10 @@ class IncomeLogScreen extends ConsumerWidget {
                     await ftRefreshDelay();
                   },
                   child: incomes.when(
-                  loading: () => const FtSkeletonListView(count: 6),
+                  loading: () => const FtSkeletonListView(
+                    count: 6,
+                    padding: EdgeInsets.only(bottom: kFtFabClearance),
+                  ),
                   error: (e, _) => Center(child: Text('Gagal: $e')),
                   data: (items) {
                     if (items.isEmpty) {
