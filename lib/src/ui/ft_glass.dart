@@ -123,11 +123,28 @@ class FtGlass extends StatelessWidget {
 
     final layers = Stack(
       children: [
+        // 1) Blur + saturasi pada konten nyata yang lewat di belakang kaca.
+        // Child filter statis supaya repaint lensa tidak mengulang blur.
+        if (!lite)
+          Positioned.fill(
+            child: BackdropFilter(
+              filter: ImageFilter.compose(
+                outer: const ColorFilter.matrix(_saturation135),
+                inner: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
+              ),
+              child: const SizedBox.expand(),
+            ),
+          ),
         // 2) Lensing: wallpaper diproyeksi membesar, menekuk di tepi.
         // Hadir sejak frame pertama — dulu di-gate `t > 0.6` sehingga "pop"
         // di tengah slide (spike 2 saveLayer + repaint scene); sekarang mulus.
         Positioned.fill(
-          child: GlassLensLayer(borderRadius: borderRadius, lite: lite),
+          child: RepaintBoundary(
+            child: GlassLensLayer(
+              borderRadius: borderRadius,
+              lite: lite,
+            ),
+          ),
         ),
         // 3) Tint + sheen.
         Positioned.fill(
@@ -170,21 +187,9 @@ class FtGlass extends StatelessWidget {
       ],
     );
 
-    // 1) Blur + saturasi pada konten nyata yang lewat di belakang kaca.
     // Lite: lewati BackdropFilter — di belakang kartu hanya ada wallpaper,
     // dan lapisan lensa sudah melukisnya ulang, jadi visual tetap "kaca".
-    Widget glass = ClipRRect(
-      borderRadius: borderRadius,
-      child: lite
-          ? layers
-          : BackdropFilter(
-              filter: ImageFilter.compose(
-                outer: const ColorFilter.matrix(_saturation135),
-                inner: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
-              ),
-              child: layers,
-            ),
-    );
+    Widget glass = ClipRRect(borderRadius: borderRadius, child: layers);
 
     // 5) Rim specular + fringe kromatik.
     glass = CustomPaint(

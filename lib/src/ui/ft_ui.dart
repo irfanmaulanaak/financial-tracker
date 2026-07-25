@@ -882,6 +882,7 @@ class FtShimmer extends StatefulWidget {
 class _FtShimmerState extends State<FtShimmer>
     with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
+  bool? _disableAnimations;
 
   @override
   void initState() {
@@ -889,7 +890,21 @@ class _FtShimmerState extends State<FtShimmer>
     _ctrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1400),
-    )..repeat();
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final disableAnimations = MediaQuery.disableAnimationsOf(context);
+    if (disableAnimations != _disableAnimations) {
+      _disableAnimations = disableAnimations;
+      if (_disableAnimations == true) {
+        _ctrl.stop();
+      } else {
+        _ctrl.repeat();
+      }
+    }
   }
 
   @override
@@ -900,6 +915,7 @@ class _FtShimmerState extends State<FtShimmer>
 
   @override
   Widget build(BuildContext context) {
+    if (_disableAnimations == true) return widget.child;
     return AnimatedBuilder(
       animation: _ctrl,
       builder: (context, child) {

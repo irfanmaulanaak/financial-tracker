@@ -39,7 +39,7 @@ class _FtLiquidBackgroundState extends State<FtLiquidBackground>
   static const _stepInterval = Duration(milliseconds: 83);
   static const _loopMs = 20000;
 
-  final LiquidFrame _frame = LiquidFrame();
+  late final LiquidFrame _frame;
   final Stopwatch _clock = Stopwatch()..start();
   Timer? _timer;
   bool _appVisible = true;
@@ -53,6 +53,7 @@ class _FtLiquidBackgroundState extends State<FtLiquidBackground>
   @override
   void initState() {
     super.initState();
+    _frame = LiquidFrame(onConsumersChanged: _syncTimer);
     WidgetsBinding.instance.addObserver(this);
   }
 
@@ -65,7 +66,7 @@ class _FtLiquidBackgroundState extends State<FtLiquidBackground>
   }
 
   void _syncTimer() {
-    final shouldRun = _animate && _appVisible;
+    final shouldRun = _animate && _appVisible && _frame.hasConsumers;
     if (shouldRun && _timer == null) {
       _timer = Timer.periodic(_stepInterval, (_) => _onStep());
     } else if (!shouldRun && _timer != null) {
@@ -163,14 +164,31 @@ class _FtLiquidBackgroundState extends State<FtLiquidBackground>
 /// CustomPainter dan MEMBACA [image] di dalam paint() (bukan menangkapnya
 /// saat build) supaya tidak pernah memegang image yang sudah di-dispose.
 class LiquidFrame extends ChangeNotifier {
+  LiquidFrame({VoidCallback? onConsumersChanged})
+    : _onConsumersChanged = onConsumersChanged;
+
+  final VoidCallback? _onConsumersChanged;
   ui.Image? _image;
   Size _logicalSize = Size.zero;
+  int _consumerCount = 0;
 
   ui.Image? get image => _image;
+  bool get hasConsumers => _consumerCount > 0;
 
   /// Ukuran layar logis yang dipetakan [image] (resolusi image bisa lebih
   /// rendah; skala px = `image.width / logicalSize.width`).
   Size get logicalSize => _logicalSize;
+
+  void addConsumer() {
+    _consumerCount += 1;
+    if (_consumerCount == 1) _onConsumersChanged?.call();
+  }
+
+  void removeConsumer() {
+    assert(_consumerCount > 0);
+    _consumerCount -= 1;
+    if (_consumerCount == 0) _onConsumersChanged?.call();
+  }
 
   void _set({
     required ui.Image? image,
@@ -315,6 +333,23 @@ class _ScenePainter extends CustomPainter {
   _ScenePainter({required this.frame}) : super(repaint: frame);
 
   final LiquidFrame frame;
+  bool _isAttached = false;
+
+  @override
+  void addListener(VoidCallback listener) {
+    super.addListener(listener);
+    if (_isAttached) return;
+    _isAttached = true;
+    frame.addConsumer();
+  }
+
+  @override
+  void removeListener(VoidCallback listener) {
+    super.removeListener(listener);
+    if (!_isAttached) return;
+    _isAttached = false;
+    frame.removeConsumer();
+  }
 
   @override
   void paint(Canvas canvas, Size size) {

@@ -58,6 +58,75 @@ class _LensPainter extends CustomPainter {
   final bool dark;
   final BorderRadius borderRadius;
   final bool lite;
+  bool _isAttached = false;
+
+  Size? _cachedSize;
+  BorderRadius? _cachedBorderRadius;
+  bool? _cachedDark;
+  late Rect _rect;
+  late Path _fullPath;
+  Path? _ringPath;
+  RRect? _vignetteRRect;
+  Paint? _vignettePaint;
+
+  final Paint _liteImagePaint = _imagePaint(1.0);
+  final Paint _baseImagePaint = _imagePaint(0.55);
+  final Paint _ringImagePaint = _imagePaint(0.70);
+
+  static Paint _imagePaint(double alpha) => Paint()
+    ..filterQuality = FilterQuality.low
+    ..color = Colors.white.withValues(alpha: alpha);
+
+  @override
+  void addListener(VoidCallback listener) {
+    super.addListener(listener);
+    if (_isAttached) return;
+    _isAttached = true;
+    frame.addConsumer();
+  }
+
+  @override
+  void removeListener(VoidCallback listener) {
+    super.removeListener(listener);
+    if (!_isAttached) return;
+    _isAttached = false;
+    frame.removeConsumer();
+  }
+
+  void _updateArtifacts(Size size) {
+    if (_cachedSize == size &&
+        _cachedBorderRadius == borderRadius &&
+        _cachedDark == dark) {
+      return;
+    }
+
+    _cachedSize = size;
+    _cachedBorderRadius = borderRadius;
+    _cachedDark = dark;
+    _rect = Offset.zero & size;
+    final rrect = borderRadius.toRRect(_rect);
+    _fullPath = Path()..addRRect(rrect);
+
+    if (lite) {
+      _ringPath = null;
+      _vignetteRRect = null;
+      _vignettePaint = null;
+      return;
+    }
+
+    final inset = math.min(size.shortestSide * 0.20, 16.0);
+    _ringPath = Path.combine(
+      PathOperation.difference,
+      _fullPath,
+      Path()..addRRect(rrect.deflate(inset)),
+    );
+    _vignetteRRect = rrect.deflate(inset / 2);
+    _vignettePaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = inset
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, inset / 2)
+      ..color = Colors.black.withValues(alpha: dark ? 0.10 : 0.05);
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -67,10 +136,9 @@ class _LensPainter extends CustomPainter {
     final logical = frame.logicalSize;
     if (image == null || logical.isEmpty) return;
 
+    _updateArtifacts(size);
     final transform = canvas.getTransform();
     final origin = Offset(transform[12], transform[13]);
-    final rect = Offset.zero & size;
-    final rrect = borderRadius.toRRect(rect);
     final center = origin + Offset(size.width / 2, size.height / 2);
     // Skala px image per px logis (image bisa beresolusi lebih rendah).
     final k = image.width / logical.width;
@@ -78,7 +146,7 @@ class _LensPainter extends CustomPainter {
     // Blit wallpaper diperbesar [magnify] di sekitar pusat kartu; alpha
     // pada paint menggantikan saveLayer lama (image sudah flat, jadi
     // group-alpha == per-image alpha).
-    void drawZone(Path clip, double magnify, double alpha) {
+    void drawZone(Path clip, double magnify, Paint paint) {
       canvas.save();
       canvas.clipPath(clip);
       final src = Rect.fromCenter(
@@ -86,45 +154,25 @@ class _LensPainter extends CustomPainter {
         width: size.width / magnify * k,
         height: size.height / magnify * k,
       );
-      canvas.drawImageRect(
-        image,
-        src,
-        rect,
-        Paint()
-          ..filterQuality = FilterQuality.low
-          ..color = Colors.white.withValues(alpha: alpha),
-      );
+      canvas.drawImageRect(image, src, _rect, paint);
       canvas.restore();
     }
 
     if (lite) {
       // Kartu: satu proyeksi penuh; tint pekat dari FtGlass yang menjaga
       // keterbacaan teks di atasnya.
-      drawZone(Path()..addRRect(rrect), 1.07, 1.0);
+      drawZone(_fullPath, 1.07, _liteImagePaint);
       return;
     }
 
     // Lensa dasar — seluruh bidang sedikit diperbesar.
-    drawZone(Path()..addRRect(rrect), 1.10, 0.55);
+    drawZone(_fullPath, 1.10, _baseImagePaint);
 
     // Cincin tepi — pembesaran kuat = background "menekuk" masuk.
-    final inset = math.min(size.shortestSide * 0.20, 16.0);
-    final ring = Path.combine(
-      PathOperation.difference,
-      Path()..addRRect(rrect),
-      Path()..addRRect(rrect.deflate(inset)),
-    );
-    drawZone(ring, 1.35, 0.70);
+    drawZone(_ringPath!, 1.35, _ringImagePaint);
 
     // Vignette tipis di dalam tepi — kesan ketebalan kaca.
-    canvas.drawRRect(
-      rrect.deflate(inset / 2),
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = inset
-        ..maskFilter = MaskFilter.blur(BlurStyle.normal, inset / 2)
-        ..color = Colors.black.withValues(alpha: dark ? 0.10 : 0.05),
-    );
+    canvas.drawRRect(_vignetteRRect!, _vignettePaint!);
   }
 
   @override
