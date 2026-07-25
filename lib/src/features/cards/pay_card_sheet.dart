@@ -264,7 +264,7 @@ class _PayCardSheetState extends ConsumerState<PayCardSheet> {
                 Padding(
                   padding: const EdgeInsets.only(top: 6, left: 4, right: 4),
                   child: Text(
-                    '${Money.format(unbilled)} belum tertagih — masuk '
+                    '${Money.format(unbilled)} belum tertagih. Masuk '
                     'tagihan berikutnya (tutup tgl ${card.billingDay}).',
                     style: TextStyle(color: FtColors.ink3, fontSize: 11),
                   ),

@@ -299,7 +299,7 @@ class _CreatorWizardScreenState extends ConsumerState<CreatorWizardScreen> {
       children: [
         const SizedBox(height: 8),
         Text(
-          'Rumah tangga dibuat!',
+          'Rumah tangga dibuat.',
           style: Theme.of(context).textTheme.titleLarge,
           textAlign: TextAlign.center,
         ),

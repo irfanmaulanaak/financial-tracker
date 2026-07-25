@@ -44,7 +44,7 @@ int recordingStreak({
 
 /// Supportive copy per streak length (id-ID).
 String streakLabel(int streak) {
-  if (streak >= 30) return '$streak hari beruntun — kebiasaan terbentuk!';
-  if (streak >= 7) return '$streak hari beruntun — konsisten sekali!';
+  if (streak >= 30) return '$streak hari beruntun tercatat';
+  if (streak >= 7) return '$streak hari beruntun tercatat';
   return '$streak hari beruntun tercatat';
 }

@@ -126,8 +126,8 @@ class _PinSheetState extends ConsumerState<_PinSheet> {
           Text(
             _error
                 ? (widget.mode == _PinSheetMode.confirm
-                    ? 'PIN salah — coba lagi.'
-                    : 'PIN tidak sama — mulai lagi.')
+                    ? 'PIN salah. Coba lagi.'
+                    : 'PIN tidak sama. Mulai lagi.')
                 : _hint,
             textAlign: TextAlign.center,
             style: TextStyle(

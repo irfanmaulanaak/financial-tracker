@@ -294,6 +294,11 @@ class FtStatItem extends StatelessWidget {
   }
 }
 
+/// Bottom inset for vertical scrollables hosted by [FtAppChrome].
+///
+/// Clears the floating nav, the 56px action FAB, and device safe area.
+const double kFtFabClearance = 176;
+
 /// App chrome: keeps the floating bottom nav above the screen body, plus a
 /// separate "Catat Aktivitas" FAB hovering above the right side of the nav.
 /// App chrome: keeps the floating bottom nav above the screen body, plus a

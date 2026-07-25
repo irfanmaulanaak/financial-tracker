@@ -50,6 +50,8 @@ class IncomeLogScreen extends ConsumerWidget {
                   data: (items) {
                     if (items.isEmpty) {
                       return ListView(
+                        padding:
+                            const EdgeInsets.only(bottom: kFtFabClearance),
                         physics: const BouncingScrollPhysics(
                           parent: AlwaysScrollableScrollPhysics(),
                         ),
@@ -67,7 +69,8 @@ class IncomeLogScreen extends ConsumerWidget {
                       );
                     }
                     return ListView.builder(
-                      padding: const EdgeInsets.only(bottom: 120),
+                      padding:
+                          const EdgeInsets.only(bottom: kFtFabClearance),
                       physics: const BouncingScrollPhysics(
                         parent: AlwaysScrollableScrollPhysics(),
                       ),

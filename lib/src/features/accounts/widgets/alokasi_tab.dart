@@ -57,7 +57,8 @@ class _AlokasiTabState extends ConsumerState<AlokasiTab> {
           await ftRefreshDelay();
         },
         child: ListView(
-        padding: const EdgeInsets.fromLTRB(22, 16, 22, 120),
+        padding:
+            const EdgeInsets.fromLTRB(22, 16, 22, kFtFabClearance),
         physics: const BouncingScrollPhysics(
           parent: AlwaysScrollableScrollPhysics(),
         ),
@@ -83,7 +84,7 @@ class _AlokasiTabState extends ConsumerState<AlokasiTab> {
         await ftRefreshDelay();
       },
       child: ListView(
-      padding: const EdgeInsets.fromLTRB(22, 4, 22, 120),
+      padding: const EdgeInsets.fromLTRB(22, 4, 22, kFtFabClearance),
       physics: const BouncingScrollPhysics(
         parent: AlwaysScrollableScrollPhysics(),
       ),

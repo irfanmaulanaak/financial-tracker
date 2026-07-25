@@ -146,7 +146,7 @@ class _CardsScreenState extends ConsumerState<CardsScreen> {
                 await ftRefreshDelay();
               },
               child: ListView(
-              padding: const EdgeInsets.only(bottom: 120),
+              padding: const EdgeInsets.only(bottom: kFtFabClearance),
               physics: const BouncingScrollPhysics(
                 parent: AlwaysScrollableScrollPhysics(),
               ),
@@ -431,10 +431,10 @@ class _SaranTip extends ConsumerWidget {
           const SizedBox(height: 8),
           Text(
             overweight
-                ? 'Total cicilan ${compactMoney(monthlyInstallments)} ($pct% dari pendapatan). Idealnya di bawah 30% — pertimbangkan menyelesaikan cicilan lebih awal.'
+                ? 'Total cicilan ${compactMoney(monthlyInstallments)} ($pct% dari pendapatan). Idealnya di bawah 30%. Pertimbangkan menyelesaikan cicilan lebih awal.'
                 : monthlyInstallments == 0
                     ? 'Saat ini belum ada cicilan aktif. Pastikan rasio pembayaran tetap di bawah 30% dari pendapatan.'
-                    : 'Cicilan ${compactMoney(monthlyInstallments)} ($pct% dari pendapatan) — masih dalam batas sehat.',
+                    : 'Cicilan ${compactMoney(monthlyInstallments)} ($pct% dari pendapatan), masih dalam batas sehat.',
             style: TextStyle(
               fontFamily: 'Newsreader',
               color: FtColors.ink,

@@ -27,7 +27,7 @@ String? dailyInsight({
     final pct = c.spent * 100 ~/ c.budget;
     if (pct >= 85 && pct < 100) {
       final sisa = c.budget - c.spent;
-      return 'Anggaran ${c.label} terpakai $pct% — sisa '
+      return 'Anggaran ${c.label} terpakai $pct%. Sisa '
           '${Money.compact(sisa)} untuk $daysLeft hari ke depan.';
     }
   }
@@ -37,8 +37,7 @@ String? dailyInsight({
     final spentPct = totalSpent * 100 ~/ totalBudget;
     final elapsedPct = daysElapsed * 100 ~/ cycleLength;
     if (spentPct < 100 && spentPct - elapsedPct >= 15) {
-      return 'Sudah $spentPct% anggaran terpakai di $elapsedPct% siklus — '
-          'pelan-pelan masih sempat.';
+      return 'Sudah $spentPct% anggaran terpakai di $elapsedPct% siklus.';
     }
   }
 
@@ -52,14 +51,14 @@ String? dailyInsight({
       final saved = prevAtPace - c.spent;
       if (saved >= 50000 && saved * 100 >= prevAtPace * 20) {
         return 'Hemat ${Money.compact(saved)} di ${c.label} dibanding '
-            'siklus lalu — pertahankan.';
+            'siklus lalu.';
       }
     }
   }
 
   // 4) Kemarin tanpa pengeluaran.
   if (noSpendYesterday && totalSpent > 0) {
-    return 'Kemarin nol pengeluaran — jeda yang sehat.';
+    return 'Kemarin nol pengeluaran.';
   }
 
   // 5) Laju terkendali.

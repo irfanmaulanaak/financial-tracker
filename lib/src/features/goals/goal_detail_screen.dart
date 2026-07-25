@@ -125,7 +125,7 @@ class _Body extends ConsumerWidget {
           await ftRefreshDelay();
         },
         child: ListView(
-        padding: const EdgeInsets.only(bottom: 120),
+        padding: const EdgeInsets.only(bottom: kFtFabClearance),
         physics: const BouncingScrollPhysics(
           parent: AlwaysScrollableScrollPhysics(),
         ),
@@ -224,7 +224,7 @@ class _Body extends ConsumerWidget {
                 const SizedBox(height: 10),
                 if (fundingAsset == null)
                   Text(
-                    'Manual — dicatat lewat setoran ke tujuan ini.',
+                    'Manual. Dicatat lewat setoran ke tujuan ini.',
                     style: TextStyle(
                         color: FtColors.ink2, fontSize: 13, height: 1.5),
                   )
@@ -265,8 +265,8 @@ class _Body extends ConsumerWidget {
                   const SizedBox(height: 8),
                   Text(
                     sharedCount > 1
-                        ? 'Porsi tujuan ini ${Money.format(goal.current)} — '
-                            'nilai aset dibagi proporsional dengan '
+                        ? 'Porsi tujuan ini ${Money.format(goal.current)}. '
+                            'Nilai aset dibagi proporsional dengan '
                             '${sharedCount - 1} tujuan lain.'
                         : 'Nilai tujuan mengikuti nilai aset ini secara '
                             'otomatis.',
@@ -475,8 +475,8 @@ class _Body extends ConsumerWidget {
           FtCelebrate.show(
             context,
             message: switch (milestone) {
-              100 => '"${goal.label}" tercapai! Selamat!',
-              50 => 'Setengah jalan ke "${goal.label}"!',
+              100 => '"${goal.label}" tercapai.',
+              50 => 'Setengah jalan ke "${goal.label}".',
               _ => 'Setoran tersimpan',
             },
             hold: milestone != null

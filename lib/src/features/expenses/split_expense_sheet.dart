@@ -153,7 +153,7 @@ class _SplitExpenseSheetState extends ConsumerState<SplitExpenseSheet> {
         setState(() {
           _busy = false;
           _error = saved > 0
-              ? 'Gagal di bagian ${saved + 1} — $saved bagian sudah tersimpan, cek daftar transaksi. ($e)'
+              ? 'Gagal di bagian ${saved + 1}. $saved bagian sudah tersimpan, cek daftar transaksi. ($e)'
               : 'Gagal menyimpan: $e';
         });
       }
@@ -241,7 +241,7 @@ class _SplitExpenseSheetState extends ConsumerState<SplitExpenseSheet> {
           Padding(
             padding: const EdgeInsets.fromLTRB(6, 0, 6, 12),
             child: Text(
-              'Bagi satu struk ke beberapa kategori — anggaran tiap kategori tetap akurat.',
+              'Bagi satu struk ke beberapa kategori. Anggaran tiap kategori tetap akurat.',
               style: TextStyle(color: FtColors.ink3, fontSize: 11.5),
             ),
           ),

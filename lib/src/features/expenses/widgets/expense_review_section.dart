@@ -100,7 +100,7 @@ class ExpenseReviewSection extends ConsumerWidget {
           Expanded(
             child: Text(
               done
-                  ? 'Sudah dicek $toName. Beres!'
+                  ? 'Sudah dicek $toName. Beres.'
                   : '$byName minta $toName cek transaksi ini',
               style: TextStyle(
                 fontSize: 12.5,

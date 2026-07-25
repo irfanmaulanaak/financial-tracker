@@ -222,7 +222,7 @@ class ReminderService {
         id: 2,
         at: nextWeekdayTime(n, DateTime.sunday, 18, 0),
         title: 'Rekap mingguan keluarga',
-        body: 'Luangkan 5 menit — lihat gimana minggu ini di halaman Rekap.',
+        body: 'Lihat ringkasan minggu ini di halaman Rekap.',
         matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
       );
     }
@@ -244,7 +244,7 @@ class ReminderService {
         id: 1,
         at: first,
         title: 'Sudah catat pengeluaran hari ini?',
-        body: '30 detik saja — biar ringkasan keluarga tetap akurat.',
+        body: 'Catat pengeluaran hari ini supaya ringkasan tetap akurat.',
         matchDateTimeComponents: DateTimeComponents.time,
       );
     }

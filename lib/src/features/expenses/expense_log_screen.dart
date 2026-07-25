@@ -210,6 +210,8 @@ class _ExpenseLogScreenState extends ConsumerState<ExpenseLogScreen> {
 
                     if (filtered.isEmpty) {
                       return ListView(
+                        padding:
+                            const EdgeInsets.only(bottom: kFtFabClearance),
                         physics: const BouncingScrollPhysics(
                           parent: AlwaysScrollableScrollPhysics(),
                         ),
@@ -253,7 +255,10 @@ class _ExpenseLogScreenState extends ConsumerState<ExpenseLogScreen> {
                       child: ListView.builder(
                       key: ValueKey(
                           '${_filterMemberId ?? ''}|${_filterCategoryId ?? ''}|${_search.text}|${filtered.length}'),
-                      padding: const EdgeInsets.only(top: 2, bottom: 120),
+                      padding: const EdgeInsets.only(
+                        top: 2,
+                        bottom: kFtFabClearance,
+                      ),
                       physics: const BouncingScrollPhysics(
                         parent: AlwaysScrollableScrollPhysics(),
                       ),
@@ -582,4 +587,3 @@ class _FilterPill extends StatelessWidget {
     );
   }
 }
-

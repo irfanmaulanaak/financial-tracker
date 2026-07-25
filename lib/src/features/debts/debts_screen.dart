@@ -115,7 +115,7 @@ class DebtsScreen extends ConsumerWidget {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(22, 0, 22, 14),
                   child: Text(
-                    'Catatan saja — saldo rekening tidak berubah.',
+                    'Catatan saja. Saldo rekening tidak berubah.',
                     style: TextStyle(color: FtColors.ink4, fontSize: 10.5),
                   ),
                 ),

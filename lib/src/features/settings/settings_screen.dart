@@ -46,7 +46,7 @@ class SettingsScreen extends ConsumerWidget {
             await ftRefreshDelay();
           },
           child: ListView(
-          padding: const EdgeInsets.only(bottom: 120),
+          padding: const EdgeInsets.only(bottom: kFtFabClearance),
           physics: const BouncingScrollPhysics(
             parent: AlwaysScrollableScrollPhysics(),
           ),

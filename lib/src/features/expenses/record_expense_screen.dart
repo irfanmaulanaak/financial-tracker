@@ -357,7 +357,7 @@ class _RecordExpenseScreenState extends ConsumerState<RecordExpenseScreen> {
       }
       if (mounted) {
         if (addAnother) {
-          FtCelebrate.show(context, message: 'Tersimpan — lanjut');
+          FtCelebrate.show(context, message: 'Tersimpan. Lanjut.');
           _resetForNext();
         } else {
           FtCelebrate.show(context, message: 'Tersimpan');
@@ -658,7 +658,7 @@ class _RecordExpenseScreenState extends ConsumerState<RecordExpenseScreen> {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Tenang — kategori, tanggal & detail bisa diubah kapan saja.',
+                        'Kategori, tanggal, dan detail bisa diubah kapan saja.',
                         style: TextStyle(
                           color: FtColors.ink4,
                           fontSize: 10.5,

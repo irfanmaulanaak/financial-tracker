@@ -240,8 +240,8 @@ class _TxnTile extends StatelessWidget {
                 children: [
                   Text(
                     outgoing
-                        ? 'Pindah ke ${counterparty?.label ?? '—'}'
-                        : 'Pindah dari ${counterparty?.label ?? '—'}',
+                        ? 'Pindah ke ${counterparty?.label ?? '-'}'
+                        : 'Pindah dari ${counterparty?.label ?? '-'}',
                     style: const TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 13,

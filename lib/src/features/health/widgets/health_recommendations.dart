@@ -56,7 +56,7 @@ class HealthRecommendations extends StatelessWidget {
       recs.add(const _Rec(
         icon: Icons.show_chart_rounded,
         label: 'Mulai diversifikasi ke investasi',
-        detail: 'Tabungan cukup — sisipkan ke reksadana atau emas',
+        detail: 'Tabungan cukup. Sisipkan ke reksadana atau emas',
         route: '/accounts',
       ));
     }
@@ -65,7 +65,7 @@ class HealthRecommendations extends StatelessWidget {
         icon: Icons.flag_rounded,
         label: 'Tinjau ulang anggaran',
         detail:
-            'Skor kesehatan di bawah 50 — atur pos pengeluaran lewat goal',
+            'Skor kesehatan di bawah 50. Atur pos pengeluaran lewat goal',
         route: '/goals',
       ));
     }

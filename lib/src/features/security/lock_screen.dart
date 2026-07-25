@@ -104,7 +104,7 @@ class _LockScreenState extends ConsumerState<LockScreen> {
               ),
               const SizedBox(height: 6),
               Text(
-                _error ? 'PIN salah — coba lagi.' : 'Masukkan PIN',
+                _error ? 'PIN salah. Coba lagi.' : 'Masukkan PIN',
                 style: TextStyle(
                   color: _error ? FtColors.danger : FtColors.ink3,
                   fontSize: 13,

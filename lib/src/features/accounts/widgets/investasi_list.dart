@@ -40,7 +40,8 @@ class InvestasiList extends ConsumerWidget {
       return FtRefreshable(
         onRefresh: () => _onRefresh(ref),
         child: ListView(
-        padding: const EdgeInsets.fromLTRB(22, 4, 22, 120),
+        padding:
+            const EdgeInsets.fromLTRB(22, 4, 22, kFtFabClearance),
         physics: const BouncingScrollPhysics(
           parent: AlwaysScrollableScrollPhysics(),
         ),
@@ -78,7 +79,7 @@ class InvestasiList extends ConsumerWidget {
     return FtRefreshable(
       onRefresh: () => _onRefresh(ref),
       child: ListView(
-      padding: const EdgeInsets.fromLTRB(22, 4, 22, 120),
+      padding: const EdgeInsets.fromLTRB(22, 4, 22, kFtFabClearance),
       physics: const BouncingScrollPhysics(
         parent: AlwaysScrollableScrollPhysics(),
       ),

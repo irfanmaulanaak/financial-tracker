@@ -157,7 +157,7 @@ class _RecapScreenState extends ConsumerState<RecapScreen> {
                                 ),
                               ),
                               Text(
-                                'Review bareng ±7 menit — 4 langkah, 1 keputusan',
+                                'Review bareng ±7 menit. 4 langkah, 1 keputusan',
                                 style: TextStyle(
                                     color: FtColors.ink3, fontSize: 11),
                               ),
@@ -223,7 +223,7 @@ class _RecapScreenState extends ConsumerState<RecapScreen> {
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(
-                                'Paling hemat: ${household.categoryOf(saver.id)?.label ?? '-'} — turun ${Money.compact(saver.saved)} vs pembanding.',
+                                'Paling hemat: ${household.categoryOf(saver.id)?.label ?? '-'}, turun ${Money.compact(saver.saved)} vs pembanding.',
                                 style: TextStyle(
                                   color: FtColors.moss,
                                   fontSize: 12,

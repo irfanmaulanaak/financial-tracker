@@ -65,8 +65,8 @@ Future<GoalFundingChoice?> showGoalFundingSheet(
                   style: Theme.of(sheetCtx).textTheme.titleLarge),
               const SizedBox(height: 4),
               Text(
-                'Tujuan yang terhubung ke aset mengikuti nilai aset itu — '
-                'dibagi proporsional bila dipakai beberapa tujuan.',
+                'Tujuan yang terhubung ke aset mengikuti nilai aset itu. '
+                'Dibagi proporsional bila dipakai beberapa tujuan.',
                 style: TextStyle(color: FtColors.ink3, fontSize: 12),
               ),
               const SizedBox(height: 12),

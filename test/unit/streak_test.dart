@@ -65,10 +65,10 @@ void main() {
   });
 
   group('streakLabel', () {
-    test('escalating supportive copy', () {
+    test('plain factual copy', () {
       expect(streakLabel(2), '2 hari beruntun tercatat');
-      expect(streakLabel(7), contains('konsisten'));
-      expect(streakLabel(30), contains('kebiasaan'));
+      expect(streakLabel(7), '7 hari beruntun tercatat');
+      expect(streakLabel(30), '30 hari beruntun tercatat');
     });
   });
 }

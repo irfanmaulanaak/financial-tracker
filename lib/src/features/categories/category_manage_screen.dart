@@ -367,7 +367,7 @@ class _CategoryEditSheetState extends State<_CategoryEditSheet> {
               contentPadding: EdgeInsets.zero,
               title: const Text('Kategori ZISWAF'),
               subtitle: const Text(
-                'Zakat, infak, sedekah, wakaf — total tahunannya '
+                'Zakat, infak, sedekah, wakaf. Total tahunannya '
                 'direkap di layar Rekap Siklus',
                 style: TextStyle(fontSize: 12),
               ),

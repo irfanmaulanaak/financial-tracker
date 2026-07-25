@@ -64,14 +64,29 @@ class HomeHeader extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  '${_greeting()}, $displayName',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontSize: 17,
-                        color: FtColors.ink,
-                      ),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final style =
+                        Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontSize: 17,
+                              color: FtColors.ink,
+                            );
+                    final fullText = '${_greeting()}, $displayName';
+                    final painter = TextPainter(
+                      text: TextSpan(text: fullText, style: style),
+                      maxLines: 1,
+                      textDirection: Directionality.of(context),
+                    )..layout();
+                    final showFullGreeting =
+                        painter.width <= constraints.maxWidth;
+                    painter.dispose();
+                    return Text(
+                      showFullGreeting ? fullText : displayName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: style,
+                    );
+                  },
                 ),
               ],
             ),

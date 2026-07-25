@@ -28,6 +28,8 @@ class CardTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = _parseColor(card.accent);
+    final cardSurface =
+        Color.lerp(color, const Color(0xFF1A1814), 0.58)!;
     final pct =
         card.limit == 0 ? 0.0 : (card.used / card.limit).clamp(0.0, 1.0);
     return FtCard(
@@ -40,13 +42,8 @@ class CardTile extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             constraints: const BoxConstraints(minHeight: 132),
             decoration: BoxDecoration(
-              color: color,
+              color: cardSurface,
               borderRadius: BorderRadius.circular(14),
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [color, FtColors.plum],
-              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -55,12 +52,9 @@ class CardTile extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        card.label.toUpperCase(),
-                        style: const TextStyle(
+                        card.label,
+                        style: Theme.of(context).textTheme.labelMedium?.copyWith(
                           color: Colors.white70,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 1.1,
                         ),
                       ),
                     ),

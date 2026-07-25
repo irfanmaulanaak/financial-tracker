@@ -158,7 +158,8 @@ class CardDetailScreen extends ConsumerWidget {
                   await ftRefreshDelay();
                 },
                 child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 120),
+                padding:
+                    const EdgeInsets.fromLTRB(16, 0, 16, kFtFabClearance),
                 physics: const BouncingScrollPhysics(
                   parent: AlwaysScrollableScrollPhysics(),
                 ),
@@ -288,10 +289,10 @@ class CardDetailScreen extends ConsumerWidget {
         title: const Text('Hitung ulang terpakai?'),
         content: Text(
           'Dua angka dihitung ulang dari data mentah:\n\n'
-          '• "Terpakai" — gaya tagihan bank: cicilan yang sudah melewati '
+          '• "Terpakai": gaya tagihan bank. Cicilan yang sudah melewati '
           'tanggal tutup tagihan (tgl ${card.billingDay}) tapi belum '
           'dibayar, plus transaksi reguler yang belum dibayar.\n'
-          '• Total sisa utang — seluruh sisa cicilan (tertagih maupun '
+          '• Total sisa utang: seluruh sisa cicilan (tertagih maupun '
           'belum) plus transaksi reguler. Angka ini yang dipakai kekayaan '
           'bersih, jadi grafik tidak lompat di tanggal cetak.',
         ),

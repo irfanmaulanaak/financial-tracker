@@ -57,7 +57,7 @@ Future<void> showOnboardingWelcomeSheet(
             ),
             const SizedBox(height: 14),
             Text(
-              'Selamat datang di ${household.name}!',
+              'Selamat datang di ${household.name}.',
               style: Theme.of(ctx).textTheme.titleLarge,
             ),
             const SizedBox(height: 6),

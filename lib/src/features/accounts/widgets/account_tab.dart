@@ -101,7 +101,8 @@ class _AccountTabState extends ConsumerState<AccountTab> {
           await ftRefreshDelay();
         },
         child: ListView(
-        padding: const EdgeInsets.fromLTRB(22, 28, 22, 120),
+        padding:
+            const EdgeInsets.fromLTRB(22, 28, 22, kFtFabClearance),
         physics: const BouncingScrollPhysics(
           parent: AlwaysScrollableScrollPhysics(),
         ),
@@ -140,7 +141,7 @@ class _AccountTabState extends ConsumerState<AccountTab> {
         await ftRefreshDelay();
       },
       child: ListView(
-      padding: const EdgeInsets.fromLTRB(22, 4, 22, 120),
+      padding: const EdgeInsets.fromLTRB(22, 4, 22, kFtFabClearance),
       physics: const BouncingScrollPhysics(
         parent: AlwaysScrollableScrollPhysics(),
       ),

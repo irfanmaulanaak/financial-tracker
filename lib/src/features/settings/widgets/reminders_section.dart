@@ -132,7 +132,7 @@ class RemindersSection extends ConsumerWidget {
               Divider(height: 1, thickness: 0.5, color: FtColors.line),
               SettingsSwitchRow(
                 label: 'Rekap mingguan',
-                detail: 'Sekali tiap Minggu sore — ajakan lihat ringkasan',
+                detail: 'Sekali tiap Minggu sore. Ajakan lihat ringkasan',
                 value: s.weeklyRecap,
                 onChanged: (v) => _toggle(
                   context,
@@ -156,7 +156,7 @@ class RemindersSection extends ConsumerWidget {
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
                 child: Text(
-                  'Pengingat bersifat lokal di perangkat ini — tidak ada data yang dikirim ke server.',
+                  'Pengingat bersifat lokal di perangkat ini. Tidak ada data yang dikirim ke server.',
                   style: TextStyle(
                       color: FtColors.ink4, fontSize: 10.5, height: 1.4),
                 ),

@@ -272,7 +272,7 @@ class _AddGoalScreenState extends ConsumerState<AddGoalScreen> {
                 if (_linked) ...[
                   const SizedBox(height: 6),
                   Text(
-                    'Progress tujuan mengikuti nilai aset ini — dibagi '
+                    'Progress tujuan mengikuti nilai aset ini. Dibagi '
                     'proporsional bila aset dipakai beberapa tujuan.',
                     style: TextStyle(color: FtColors.ink3, fontSize: 11),
                   ),

@@ -110,7 +110,7 @@ class OnboardingChecklist extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.only(bottom: 4),
               child: Text(
-                'Semua beres — kamu siap pakai FinSist. Buka lagi kapan '
+                'Semua beres. Kamu siap pakai FinSist. Buka lagi kapan '
                 'saja dari menu \u22ef \u2192 Panduan Mulai.',
                 style: TextStyle(
                     color: FtColors.ink2, fontSize: 12, height: 1.5),

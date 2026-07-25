@@ -69,7 +69,7 @@ class CategoryDetailScreen extends ConsumerWidget {
             await ftRefreshDelay();
           },
           child: ListView(
-          padding: const EdgeInsets.only(bottom: 120),
+          padding: const EdgeInsets.only(bottom: kFtFabClearance),
           physics: const BouncingScrollPhysics(
             parent: AlwaysScrollableScrollPhysics(),
           ),
@@ -391,7 +391,7 @@ class _HeaderCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         over
-                            ? 'Melebihi anggaran ${pct - 100}%. Wajar kok meleset — geser saja dari kategori yang masih longgar.'
+                            ? 'Melebihi anggaran ${pct - 100}%. Wajar kalau meleset. Geser saja dari kategori yang masih longgar.'
                             : 'Pola pengeluaran wajar. Sisa ${Money.format(budget - spent)} untuk siklus ini.',
                         style: TextStyle(
                           color: over ? FtColors.danger : FtColors.moss,

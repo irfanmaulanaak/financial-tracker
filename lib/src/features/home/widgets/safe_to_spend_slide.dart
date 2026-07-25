@@ -67,7 +67,7 @@ class SafeToSpendSlide extends StatelessWidget {
                   const SizedBox(height: 6),
                   Text(
                     'Anggaran siklus ini sudah terpakai '
-                    '${Money.compact(-remaining)} lebih. Geser anggaran atau tahan dulu — gajian ${Dates.dayMonth(nextPayday)}.',
+                    '${Money.compact(-remaining)} lebih. Geser anggaran atau tahan dulu. Gajian ${Dates.dayMonth(nextPayday)}.',
                     style: TextStyle(
                         color: FtColors.ink2, fontSize: 12, height: 1.45),
                   ),

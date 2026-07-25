@@ -140,8 +140,8 @@ class BillCalendarScreen extends ConsumerWidget {
 
   static String _dayLabel(DateTime d, DateTime today) {
     final diff = d.difference(today).inDays;
-    if (diff == 0) return 'Hari ini — ${Dates.dayMonth(d)}';
-    if (diff == 1) return 'Besok — ${Dates.dayMonth(d)}';
+    if (diff == 0) return 'Hari ini, ${Dates.dayMonth(d)}';
+    if (diff == 1) return 'Besok, ${Dates.dayMonth(d)}';
     return Dates.grouped(d);
   }
 }
@@ -175,7 +175,7 @@ class _ProjectionCard extends StatelessWidget {
           Text(
             ok
                 ? 'Sampai ${Dates.dayMonth(cycleEnd)} kas diperkirakan masih cukup.'
-                : 'Dengan pola belanja sekarang, kas bisa minus sebelum gajian — cek tagihan di bawah.',
+                : 'Dengan pola belanja sekarang, kas bisa minus sebelum gajian. Cek tagihan di bawah.',
             style: TextStyle(color: FtColors.ink3, fontSize: 12, height: 1.4),
           ),
           const SizedBox(height: 12),

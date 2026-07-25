@@ -22,7 +22,8 @@ class LiquidPreviewScreen extends ConsumerWidget {
         current: FtTab.home,
         showActionFab: false,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(22, 60, 22, 140),
+          padding:
+              const EdgeInsets.fromLTRB(22, 60, 22, kFtFabClearance),
           children: [
             Text('Liquid Glass Lab',
                 style: Theme.of(context).textTheme.headlineMedium),

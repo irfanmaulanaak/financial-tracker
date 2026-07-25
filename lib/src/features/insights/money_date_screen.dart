@@ -49,7 +49,7 @@ class _MoneyDateScreenState extends ConsumerState<MoneyDateScreen> {
   void _next() {
     FtHaptics.select();
     if (_step >= 3) {
-      FtCelebrate.show(context, message: 'Money date selesai!');
+      FtCelebrate.show(context, message: 'Money date selesai.');
       context.pop();
       return;
     }
@@ -150,10 +150,10 @@ class _MoneyDateScreenState extends ConsumerState<MoneyDateScreen> {
                   onPageChanged: (i) => setState(() => _step = i),
                   children: [
                     _StepScaffold(
-                      eyebrow: 'Langkah 1 — Rayakan dulu',
+                       eyebrow: 'Langkah 1: Rayakan dulu',
                       title: savers.isEmpty
                           ? 'Siklus berjalan.'
-                          : 'Ada yang berhasil dihemat!',
+                          : 'Ada kategori yang dihemat.',
                       child: _CelebrateStep(
                         household: household,
                         savers: savers,
@@ -162,21 +162,21 @@ class _MoneyDateScreenState extends ConsumerState<MoneyDateScreen> {
                       ),
                     ),
                     _StepScaffold(
-                      eyebrow: 'Langkah 2 — Sorotan',
+                       eyebrow: 'Langkah 2: Sorotan',
                       title: risers.isEmpty
                           ? 'Tidak ada lonjakan berarti.'
                           : 'Dua kategori naik paling banyak.',
                       child: _RisersStep(household: household, risers: risers),
                     ),
                     _StepScaffold(
-                      eyebrow: 'Langkah 3 — Lihat ke depan',
+                       eyebrow: 'Langkah 3: Lihat ke depan',
                       title: upcoming.isEmpty
                           ? '7 hari ke depan aman.'
                           : 'Tagihan 7 hari ke depan.',
                       child: _UpcomingStep(items: upcoming),
                     ),
                     _StepScaffold(
-                      eyebrow: 'Langkah 4 — Satu keputusan',
+                       eyebrow: 'Langkah 4: Satu keputusan',
                       title: 'Cukup satu keputusan kecil.',
                       child: _DecisionStep(
                         household: household,
@@ -295,12 +295,12 @@ class _CelebrateStep extends StatelessWidget {
             icon: Icons.south_rounded,
             title: household.categoryOf(s.id)?.label ?? '-',
             detail:
-                'Hemat ${Money.compact(-s.delta)} dibanding siklus lalu — pertahankan!',
+                'Hemat ${Money.compact(-s.delta)} dibanding siklus lalu.',
             amount: s.spend,
           ),
         if (savers.isEmpty)
           Text(
-            'Belum ada pembanding siklus lalu. Lanjut saja — yang penting rutinnya.',
+            'Belum ada pembanding siklus lalu.',
             style: TextStyle(color: FtColors.ink3, fontSize: 13, height: 1.5),
           ),
         const SizedBox(height: 8),
@@ -312,7 +312,7 @@ class _CelebrateStep extends StatelessWidget {
           title: net >= 0 ? 'Masih sisa' : 'Sementara defisit',
           detail: net >= 0
               ? 'Pemasukan ${Money.compact(earned)} − pengeluaran ${Money.compact(spent)}'
-              : 'Wajar di tanggal tua — cek langkah berikutnya.',
+              : 'Wajar di tanggal tua. Cek langkah berikutnya.',
           amount: net.abs(),
         ),
       ],
@@ -348,7 +348,7 @@ class _RisersStep extends StatelessWidget {
           ),
         const SizedBox(height: 4),
         Text(
-          'Bukan untuk menyalahkan — cukup tahu kenapa, lalu lanjut.',
+          'Bukan untuk menyalahkan. Cukup tahu kenapa, lalu lanjut.',
           style: TextStyle(
               color: FtColors.ink4, fontSize: 11, fontStyle: FontStyle.italic),
         ),
@@ -442,7 +442,7 @@ class _DecisionStep extends ConsumerWidget {
           ),
         ] else
           Text(
-            'Anggaran aman. Boleh tutup money date — atau sepakati satu hal kecil untuk siklus depan.',
+            'Anggaran aman. Boleh tutup money date atau sepakati satu hal kecil untuk siklus depan.',
             style: TextStyle(color: FtColors.ink2, fontSize: 13, height: 1.5),
           ),
       ],

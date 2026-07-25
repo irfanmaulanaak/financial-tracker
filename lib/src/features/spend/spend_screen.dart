@@ -130,7 +130,7 @@ class _SpendScreenState extends ConsumerState<SpendScreen> {
             await ftRefreshDelay();
           },
           child: ListView(
-          padding: const EdgeInsets.only(bottom: 120),
+          padding: const EdgeInsets.only(bottom: kFtFabClearance),
           physics: const BouncingScrollPhysics(
             parent: AlwaysScrollableScrollPhysics(),
           ),
