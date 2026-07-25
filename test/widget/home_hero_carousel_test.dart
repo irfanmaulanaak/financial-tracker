@@ -65,12 +65,14 @@ void main() {
     await initializeDateFormatting('id_ID');
   });
 
-  // Informasi paling actionable tampil pertama: aman dibelanjakan + cara
-  // hitungnya.
+  // Slide kedua: "aman dibelanjakan" + anotasi cara hitung (slide pertama
+  // sekarang Kekayaan Bersih).
   testWidgets('safe-to-spend slide shows perDay and annotation',
       (tester) async {
     await tester.pumpWidget(_harness());
     await tester.pump(const Duration(milliseconds: 700));
+    await tester.tap(find.bySemanticsLabel('Slide 2 dari 5'));
+    await tester.pumpAndSettle();
     expect(find.text('Rp150.000'), findsOneWidget);
     expect(find.textContaining('÷ 20 hari'), findsOneWidget);
   });
@@ -80,8 +82,7 @@ void main() {
   testWidgets('hero sparkline gets a real width', (tester) async {
     await tester.pumpWidget(_harness());
     await tester.pump(const Duration(milliseconds: 700));
-    await tester.tap(find.bySemanticsLabel('Slide 2 dari 5'));
-    await tester.pumpAndSettle();
+    // Slide aset (sparkline) kini slide pertama — tanpa navigasi.
     final size = tester.getSize(find.byType(FtSparkline));
     expect(size.width, greaterThan(100));
   });
@@ -91,8 +92,6 @@ void main() {
   testWidgets('hovering the sparkline shows the daily value', (tester) async {
     await tester.pumpWidget(_harness());
     await tester.pump(const Duration(milliseconds: 700));
-    await tester.tap(find.bySemanticsLabel('Slide 2 dari 5'));
-    await tester.pumpAndSettle();
     expect(find.textContaining('· Rp'), findsNothing);
 
     final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);

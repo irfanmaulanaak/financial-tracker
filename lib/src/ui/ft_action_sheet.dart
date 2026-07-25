@@ -9,7 +9,9 @@ import 'ft_glass.dart';
 import 'ft_haptics.dart';
 import 'ft_motion.dart';
 
-/// Bottom sheet primitive — rounded top, grabber handle, glass or solid surface.
+/// Bottom sheet primitive — warm cream surface, rounded top, grabber handle.
+/// Animates in from below; backdrop dim layered above content.
+/// Bottom sheet primitive — warm cream surface, rounded top, grabber handle.
 /// Animates in from below; backdrop dim layered above content.
 ///
 /// On `medium`+ breakpoints, automatically switches to a centered dialog
@@ -120,6 +122,7 @@ class _Grabber extends StatelessWidget {
 }
 
 /// "Catat aktivitas" chooser — Pengeluaran / Pemasukan / Sesuaikan Aset.
+/// Mirrors `ActionChooserSheet` from `claude-design/screens-actions.jsx`.
 ///
 /// Filters its options against the signed-in member's access tier:
 /// - `view` accounts see no write options (sheet is blocked at the FAB

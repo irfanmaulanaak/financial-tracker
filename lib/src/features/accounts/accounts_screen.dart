@@ -18,9 +18,9 @@ import 'widgets/cash_tab.dart';
 import 'widgets/investasi_list.dart';
 import 'widgets/savings_tab.dart';
 
-/// Aset screen — hero with 3-segment composition bar + 4 tabs
-/// (Tunai / Tabungan / Investasi / Alokasi). Each tab list reuses the `+`
-/// from the header.
+/// Aset screen — mirrors `claude-design/screens-assets.jsx`:
+/// hero with 3-segment composition bar + 4 tabs (Tunai / Tabungan / Investasi
+/// / Alokasi). Each tab list reuses the `+` from the header.
 class AccountsScreen extends ConsumerStatefulWidget {
   const AccountsScreen({super.key});
 

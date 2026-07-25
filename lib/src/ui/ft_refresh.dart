@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme.dart';
 import 'ft_haptics.dart';
 
-/// Project-wide pull-to-refresh wrapper. Brand-colored spinner on the
+/// Project-wide pull-to-refresh wrapper. Brand-colored spinner on the cream
 /// surface. The [child] must be a vertically scrollable widget (ListView,
 /// CustomScrollView, SingleChildScrollView with AlwaysScrollableScrollPhysics).
 ///

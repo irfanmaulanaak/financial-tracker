@@ -9,8 +9,9 @@ import '../../ui/ft_ui.dart';
 import '../household/household_providers.dart';
 import 'notification_providers.dart';
 
-/// Notifications feed. In-app only (no push). Sources: budget over-warnings,
-/// CC due in ≤5 days, goal milestones, recent member spend.
+/// Notifications feed — `claude-design/screens-extras.jsx > NotificationsScreen`.
+/// In-app only (no push). Sources: budget over-warnings, CC due in ≤5 days,
+/// goal milestones, recent member spend.
 class NotificationsScreen extends ConsumerWidget {
   const NotificationsScreen({super.key});
 

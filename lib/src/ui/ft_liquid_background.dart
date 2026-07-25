@@ -6,13 +6,17 @@ import 'package:flutter/material.dart';
 
 import '../theme.dart';
 
-/// Background global tema Liquid: neutral canvas + slow cool-color drift.
-/// Dipasang sekali di belakang Navigator; semua Scaffold transparan saat
-/// liquid sehingga background terlihat menerus antar layar.
+/// Background global tema Liquid: warna dasar `FtColors.bg` + blob gradient
+/// aksen yang drift pelan (loop mulus 20 detik). Dipasang sekali di
+/// `app.dart` di belakang Navigator; semua Scaffold transparan saat liquid
+/// sehingga background ini terlihat menerus antar layar.
 ///
-/// Scene dirender sekitar 12 fps ke satu [ui.Image] beresolusi terbatas.
-/// Background dan seluruh lensa hanya menyalin image itu; tidak ada painter
-/// prosedural per-kartu atau ticker 60/120 fps.
+/// Model performa (Jul 2026): scene dirender SEKALI per langkah (~12 fps
+/// dari loop 20 dtk) ke sebuah [ui.Image] beresolusi terbatas yang
+/// dibagikan lewat [LiquidFrame]. Background DAN tiap permukaan kaca
+/// (`FtGlass`/lensa) tinggal men-blit image itu — dulu tiap kartu melukis
+/// ulang seluruh scene prosedural (7 shader/frame) di TIAP vsync, membuat
+/// compositor tidak pernah idle di semua platform.
 ///
 /// Liquid OFF → langsung mengembalikan child (tanpa Stack, tanpa ticker).
 class FtLiquidBackground extends StatefulWidget {
@@ -26,14 +30,21 @@ class FtLiquidBackground extends StatefulWidget {
 
 class _FtLiquidBackgroundState extends State<FtLiquidBackground>
     with WidgetsBindingObserver {
+  /// Langkah baru tiap ~83 ms (~12 fps) pada loop 20 dtk. Blob super lembut
+  /// bergeser ≤5 px per langkah — tak terlihat sebagai stepping. Digerakkan
+  /// Timer, BUKAN Ticker/AnimationController: ticker menjadwalkan frame di
+  /// TIAP vsync (60–120 Hz) dan di web/canvaskit tiap frame = re-raster
+  /// seluruh scene walau tak ada yang berubah. Timer hanya membangunkan
+  /// engine 12×/dtk. (Profil Chrome, lab idle: 529 → ~200 busy-sample/dtk.)
   static const _stepInterval = Duration(milliseconds: 83);
   static const _loopMs = 20000;
 
-  late final LiquidFrame _frame;
+  final LiquidFrame _frame = LiquidFrame();
   final Stopwatch _clock = Stopwatch()..start();
   Timer? _timer;
   bool _appVisible = true;
   bool _animate = false;
+
   double _t = 0;
   Size _size = Size.zero;
   double _dpr = 1;
@@ -42,28 +53,30 @@ class _FtLiquidBackgroundState extends State<FtLiquidBackground>
   @override
   void initState() {
     super.initState();
-    _frame = LiquidFrame(onConsumerCountChanged: _syncTimer);
     WidgetsBinding.instance.addObserver(this);
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Jangan render saat app di background (hemat baterai; GPU context
+    // bisa tidak tersedia di Android).
     _appVisible = state == AppLifecycleState.resumed;
     _syncTimer();
   }
 
   void _syncTimer() {
-    final shouldRun = _animate && _appVisible && _frame.hasConsumers;
-    if (!shouldRun) {
-      _timer?.cancel();
+    final shouldRun = _animate && _appVisible;
+    if (shouldRun && _timer == null) {
+      _timer = Timer.periodic(_stepInterval, (_) => _onStep());
+    } else if (!shouldRun && _timer != null) {
+      _timer!.cancel();
       _timer = null;
-      return;
     }
-    _timer ??= Timer.periodic(_stepInterval, (_) {
-      if (!mounted || _size.isEmpty) return;
-      _t = (_clock.elapsedMilliseconds % _loopMs) / _loopMs;
-      _render(notify: true);
-    });
+  }
+
+  void _onStep() {
+    _t = (_clock.elapsedMilliseconds % _loopMs) / _loopMs;
+    _render(notify: true);
   }
 
   /// Render scene ke image bersama. Resolusi dibatasi ± ukuran logis dan
@@ -98,9 +111,12 @@ class _FtLiquidBackgroundState extends State<FtLiquidBackground>
   @override
   Widget build(BuildContext context) {
     final liquid = FtColors.liquid;
+    _animate = liquid && !MediaQuery.disableAnimationsOf(context);
+    // Sinkron timer dengan status liquid — build ini ikut terpicu oleh
+    // ftRebuildAllWidgets() saat toggle di Settings di-flip.
+    _syncTimer();
+
     if (!liquid) {
-      _animate = false;
-      _syncTimer();
       if (_frame.image != null) {
         _frame._set(image: null, logicalSize: Size.zero, notify: false);
       }
@@ -110,17 +126,16 @@ class _FtLiquidBackgroundState extends State<FtLiquidBackground>
     final size = MediaQuery.sizeOf(context);
     final dpr = MediaQuery.devicePixelRatioOf(context);
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final animate = !MediaQuery.disableAnimationsOf(context);
-    if (_animate != animate) {
-      _animate = animate;
-      _syncTimer();
-    }
-    if (_frame.image == null || size != _size || dpr != _dpr || dark != _dark) {
+    if (_frame.image == null ||
+        size != _size ||
+        dpr != _dpr ||
+        dark != _dark) {
       _size = size;
       _dpr = dpr;
       _dark = dark;
-      // Jalur ini berjalan saat build; perubahan MediaQuery/theme juga sudah
-      // membangun ulang semua konsumen frame.
+      // Diam-diam (tanpa notify): jalur ini berjalan saat build — konsumen
+      // membaca frame.image saat paint, dan perubahan MediaQuery/theme
+      // sudah me-rebuild mereka. Notify hanya dari timer.
       _render(notify: false);
     }
 
@@ -144,37 +159,18 @@ class _FtLiquidBackgroundState extends State<FtLiquidBackground>
 }
 
 /// Frame wallpaper bersama: image scene ter-flatten + ukuran logis yang
-/// dipetakannya. Lensa yang terlihat mendaftar lewat [addConsumer], lalu
-/// membaca [image] di dalam paint() supaya tidak pernah memegang image yang
-/// sudah di-dispose.
+/// dipetakannya. Konsumen mendaftar sebagai `repaint:` listener pada
+/// CustomPainter dan MEMBACA [image] di dalam paint() (bukan menangkapnya
+/// saat build) supaya tidak pernah memegang image yang sudah di-dispose.
 class LiquidFrame extends ChangeNotifier {
-  LiquidFrame({VoidCallback? onConsumerCountChanged})
-    : _onConsumerCountChanged = onConsumerCountChanged;
-
-  final VoidCallback? _onConsumerCountChanged;
   ui.Image? _image;
   Size _logicalSize = Size.zero;
-  int _consumerCount = 0;
 
   ui.Image? get image => _image;
-  bool get hasConsumers => _consumerCount > 0;
 
   /// Ukuran layar logis yang dipetakan [image] (resolusi image bisa lebih
   /// rendah; skala px = `image.width / logicalSize.width`).
   Size get logicalSize => _logicalSize;
-
-  void addConsumer() {
-    _consumerCount++;
-    if (_consumerCount == 1) _onConsumerCountChanged?.call();
-  }
-
-  void removeConsumer() {
-    if (_consumerCount == 0) {
-      throw StateError('LiquidFrame consumer count cannot be negative.');
-    }
-    _consumerCount--;
-    if (_consumerCount == 0) _onConsumerCountChanged?.call();
-  }
 
   void _set({
     required ui.Image? image,
@@ -198,7 +194,11 @@ class LiquidFrame extends ChangeNotifier {
 /// Scope yang membagikan [LiquidFrame] ke permukaan kaca, supaya kaca bisa
 /// men-blit wallpaper identik dengan proyeksi lensa (refraksi).
 class LiquidScene extends InheritedWidget {
-  const LiquidScene({super.key, required this.frame, required super.child});
+  const LiquidScene({
+    super.key,
+    required this.frame,
+    required super.child,
+  });
 
   final LiquidFrame frame;
 
@@ -226,14 +226,14 @@ class LiquidScene extends InheritedWidget {
         ).createShader(rect),
     );
 
-    // Cool spectrum only. Semantic orange/red never leaks into decoration.
+    // Aksen palette sudah punya varian gelap/terang sendiri di FtColors.
     final colors = [
       FtColors.clay,
       FtColors.sky,
+      FtColors.ochre,
       FtColors.sage,
       FtColors.plum,
       FtColors.sky,
-      FtColors.clay,
     ];
     const twoPi = 2 * math.pi;
     for (var i = 0; i < _specs.length; i++) {
@@ -252,7 +252,9 @@ class LiquidScene extends InheritedWidget {
         Paint()
           ..shader = RadialGradient(
             colors: [color, color.withValues(alpha: 0)],
-          ).createShader(Rect.fromCircle(center: Offset(cx, cy), radius: r)),
+          ).createShader(
+            Rect.fromCircle(center: Offset(cx, cy), radius: r),
+          ),
       );
     }
   }
@@ -282,73 +284,29 @@ class _BlobSpec {
   final double freq; // siklus per loop — bilangan bulat agar loop mulus
 }
 
-// Large, low-contrast fields create enough variation for transparent chrome
-// without turning the content canvas into a decorative gradient poster.
+// Vivid ala wallpaper demo Apple: blob besar saling tumpang tindih, warna
+// hangat-dingin berselang supaya tidak muddy. Dark butuh alpha lebih tinggi
+// karena warna tenggelam di dasar gelap.
 const _specs = [
   _BlobSpec(
-    cx: 0.88,
-    cy: 0.05,
-    r: 0.70,
-    ax: 0.14,
-    ay: 0.10,
-    phase: 0,
-    alphaLight: 0.18,
-    alphaDark: 0.24,
-  ),
+      cx: 0.88, cy: 0.05, r: 0.70, ax: 0.14, ay: 0.10,
+      phase: 0, alphaLight: 0.46, alphaDark: 0.50),
   _BlobSpec(
-    cx: 0.02,
-    cy: 0.32,
-    r: 0.75,
-    ax: 0.12,
-    ay: 0.14,
-    phase: 2.1,
-    alphaLight: 0.14,
-    alphaDark: 0.20,
-    freq: 2,
-  ),
+      cx: 0.02, cy: 0.32, r: 0.75, ax: 0.12, ay: 0.14,
+      phase: 2.1, alphaLight: 0.38, alphaDark: 0.44, freq: 2),
   _BlobSpec(
-    cx: 0.70,
-    cy: 0.92,
-    r: 0.65,
-    ax: 0.15,
-    ay: 0.10,
-    phase: 4.2,
-    alphaLight: 0.13,
-    alphaDark: 0.18,
-  ),
+      cx: 0.70, cy: 0.92, r: 0.65, ax: 0.15, ay: 0.10,
+      phase: 4.2, alphaLight: 0.38, alphaDark: 0.40),
   _BlobSpec(
-    cx: 0.22,
-    cy: -0.05,
-    r: 0.55,
-    ax: 0.10,
-    ay: 0.09,
-    phase: 1.0,
-    alphaLight: 0.12,
-    alphaDark: 0.17,
-    freq: 2,
-  ),
+      cx: 0.22, cy: -0.05, r: 0.55, ax: 0.10, ay: 0.09,
+      phase: 1.0, alphaLight: 0.32, alphaDark: 0.38, freq: 2),
   _BlobSpec(
-    cx: 0.12,
-    cy: 0.95,
-    r: 0.55,
-    ax: 0.12,
-    ay: 0.11,
-    phase: 5.3,
-    alphaLight: 0.10,
-    alphaDark: 0.15,
-  ),
+      cx: 0.12, cy: 0.95, r: 0.55, ax: 0.12, ay: 0.11,
+      phase: 5.3, alphaLight: 0.30, alphaDark: 0.34),
   // Pengisi tengah — area mati antara blob pinggir tetap hidup.
   _BlobSpec(
-    cx: 0.45,
-    cy: 0.55,
-    r: 0.50,
-    ax: 0.16,
-    ay: 0.13,
-    phase: 3.4,
-    alphaLight: 0.08,
-    alphaDark: 0.12,
-    freq: 1,
-  ),
+      cx: 0.45, cy: 0.55, r: 0.50, ax: 0.16, ay: 0.13,
+      phase: 3.4, alphaLight: 0.22, alphaDark: 0.30, freq: 1),
 ];
 
 /// Blit image bersama ke layar penuh — satu drawImageRect per langkah,

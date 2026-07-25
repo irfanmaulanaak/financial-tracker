@@ -88,8 +88,8 @@ void main() {
     await tester.pumpWidget(_harness(_expenses()));
     await tester.pumpAndSettle();
 
-    // 24 transactions → 3 pages of 8.
-    expect(find.text('Aktivitas · 24 transaksi'), findsOneWidget);
+    // 24 transactions → 3 pages of 8. (Eyebrow renders uppercased.)
+    expect(find.text('AKTIVITAS · 24 TRANSAKSI'), findsOneWidget);
     expect(find.text('Hal 1 dari 3'), findsOneWidget);
     expect(find.byType(ExpenseActivityRow), findsNWidgets(8));
 
@@ -126,7 +126,7 @@ void main() {
     await tester.tap(find.widgetWithText(PopupMenuItem<String>, 'Bima'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Aktivitas · 8 transaksi'), findsOneWidget);
+    expect(find.text('AKTIVITAS · 8 TRANSAKSI'), findsOneWidget);
     expect(find.byType(ExpenseActivityRow), findsNWidgets(8));
     expect(find.textContaining('Hal '), findsNothing);
     // Pill now reflects the selection.

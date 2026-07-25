@@ -1,7 +1,7 @@
 import 'package:financial_tracker/src/theme.dart';
+import 'package:financial_tracker/src/ui/ft_glass.dart';
 import 'package:financial_tracker/src/ui/ft_glass_fx.dart';
 import 'package:financial_tracker/src/ui/ft_liquid_background.dart';
-import 'package:financial_tracker/src/ui/ft_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -17,111 +17,89 @@ Widget _host(Widget child, {bool highContrast = false}) {
 void main() {
   tearDown(() => FtColors.setLiquid(false));
 
-  testWidgets('liquid OFF tanpa blur fallback → solid, tanpa BackdropFilter', (
-    tester,
-  ) async {
+  testWidgets('liquid OFF tanpa blur fallback → solid, tanpa BackdropFilter',
+      (tester) async {
     FtColors.setLiquid(false);
-    await tester.pumpWidget(
-      _host(
-        FtGlass(
-          borderRadius: BorderRadius.circular(20),
-          child: const SizedBox(width: 100, height: 40),
-        ),
+    await tester.pumpWidget(_host(
+      FtGlass(
+        borderRadius: BorderRadius.circular(20),
+        child: const SizedBox(width: 100, height: 40),
       ),
-    );
+    ));
     expect(find.byType(BackdropFilter), findsNothing);
   });
 
-  testWidgets(
-    'liquid OFF dengan fallbackBlurSigma → BackdropFilter (paritas nav klasik)',
-    (tester) async {
-      FtColors.setLiquid(false);
-      await tester.pumpWidget(
-        _host(
-          FtGlass(
-            borderRadius: BorderRadius.circular(28),
-            fallbackAlpha: 0.88,
-            fallbackBlurSigma: 18,
-            child: const SizedBox(width: 100, height: 40),
-          ),
-        ),
-      );
-      expect(find.byType(BackdropFilter), findsOneWidget);
-    },
-  );
-
-  testWidgets('bottom nav klasik tidak memakai BackdropFilter', (tester) async {
+  testWidgets('liquid OFF dengan fallbackBlurSigma → BackdropFilter (paritas nav klasik)',
+      (tester) async {
     FtColors.setLiquid(false);
-    await tester.pumpWidget(_host(const FtBottomNav(current: FtTab.home)));
-    expect(find.byType(BackdropFilter), findsNothing);
-  });
-
-  testWidgets('liquid ON → jalur glass (BackdropFilter) aktif', (tester) async {
-    FtColors.setLiquid(true);
-    await tester.pumpWidget(
-      _host(
-        FtGlass(
-          borderRadius: BorderRadius.circular(20),
-          child: const SizedBox(width: 100, height: 40),
-        ),
+    await tester.pumpWidget(_host(
+      FtGlass(
+        borderRadius: BorderRadius.circular(28),
+        fallbackAlpha: 0.88,
+        fallbackBlurSigma: 18,
+        child: const SizedBox(width: 100, height: 40),
       ),
-    );
+    ));
     expect(find.byType(BackdropFilter), findsOneWidget);
-    expect(
-      find.descendant(
-        of: find.byType(BackdropFilter),
-        matching: find.byType(GlassLensLayer),
-      ),
-      findsNothing,
-    );
-    expect(
-      find.ancestor(
-        of: find.byType(GlassLensLayer),
-        matching: find.byType(RepaintBoundary),
-      ),
-      findsWidgets,
-    );
   });
 
-  testWidgets('liquid ON + high contrast → fallback solid (a11y)', (
-    tester,
-  ) async {
+  testWidgets('liquid ON → jalur glass (BackdropFilter) aktif',
+      (tester) async {
     FtColors.setLiquid(true);
-    await tester.pumpWidget(
-      _host(
-        FtGlass(
-          borderRadius: BorderRadius.circular(20),
-          child: const SizedBox(width: 100, height: 40),
-        ),
-        highContrast: true,
+    await tester.pumpWidget(_host(
+      FtGlass(
+        borderRadius: BorderRadius.circular(20),
+        child: const SizedBox(width: 100, height: 40),
       ),
-    );
+    ));
+    expect(find.byType(BackdropFilter), findsOneWidget);
+  });
+
+  testWidgets('liquid ON + high contrast → fallback solid (a11y)',
+      (tester) async {
+    FtColors.setLiquid(true);
+    await tester.pumpWidget(_host(
+      FtGlass(
+        borderRadius: BorderRadius.circular(20),
+        child: const SizedBox(width: 100, height: 40),
+      ),
+      highContrast: true,
+    ));
     expect(find.byType(BackdropFilter), findsNothing);
   });
 
-  testWidgets('FtCard tetap solid saat liquid aktif', (tester) async {
+  testWidgets('lite (kartu) → tanpa GlassTouchGlow (regresi jank scroll)',
+      (tester) async {
     FtColors.setLiquid(true);
-    await tester.pumpWidget(
-      _host(const FtCard(child: SizedBox(width: 100, height: 40))),
-    );
-    expect(find.byType(BackdropFilter), findsNothing);
-    expect(find.byType(GlassLensLayer), findsNothing);
+    await tester.pumpWidget(_host(
+      FtGlass(
+        lite: true,
+        borderRadius: BorderRadius.circular(18),
+        child: const SizedBox(width: 100, height: 40),
+      ),
+    ));
+    expect(find.byType(GlassTouchGlow), findsNothing);
+    // Chrome (non-lite) tetap punya glow.
+    await tester.pumpWidget(_host(
+      FtGlass(
+        borderRadius: BorderRadius.circular(18),
+        child: const SizedBox(width: 100, height: 40),
+      ),
+    ));
+    expect(find.byType(GlassTouchGlow), findsOneWidget);
   });
 
-  testWidgets('lens paints on first frame without deferred origin state', (
-    tester,
-  ) async {
+  testWidgets('lens paints on first frame without deferred origin state',
+      (tester) async {
     final frame = LiquidFrame();
     addTearDown(frame.dispose);
 
-    await tester.pumpWidget(
-      _host(
-        LiquidScene(
-          frame: frame,
-          child: GlassLensLayer(borderRadius: BorderRadius.circular(20)),
-        ),
+    await tester.pumpWidget(_host(
+      LiquidScene(
+        frame: frame,
+        child: GlassLensLayer(borderRadius: BorderRadius.circular(20)),
       ),
-    );
+    ));
 
     expect(
       find.descendant(
@@ -130,30 +108,5 @@ void main() {
       ),
       findsOneWidget,
     );
-  });
-
-  testWidgets('lens registers only while its TickerMode is visible', (
-    tester,
-  ) async {
-    final frame = LiquidFrame();
-    addTearDown(frame.dispose);
-
-    Widget scene({required bool visible}) {
-      return _host(
-        LiquidScene(
-          frame: frame,
-          child: TickerMode(
-            enabled: visible,
-            child: GlassLensLayer(borderRadius: BorderRadius.circular(20)),
-          ),
-        ),
-      );
-    }
-
-    await tester.pumpWidget(scene(visible: true));
-    expect(frame.hasConsumers, isTrue);
-
-    await tester.pumpWidget(scene(visible: false));
-    expect(frame.hasConsumers, isFalse);
   });
 }

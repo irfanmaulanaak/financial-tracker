@@ -67,7 +67,7 @@ class _FtFadeUpState extends State<FtFadeUp>
   }
 }
 
-/// Press-down scale + light haptic for buttons and tappable surfaces.
+/// Press-down scale + light haptic. Use for editorial buttons/cards.
 class FtTapScale extends StatefulWidget {
   const FtTapScale({
     super.key,
@@ -98,7 +98,8 @@ class _FtTapScaleState extends State<FtTapScale> {
 
   @override
   Widget build(BuildContext context) {
-    final hasInteraction = widget.onTap != null || widget.onLongPress != null;
+    final hasInteraction =
+        widget.onTap != null || widget.onLongPress != null;
     if (!hasInteraction) return widget.child;
 
     return GestureDetector(
@@ -133,15 +134,15 @@ class _FtTapScaleState extends State<FtTapScale> {
         child: widget.child,
       );
     }
-    // Liquid controls react immediately, then settle without a cartoon bounce.
-    // The small vertical compression gives glass a soft, gel-like response.
+    // Liquid: squash & stretch — turun cepat agak gepeng, lepas membal
+    // (elasticOut melewati 0 → sumbu X/Y bergoyang bergantian).
     return TweenAnimationBuilder<double>(
       tween: Tween(end: _down ? 1.0 : 0.0),
-      duration: Duration(milliseconds: _down ? 80 : 220),
-      curve: _down ? Curves.easeOut : const Cubic(0.2, 0.8, 0.2, 1),
+      duration: Duration(milliseconds: _down ? 90 : 440),
+      curve: _down ? Curves.easeOut : Curves.elasticOut,
       builder: (_, p, child) {
-        final sx = lerpDouble(1, widget.scale * 1.01, p)!;
-        final sy = lerpDouble(1, widget.scale * 0.99, p)!;
+        final sx = lerpDouble(1, widget.scale * 1.015, p)!;
+        final sy = lerpDouble(1, widget.scale * 0.985, p)!;
         return Transform(
           transform: Matrix4.diagonal3Values(sx, sy, 1),
           alignment: Alignment.center,

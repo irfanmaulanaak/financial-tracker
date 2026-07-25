@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../theme.dart';
 
-/// Tiny area/line chart for trend hints on the home asset hero card.
+/// Tiny area/line chart for trend hints on the home asset hero card. Mirrors
+/// `Sparkline` in `claude-design/design/widgets.jsx`.
 ///
 /// On first build the line draws progressively from left to right over
 /// [animationDuration]. On data changes the line is redrawn from zero (a

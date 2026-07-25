@@ -7,8 +7,9 @@ import '../../home/widgets/home_formatters.dart';
 import '../goal.dart';
 import 'goal_funding_sheet.dart';
 
-/// Tap-friendly goal row used by `GoalsScreen`. Icon badge + label + percent
-/// + tone progress bar + amounts/due/monthly + an "off-track" warning when the
+/// Tap-friendly goal row used by `GoalsScreen`. Mirrors the goal cells in
+/// `claude-design/screens-rest.jsx` — icon badge + label + percent + tone
+/// progress bar + amounts/due/monthly + an "off-track" warning when the
 /// remaining-per-month implies it won't make the deadline.
 class GoalCard extends StatelessWidget {
   const GoalCard({

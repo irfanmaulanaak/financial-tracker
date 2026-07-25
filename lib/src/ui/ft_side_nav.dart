@@ -18,41 +18,16 @@ class FtSideNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = const [
-      _SideItem(
-        FtTab.home,
-        Icons.home_rounded,
-        Icons.home_outlined,
-        'Beranda',
-        '/home',
-      ),
-      _SideItem(
-        FtTab.spend,
-        Icons.donut_large_rounded,
-        Icons.donut_large_outlined,
-        'Pengeluaran',
-        '/spend',
-      ),
-      _SideItem(
-        FtTab.assets,
-        Icons.pie_chart_rounded,
-        Icons.pie_chart_outline_rounded,
-        'Aset',
-        '/accounts',
-      ),
-      _SideItem(
-        FtTab.goals,
-        Icons.flag_rounded,
-        Icons.flag_outlined,
-        'Tujuan',
-        '/goals',
-      ),
-      _SideItem(
-        FtTab.cards,
-        Icons.credit_card_rounded,
-        Icons.credit_card_outlined,
-        'Utang',
-        '/cards',
-      ),
+      _SideItem(FtTab.home, Icons.home_rounded, Icons.home_outlined,
+          'Beranda', '/home'),
+      _SideItem(FtTab.spend, Icons.donut_large_rounded,
+          Icons.donut_large_outlined, 'Pengeluaran', '/spend'),
+      _SideItem(FtTab.assets, Icons.pie_chart_rounded,
+          Icons.pie_chart_outline_rounded, 'Aset', '/accounts'),
+      _SideItem(FtTab.goals, Icons.flag_rounded, Icons.flag_outlined,
+          'Tujuan', '/goals'),
+      _SideItem(FtTab.cards, Icons.credit_card_rounded,
+          Icons.credit_card_outlined, 'Utang', '/cards'),
     ];
 
     final extended = context.isAtLeastExpanded;
@@ -127,14 +102,16 @@ class _SideButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: active
               ? (FtColors.liquid
-                    ? Colors.white.withValues(
-                        alpha: Theme.of(context).brightness == Brightness.dark
-                            ? 0.06
-                            : 0.12,
-                      )
-                    : FtColors.bg)
+                  ? FtColors.bg.withValues(alpha: 0.78)
+                  : FtColors.bg)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(16),
+          border: active && FtColors.liquid
+              ? Border.all(
+                  color: Colors.white.withValues(alpha: 0.35),
+                  width: 0.8,
+                )
+              : null,
         ),
         child: extended
             ? Row(
@@ -142,7 +119,7 @@ class _SideButton extends StatelessWidget {
                   Icon(
                     active ? item.iconActive : item.icon,
                     size: 20,
-                    color: active ? FtColors.clay : FtColors.ink3,
+                    color: active ? FtColors.ink : FtColors.ink3,
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -151,9 +128,10 @@ class _SideButton extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: active ? FtColors.clay : FtColors.ink3,
+                        color: active ? FtColors.ink : FtColors.ink3,
                         fontSize: 13,
-                        fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+                        fontWeight:
+                            active ? FontWeight.w600 : FontWeight.w500,
                         letterSpacing: 0.1,
                       ),
                     ),
@@ -165,7 +143,7 @@ class _SideButton extends StatelessWidget {
                   Icon(
                     active ? item.iconActive : item.icon,
                     size: 22,
-                    color: active ? FtColors.clay : FtColors.ink3,
+                    color: active ? FtColors.ink : FtColors.ink3,
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -173,9 +151,10 @@ class _SideButton extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: active ? FtColors.clay : FtColors.ink3,
+                      color: active ? FtColors.ink : FtColors.ink3,
                       fontSize: 9.5,
-                      fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+                      fontWeight:
+                          active ? FontWeight.w600 : FontWeight.w500,
                       letterSpacing: 0.2,
                     ),
                   ),
@@ -187,7 +166,13 @@ class _SideButton extends StatelessWidget {
 }
 
 class _SideItem {
-  const _SideItem(this.tab, this.iconActive, this.icon, this.label, this.path);
+  const _SideItem(
+    this.tab,
+    this.iconActive,
+    this.icon,
+    this.label,
+    this.path,
+  );
 
   final FtTab tab;
   final IconData iconActive;

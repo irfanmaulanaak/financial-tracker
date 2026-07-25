@@ -25,69 +25,77 @@ class RecentList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        FtSectionHeader(
-          title: 'Aktivitas Terbaru',
-          actionLabel: 'Lihat semua',
-          onAction: onTap,
-        ),
-        Container(
-          margin: const EdgeInsets.fromLTRB(22, 0, 22, 16),
-          decoration: BoxDecoration(
-            color: FtColors.surface,
-            border: Border.all(color: FtColors.line),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            children: recentAsync.maybeWhen(
-              data: (recent) => recent.isEmpty
-                  ? [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(18, 8, 18, 18),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Belum ada pengeluaran tercatat siklus ini.',
-                              style: TextStyle(
-                                color: FtColors.ink3,
-                                fontSize: 12,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            OutlinedButton.icon(
-                              onPressed: () => context.push('/expenses/new'),
-                              icon: const Icon(Icons.add_rounded, size: 16),
-                              label: const Text(
-                                'Catat pengeluaran pertama',
-                                style: TextStyle(fontSize: 12),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ]
-                  : [
-                      for (var i = 0; i < recent.length; i++)
-                        ExpenseActivityRow(
-                          expense: recent[i],
-                          category: household.categoryOf(recent[i].categoryId),
-                          spender: household.memberOf(recent[i].spentBy),
-                          showTopBorder: i > 0,
-                        ),
-                    ],
-              orElse: () => const [
-                Padding(
-                  padding: EdgeInsets.all(18),
-                  child: Center(child: CircularProgressIndicator()),
+    return FtCard(
+      margin: const EdgeInsets.fromLTRB(22, 0, 22, 16),
+      padding: EdgeInsets.zero,
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 16, 18, 10),
+            child: Row(
+              children: [
+                const Expanded(child: Eyebrow('Aktivitas Terbaru')),
+                TextButton(
+                  onPressed: onTap,
+                  style: TextButton.styleFrom(
+                    minimumSize: Size.zero,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 4,
+                    ),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: const Text(
+                    'Lihat semua',
+                    style: TextStyle(fontSize: 11),
+                  ),
                 ),
               ],
             ),
           ),
-        ),
-      ],
+          ...recentAsync.maybeWhen(
+            data: (recent) => recent.isEmpty
+                ? [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(18, 8, 18, 18),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Belum ada pengeluaran tercatat siklus ini.',
+                            style:
+                                TextStyle(color: FtColors.ink3, fontSize: 12),
+                          ),
+                          const SizedBox(height: 10),
+                          OutlinedButton.icon(
+                            onPressed: () => context.push('/expenses/new'),
+                            icon: const Icon(Icons.add_rounded, size: 16),
+                            label: const Text(
+                              'Catat pengeluaran pertama',
+                              style: TextStyle(fontSize: 12),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ]
+                : [
+                    for (final e in recent)
+                      ExpenseActivityRow(
+                        expense: e,
+                        category: household.categoryOf(e.categoryId),
+                        spender: household.memberOf(e.spentBy),
+                      ),
+                  ],
+            orElse: () => const [
+              Padding(
+                padding: EdgeInsets.all(18),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -116,79 +124,83 @@ class ExpenseActivityRow extends StatelessWidget {
         : FtColors.ink3;
     return FtTapScale(
       scale: 0.99,
-      onTap: () => ExpenseDetailSheet.show(context: context, expense: expense),
+      onTap: () =>
+          ExpenseDetailSheet.show(context: context, expense: expense),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-        decoration: BoxDecoration(
-          border: showTopBorder
-              ? Border(top: BorderSide(color: FtColors.line))
-              : null,
-        ),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 22,
-              child: Icon(
-                iconFor(category?.icon ?? 'category'),
-                color: color,
-                size: 18,
-              ),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+      decoration: BoxDecoration(
+        border: showTopBorder
+            ? Border(top: BorderSide(color: FtColors.line, width: 0.5))
+            : null,
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: color.withValues(alpha: 0.22)),
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    category?.label ?? '-',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: FtColors.ink,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
+            child: Icon(
+              iconFor(category?.icon ?? 'category'),
+              color: color,
+              size: 16,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  category?.label ?? '-',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: FtColors.ink,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
                   ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          [
-                            Dates.short(expense.date),
-                            if (expense.note != null &&
-                                expense.note!.isNotEmpty)
-                              expense.note!,
-                          ].join(' · '),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: FtColors.ink3,
-                            fontSize: 11,
-                            fontFeatures: const [FontFeature.tabularFigures()],
-                          ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        [
+                          Dates.short(expense.date),
+                          if (expense.note != null && expense.note!.isNotEmpty)
+                            expense.note!,
+                        ].join(' · '),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: FtColors.ink3,
+                          fontSize: 11,
                         ),
                       ),
-                      if (spender != null) ...[
-                        const SizedBox(width: 6),
-                        MemberChip(member: spender!),
-                      ],
+                    ),
+                    if (spender != null) ...[
+                      const SizedBox(width: 6),
+                      MemberChip(member: spender!),
                     ],
-                  ),
-                ],
-              ),
+                  ],
+                ),
+              ],
             ),
-            Text(
-              compactMoney(expense.amount),
-              style: TextStyle(
-                color: FtColors.ink,
-                fontSize: 14.5,
-                fontWeight: FontWeight.w600,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
+          ),
+          Text(
+            compactMoney(expense.amount),
+            style: TextStyle(
+              color: FtColors.ink,
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
             ),
-          ],
-        ),
+          ),
+        ],
+      ),
       ),
     );
   }

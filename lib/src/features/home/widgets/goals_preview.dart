@@ -15,122 +15,113 @@ class GoalsPreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (goals.isEmpty) return const SizedBox.shrink();
-    return Column(
-      children: [
-        FtSectionHeader(
-          title: 'Tujuan Finansial',
-          actionLabel: '${goals.length} aktif',
-          onAction: onTap,
-          prominent: true,
-        ),
-        FtTapScale(
-          scale: 0.995,
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(22, 0, 22, 16),
-            child: Column(
+    return FtCard(
+      margin: const EdgeInsets.fromLTRB(22, 0, 22, 16),
+      padding: EdgeInsets.zero,
+      onTap: onTap,
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 16, 18, 10),
+            child: Row(
               children: [
-                for (var i = 0; i < goals.take(3).length; i++)
-                  _GoalPreviewRow(goal: goals[i], showDivider: i > 0),
+                const Expanded(child: Eyebrow('Tujuan Finansial')),
+                Text(
+                  '${goals.length} aktif',
+                ),
               ],
             ),
           ),
-        ),
-      ],
+          for (final g in goals.take(3)) _GoalPreviewRow(goal: g),
+        ],
+      ),
     );
   }
 }
 
 class _GoalPreviewRow extends StatelessWidget {
-  const _GoalPreviewRow({required this.goal, required this.showDivider});
+  const _GoalPreviewRow({required this.goal});
 
   final Goal goal;
-  final bool showDivider;
 
   @override
   Widget build(BuildContext context) {
     final color = parseColor(goal.color);
-    return Column(
-      children: [
-        if (showDivider)
-          Divider(height: 1, thickness: 0.5, indent: 31, color: FtColors.line),
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 13),
-          child: Row(
-            children: [
-              Icon(goalIconFor(goal.icon), color: color, size: 19),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+    return Container(
+      padding: const EdgeInsets.fromLTRB(18, 10, 18, 14),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: FtColors.line, width: 0.5)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: color.withValues(alpha: 0.22)),
+            ),
+            child: Icon(goalIconFor(goal.icon), color: color, size: 18),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            goal.label,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: FtColors.ink,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
+                    Expanded(
+                      child: Text(
+                        goal.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: FtColors.ink,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
                         ),
-                        Text(
-                          '${(goal.progress * 100).round()}%',
-                          style: TextStyle(
-                            color: FtColors.ink3,
-                            fontSize: 11,
-                            fontFeatures: const [FontFeature.tabularFigures()],
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                    const SizedBox(height: 7),
-                    FtProgressBar(
-                      value: goal.current,
-                      max: goal.target,
-                      color: color,
-                      height: 3,
-                    ),
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            '${compactMoney(goal.current)} / ${compactMoney(goal.target)}',
-                            style: TextStyle(
-                              color: FtColors.ink2,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                              fontFeatures: const [
-                                FontFeature.tabularFigures(),
-                              ],
-                            ),
-                          ),
-                        ),
-                        if (goal.dueDate != null)
-                          Text(
-                            Dates.monthYear(goal.dueDate!),
-                            style: TextStyle(
-                              color: FtColors.ink3,
-                              fontSize: 11,
-                              fontFeatures: const [
-                                FontFeature.tabularFigures(),
-                              ],
-                            ),
-                          ),
-                      ],
+                    Text(
+                      '${(goal.progress * 100).round()}%',
+                      style: TextStyle(
+                        color: FtColors.ink3,
+                        fontSize: 11,
+                      ),
                     ),
                   ],
                 ),
-              ),
-            ],
+                const SizedBox(height: 7),
+                FtProgressBar(
+                  value: goal.current,
+                  max: goal.target,
+                  color: color,
+                  height: 3,
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '${compactMoney(goal.current)} / ${compactMoney(goal.target)}',
+                      ),
+                    ),
+                    if (goal.dueDate != null)
+                      Text(
+                        Dates.monthYear(goal.dueDate!),
+                        style: TextStyle(
+                          color: FtColors.ink3,
+                          fontSize: 11,
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

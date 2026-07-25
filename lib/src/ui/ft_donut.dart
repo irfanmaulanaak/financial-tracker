@@ -14,6 +14,7 @@ class FtDonutSegment {
 }
 
 /// Pie/donut chart with rounded segment ends.
+/// Mirrors `Donut` in `claude-design/design/widgets.jsx`.
 ///
 /// Segments sweep from zero into place over [animationDuration] on first
 /// build and tween toward new values when the data changes.

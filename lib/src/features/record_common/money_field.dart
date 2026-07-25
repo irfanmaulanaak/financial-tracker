@@ -10,7 +10,7 @@ import '../../ui/ft_haptics.dart';
 export '../../core/formatters.dart'
     show ThousandsSeparatorFormatter, MoneyExpressionFormatter;
 
-/// Big amount input backed by the system **numeric** keyboard (no
+/// Big serif amount input backed by the system **numeric** keyboard (no
 /// QWERTY). Drops the custom in-app numpad while keeping the editorial
 /// look of [RecordAmountDisplay]: eyebrow label + Rp prefix + large
 /// auto-grouped number.

@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 import '../theme.dart';
 
 /// Circular progress gauge (0..1 of [value] / [max]). Used as a goal progress
-/// ring and a per-factor health-score indicator.
+/// ring and a per-factor health-score indicator. Matches `Ring` in
+/// `claude-design/design/widgets.jsx`.
 class FtRing extends StatelessWidget {
   const FtRing({
     super.key,

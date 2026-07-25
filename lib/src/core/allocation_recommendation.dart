@@ -1,4 +1,5 @@
-/// Static, opinionated portfolio allocation recommendation. Current vs
+/// Static, opinionated portfolio allocation recommendation. Mirrors the
+/// shape of `claude-design/data.jsx`'s `allocation` object — current vs
 /// target weights + a list of rebalancing moves derived from the gap.
 ///
 /// We don't fetch live market data. Targets reflect a single moderate-risk

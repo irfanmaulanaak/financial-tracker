@@ -19,7 +19,8 @@ import 'widgets/goal_funding_sheet.dart';
 import 'widgets/goal_preset_grid.dart';
 
 /// Full add-goal flow: preset → name + color → target + current with keypad
-/// → duration → projection.
+/// → duration → projection. Mirrors `AddGoalScreen` in
+/// `claude-design/screens-extras.jsx`.
 class AddGoalScreen extends ConsumerStatefulWidget {
   const AddGoalScreen({super.key});
 

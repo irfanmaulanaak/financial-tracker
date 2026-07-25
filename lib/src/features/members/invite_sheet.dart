@@ -10,9 +10,10 @@ import '../household/household.dart';
 import '../household/household_repository.dart';
 import 'widgets/invite_sheet_parts.dart';
 
-/// Invite bottom sheet. Generates a single-use 6-digit invite code that's
-/// pre-baked with the invited member's role + access level. The joiner cannot
-/// escalate access beyond what the invite carries.
+/// Invite bottom sheet — `claude-design/screens-household.jsx > InviteMemberSheet`.
+/// Generates a single-use 6-digit invite code that's pre-baked with the
+/// invited member's role + access level. The joiner cannot escalate access
+/// beyond what the invite carries.
 class InviteMemberSheet extends ConsumerStatefulWidget {
   const InviteMemberSheet({
     super.key,

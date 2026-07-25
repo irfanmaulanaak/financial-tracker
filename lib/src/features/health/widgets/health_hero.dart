@@ -6,7 +6,8 @@ import '../../../ui/ft_traffic_light.dart';
 import '../../../ui/ft_ui.dart';
 
 /// Hero card on the health detector screen — vertical traffic light + score
-/// + verdict label + tinted summary box.
+/// + verdict label + tinted summary box. Mirrors the top of `HealthScreen`
+/// in `claude-design/screens-rest.jsx`.
 class HealthHero extends StatelessWidget {
   const HealthHero({super.key, required this.score});
   final HealthScore score;

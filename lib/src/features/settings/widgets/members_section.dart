@@ -7,9 +7,9 @@ import '../../home/widgets/home_formatters.dart';
 import '../../household/household.dart';
 import '../../household/name_format.dart';
 
-/// Members section card. Lists family members with role + access tier,
-/// badges for creator and pending invites (future), plus the inline
-/// "Undang Anggota" CTA.
+/// Members section card from `claude-design/screens-household.jsx`.
+/// Lists family members with role + access tier, badges for creator and
+/// pending invites (future), plus the inline "Undang Anggota" CTA.
 ///
 /// Tapping a member row pushes `/members/<uid>`.
 class MembersSection extends StatelessWidget {

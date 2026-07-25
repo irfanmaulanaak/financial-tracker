@@ -5,7 +5,8 @@ import '../theme.dart';
 enum FtHealthState { good, caution, risk }
 
 /// Three-circle traffic light used on the health detector + category verdict
-/// boxes. Active circle glows; inactive circles dim.
+/// boxes. Active circle glows; inactive circles dim. Mirrors `TrafficLight`
+/// in `claude-design/design/widgets.jsx`.
 class FtTrafficLight extends StatelessWidget {
   const FtTrafficLight({
     super.key,
@@ -29,9 +30,10 @@ class FtTrafficLight extends StatelessWidget {
     for (var i = 0; i < lights.length; i++) {
       children.add(lights[i]);
       if (i != lights.length - 1) {
-        children.add(
-          SizedBox(width: vertical ? 0 : 6, height: vertical ? 6 : 0),
-        );
+        children.add(SizedBox(
+          width: vertical ? 0 : 6,
+          height: vertical ? 6 : 0,
+        ));
       }
     }
     return vertical
@@ -50,8 +52,8 @@ class FtTrafficLight extends StatelessWidget {
             ? [
                 BoxShadow(
                   color: color.withValues(alpha: 0.55),
-                  blurRadius: 5,
-                  spreadRadius: 0.5,
+                  blurRadius: 10,
+                  spreadRadius: 1,
                 ),
               ]
             : null,

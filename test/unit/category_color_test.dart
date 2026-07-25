@@ -24,8 +24,8 @@ void main() {
       final light = parseColor('#C4612A');
       FtColors.setBrightness(Brightness.dark);
       final dark = parseColor('#C4612A');
-      expect(light, const Color(0xFFD85C2F));
-      expect(dark, const Color(0xFFFF9B73));
+      expect(light, const Color(0xFFC4612A));
+      expect(dark, const Color(0xFFe08a4a));
       expect(light, isNot(dark));
     });
 

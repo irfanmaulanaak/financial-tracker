@@ -15,8 +15,9 @@ import '../household/name_format.dart';
 import 'widgets/access_picker_sheet.dart';
 import 'widgets/member_detail_parts.dart';
 
-/// Member detail. Shows member hero, contact info, access tier, this-cycle
-/// activity stats. Creator-only destructive action: remove member.
+/// Member detail — `claude-design/screens-profile.jsx > MemberDetailScreen`.
+/// Shows member hero, contact info, access tier, this-cycle activity stats.
+/// Creator-only destructive action: remove member.
 class MemberDetailScreen extends ConsumerWidget {
   const MemberDetailScreen({super.key, required this.memberId});
   final String memberId;
