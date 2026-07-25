@@ -775,17 +775,17 @@ class _CicilanLockedBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
       decoration: BoxDecoration(
-        color: FtColors.plum.withValues(alpha: 0.08),
+        color: FtColors.clay.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: FtColors.plum.withValues(alpha: 0.24),
+          color: FtColors.clay.withValues(alpha: 0.24),
           width: 0.5,
         ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.lock_outline, size: 16, color: FtColors.plum),
+          Icon(Icons.lock_outline, size: 16, color: FtColors.clay),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -802,4 +802,3 @@ class _CicilanLockedBanner extends StatelessWidget {
     );
   }
 }
-

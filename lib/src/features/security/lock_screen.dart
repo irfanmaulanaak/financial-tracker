@@ -97,7 +97,8 @@ class _LockScreenState extends ConsumerState<LockScreen> {
               Text(
                 'FinSist',
                 style: TextStyle(
-                  fontFamily: 'Newsreader',
+                  fontFamily: 'Geist',
+                  fontFeatures: const [FontFeature.tabularFigures()],
                   fontSize: 28,
                   color: FtColors.ink,
                 ),

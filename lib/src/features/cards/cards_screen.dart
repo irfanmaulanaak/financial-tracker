@@ -184,7 +184,11 @@ class _CardsScreenState extends ConsumerState<CardsScreen> {
                       FtProgressBar(
                         value: totalUsed,
                         max: totalLimit <= 0 ? 1 : totalLimit,
-                        color: FtColors.plum,
+                        color: ftProgressColor(
+                          totalUsed,
+                          totalLimit,
+                          dangerWhenOver: true,
+                        ),
                         height: 6,
                       ),
                       const SizedBox(height: 14),
@@ -195,7 +199,7 @@ class _CardsScreenState extends ConsumerState<CardsScreen> {
                             child: _LabeledStat(
                               label: 'Min. bayar',
                               value: compactMoney(totalMin),
-                              color: FtColors.plum,
+                              color: FtColors.clay,
                             ),
                           ),
                           Expanded(
@@ -436,7 +440,8 @@ class _SaranTip extends ConsumerWidget {
                     ? 'Saat ini belum ada cicilan aktif. Pastikan rasio pembayaran tetap di bawah 30% dari pendapatan.'
                     : 'Cicilan ${compactMoney(monthlyInstallments)} ($pct% dari pendapatan), masih dalam batas sehat.',
             style: TextStyle(
-              fontFamily: 'Newsreader',
+              fontFamily: 'Geist',
+              fontFeatures: const [FontFeature.tabularFigures()],
               color: FtColors.ink,
               fontSize: 14,
               height: 1.45,

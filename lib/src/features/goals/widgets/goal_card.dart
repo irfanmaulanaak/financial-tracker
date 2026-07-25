@@ -102,7 +102,7 @@ class GoalCard extends StatelessWidget {
                     FtProgressBar(
                       value: goal.current,
                       max: goal.target == 0 ? 1 : goal.target,
-                      color: color,
+                      color: ftProgressColor(goal.current, goal.target),
                       height: 4,
                     ),
                     const SizedBox(height: 8),

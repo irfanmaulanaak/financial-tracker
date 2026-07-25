@@ -70,9 +70,9 @@ class RecordMetaRow extends StatelessWidget {
               padding:
                   const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
-                color: recurring ? FtColors.moss : FtColors.surface,
+                color: recurring ? FtColors.clay : FtColors.surface,
                 border: Border.all(
-                  color: recurring ? FtColors.moss : FtColors.line,
+                  color: recurring ? FtColors.clay : FtColors.line,
                   width: 0.5,
                 ),
                 borderRadius: BorderRadius.circular(10),

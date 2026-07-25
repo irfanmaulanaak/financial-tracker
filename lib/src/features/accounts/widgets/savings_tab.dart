@@ -22,7 +22,7 @@ class SavingsTab extends StatelessWidget {
         household: household,
         kind: AccountKind.savings,
         total: total,
-        accent: FtColors.moss,
+        accent: FtColors.ink2,
         subtitle: 'Dana terkunci untuk tujuan dan dana darurat',
         onAdd: onAdd,
       );

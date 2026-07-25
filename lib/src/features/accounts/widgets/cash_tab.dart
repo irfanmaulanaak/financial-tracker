@@ -24,7 +24,7 @@ class CashTab extends StatelessWidget {
         household: household,
         kind: AccountKind.cash,
         total: total,
-        accent: FtColors.sky,
+        accent: FtColors.ink2,
         subtitle: 'Tunai & rekening cair · siap pakai',
         onAdd: onAdd,
       );

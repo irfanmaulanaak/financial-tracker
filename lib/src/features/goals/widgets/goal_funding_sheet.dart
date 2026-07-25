@@ -166,16 +166,16 @@ class _OptionTile extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: selected ? FtColors.moss.withValues(alpha: 0.08) : FtColors.surface,
+          color: selected ? FtColors.clay.withValues(alpha: 0.08) : FtColors.surface,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: selected ? FtColors.moss : FtColors.line,
+            color: selected ? FtColors.clay : FtColors.line,
             width: selected ? 1 : 0.5,
           ),
         ),
         child: Row(
           children: [
-            Icon(icon, size: 18, color: selected ? FtColors.moss : FtColors.ink2),
+            Icon(icon, size: 18, color: selected ? FtColors.clay : FtColors.ink2),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -202,7 +202,7 @@ class _OptionTile extends StatelessWidget {
               ),
             ),
             if (selected)
-              Icon(Icons.check_circle, size: 18, color: FtColors.moss),
+              Icon(Icons.check_circle, size: 18, color: FtColors.clay),
           ],
         ),
       ),

@@ -219,7 +219,7 @@ class _TxnTile extends StatelessWidget {
       final actor = household.memberOf(t.transferredBy);
       // Outgoing nets total = amount + fee; incoming only amount lands.
       final signedAmount = outgoing ? -(t.amount + t.fee) : t.amount;
-      final color = outgoing ? FtColors.sky : FtColors.moss;
+      final color = outgoing ? FtColors.ink2 : FtColors.moss;
       final feeNote =
           outgoing && t.fee > 0 ? 'Biaya ${Money.format(t.fee)}' : null;
       return FtCard(

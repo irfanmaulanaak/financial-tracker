@@ -117,7 +117,8 @@ class _PinSheetState extends ConsumerState<_PinSheet> {
           Text(
             _title,
             style: TextStyle(
-              fontFamily: 'Newsreader',
+              fontFamily: 'Geist',
+              fontFeatures: const [FontFeature.tabularFigures()],
               fontSize: 20,
               color: FtColors.ink,
             ),

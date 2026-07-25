@@ -96,7 +96,7 @@ class _GoalPreviewRow extends StatelessWidget {
                 FtProgressBar(
                   value: goal.current,
                   max: goal.target,
-                  color: color,
+                  color: ftProgressColor(goal.current, goal.target),
                   height: 3,
                 ),
                 const SizedBox(height: 6),

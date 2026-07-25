@@ -158,7 +158,8 @@ class _ProfileCard extends StatelessWidget {
               child: Text(
                 initialsOf(user.displayName ?? user.email ?? 'User'),
                 style: TextStyle(
-                  fontFamily: 'Newsreader',
+                  fontFamily: 'Geist',
+                  fontFeatures: const [FontFeature.tabularFigures()],
                   fontSize: 22,
                   color: FtColors.ink,
                   letterSpacing: 0.5,

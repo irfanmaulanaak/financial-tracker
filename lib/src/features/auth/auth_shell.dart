@@ -212,21 +212,21 @@ class AuthInfoBanner extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: FtColors.sage.withValues(alpha: 0.08),
+        color: FtColors.clay.withValues(alpha: 0.08),
         border: Border.all(
-            color: FtColors.sage.withValues(alpha: 0.3), width: 0.5),
+            color: FtColors.clay.withValues(alpha: 0.3), width: 0.5),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: FtColors.moss, size: 16),
+          Icon(icon, color: FtColors.clay, size: 16),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               message,
               style: TextStyle(
-                color: FtColors.moss,
+                color: FtColors.ink2,
                 fontSize: 12,
                 height: 1.5,
               ),

@@ -8,7 +8,7 @@ import '../credit_card.dart';
 import '../pay_card_sheet.dart';
 import 'installment_list.dart';
 
-/// Per-card tile shown on the Cards screen — gradient card visual with
+/// Per-card tile shown on the Cards screen — tonal card visual with
 /// label/last4, used amount, usage bar, owner/limit/due grid, active
 /// installments list, and pay actions.
 class CardTile extends StatelessWidget {
@@ -28,8 +28,7 @@ class CardTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = _parseColor(card.accent);
-    final cardSurface =
-        Color.lerp(color, const Color(0xFF1A1814), 0.58)!;
+    final cardSurface = Color.lerp(color, FtColors.surface, 0.68)!;
     final pct =
         card.limit == 0 ? 0.0 : (card.used / card.limit).clamp(0.0, 1.0);
     return FtCard(
@@ -54,13 +53,13 @@ class CardTile extends StatelessWidget {
                       child: Text(
                         card.label,
                         style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                          color: Colors.white70,
+                          color: FtColors.ink2,
                         ),
                       ),
                     ),
-                    const Icon(
+                    Icon(
                       Icons.account_balance,
-                      color: Colors.white,
+                      color: FtColors.ink,
                       size: 20,
                     ),
                   ],
@@ -68,9 +67,10 @@ class CardTile extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   card.last4.isNotEmpty ? '•••• ${card.last4}' : '',
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: FtColors.ink,
                     letterSpacing: 2,
+                    fontFeatures: const [FontFeature.tabularFigures()],
                   ),
                 ),
                 const SizedBox(height: 26),
@@ -83,7 +83,7 @@ class CardTile extends StatelessWidget {
                         style: Theme.of(context)
                             .textTheme
                             .titleLarge
-                            ?.copyWith(color: Colors.white, fontSize: 22),
+                            ?.copyWith(color: FtColors.ink, fontSize: 22),
                       ),
                     ),
                   ],
@@ -92,8 +92,12 @@ class CardTile extends StatelessWidget {
                 FtProgressBar(
                   value: pct,
                   max: 1,
-                  color: Colors.white,
-                  trackColor: Colors.white24,
+                  color: ftProgressColor(
+                    card.used,
+                    card.limit,
+                    dangerWhenOver: true,
+                  ),
+                  trackColor: FtColors.ink.withValues(alpha: 0.14),
                   height: 3,
                 ),
               ],

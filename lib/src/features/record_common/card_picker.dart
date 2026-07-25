@@ -58,7 +58,7 @@ class _CardTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent = FtColors.plum;
+    final accent = FtColors.clay;
     final remaining = card.limit - card.used;
     return FtTapScale(
       scale: 0.97,

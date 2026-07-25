@@ -196,16 +196,16 @@ class _TransferCta extends StatelessWidget {
                 width: 28,
                 height: 28,
                 decoration: BoxDecoration(
-                  color: FtColors.sky.withValues(alpha: 0.12),
+                  color: FtColors.clay.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: FtColors.sky.withValues(alpha: 0.24),
+                    color: FtColors.clay.withValues(alpha: 0.24),
                     width: 0.5,
                   ),
                 ),
                 alignment: Alignment.center,
                 child: Icon(Icons.compare_arrows_rounded,
-                    size: 16, color: FtColors.sky),
+                    size: 16, color: FtColors.clay),
               ),
               const SizedBox(width: 12),
               Expanded(

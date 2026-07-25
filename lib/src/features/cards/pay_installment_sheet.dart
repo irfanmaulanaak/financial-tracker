@@ -132,8 +132,8 @@ class _PayInstallmentSheetState extends ConsumerState<PayInstallmentSheet> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 decoration: BoxDecoration(
-                  color: FtColors.plum.withValues(alpha: 0.08),
-                  border: Border.all(color: FtColors.plum, width: 0.5),
+                  color: FtColors.clay.withValues(alpha: 0.08),
+                  border: Border.all(color: FtColors.clay, width: 0.5),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
@@ -177,7 +177,7 @@ class _PayInstallmentSheetState extends ConsumerState<PayInstallmentSheet> {
               RecordAccountDropdownField(
                 accounts: accounts,
                 selectedId: _sourceAccountId,
-                accent: FtColors.plum,
+                accent: FtColors.clay,
                 sheetTitle: 'Pilih rekening',
                 onSelect: (id) {
                   FtHaptics.select();

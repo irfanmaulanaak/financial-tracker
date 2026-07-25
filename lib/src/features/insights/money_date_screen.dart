@@ -374,9 +374,7 @@ class _UpcomingStep extends StatelessWidget {
       children: [
         for (final i in items)
           _LineCard(
-            color: i.kind == UpcomingKind.cardDue
-                ? FtColors.plum
-                : FtColors.sky,
+            color: FtColors.ochre,
             icon: i.kind == UpcomingKind.cardDue
                 ? Icons.credit_card_rounded
                 : Icons.receipt_long_rounded,

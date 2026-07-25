@@ -87,7 +87,7 @@ class GoalPreviewHero extends StatelessWidget {
                   FtProgressBar(
                     value: current,
                     max: target == 0 ? 1 : target,
-                    color: tone,
+                    color: ftProgressColor(current, target),
                     height: 3,
                   ),
                 ],
@@ -273,7 +273,8 @@ class GoalProjectionCard extends StatelessWidget {
               style: TextStyle(
                 color: FtColors.ink,
                 fontSize: 13,
-                fontFamily: 'Newsreader',
+                fontFamily: 'Geist',
+                fontFeatures: const [FontFeature.tabularFigures()],
                 height: 1.45,
               ),
               children: [
@@ -305,4 +306,3 @@ class GoalProjectionCard extends StatelessWidget {
     );
   }
 }
-

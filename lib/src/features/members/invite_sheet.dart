@@ -241,7 +241,8 @@ class _InviteMemberSheetState extends ConsumerState<InviteMemberSheet> {
               SelectableText(
                 _code!,
                 style: TextStyle(
-                  fontFamily: 'Newsreader',
+                  fontFamily: 'Geist',
+                  fontFeatures: const [FontFeature.tabularFigures()],
                   fontSize: 30,
                   fontWeight: FontWeight.w500,
                   letterSpacing: 6,

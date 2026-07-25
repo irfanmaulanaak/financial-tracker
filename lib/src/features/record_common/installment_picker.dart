@@ -84,7 +84,8 @@ class InstallmentPlans extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                fontFamily: 'Newsreader',
+                fontFamily: 'Geist',
+                fontFeatures: const [FontFeature.tabularFigures()],
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
                 color: selected ? FtColors.bg : FtColors.ink2,
@@ -144,7 +145,8 @@ class InstallmentPreview extends StatelessWidget {
                 TextSpan(
                   text: Money.format(plan.monthly),
                   style: TextStyle(
-                    fontFamily: 'Newsreader',
+                    fontFamily: 'Geist',
+                    fontFeatures: const [FontFeature.tabularFigures()],
                     fontSize: 18,
                     fontWeight: FontWeight.w500,
                     color: FtColors.ink,

@@ -84,7 +84,13 @@ class CardDetailHeader extends StatelessWidget {
               value: pct,
               minHeight: 6,
               backgroundColor: Colors.white.withValues(alpha: 0.3),
-              valueColor: const AlwaysStoppedAnimation(Colors.white),
+              valueColor: AlwaysStoppedAnimation(
+                ftProgressColor(
+                  card.used,
+                  card.limit,
+                  dangerWhenOver: true,
+                ),
+              ),
             ),
           ),
           const SizedBox(height: 8),
@@ -165,7 +171,11 @@ class CardInstallmentTile extends StatelessWidget {
             const SizedBox(height: 4),
             ClipRRect(
               borderRadius: BorderRadius.circular(4),
-              child: FtProgressBar(value: pct, max: 1, color: FtColors.sky),
+              child: FtProgressBar(
+                value: pct,
+                max: 1,
+                color: ftProgressColor(pct, 1),
+              ),
             ),
             const SizedBox(height: 8),
             Row(

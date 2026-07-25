@@ -241,7 +241,7 @@ class _BillRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isCard = item.kind == UpcomingKind.cardDue;
-    final color = isCard ? FtColors.plum : FtColors.sky;
+    final color = FtColors.ochre;
     return FtCard(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(14),

@@ -303,7 +303,7 @@ class _PayCardSheetState extends ConsumerState<PayCardSheet> {
               RecordAccountDropdownField(
                 accounts: accounts,
                 selectedId: _sourceAccountId,
-                accent: FtColors.plum,
+                accent: FtColors.clay,
                 sheetTitle: 'Pilih rekening',
                 onSelect: (id) {
                   FtHaptics.select();
@@ -382,10 +382,10 @@ class _OptionRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: selected
-              ? FtColors.plum.withValues(alpha: 0.08)
+              ? FtColors.clay.withValues(alpha: 0.08)
               : FtColors.bg,
           border: Border.all(
-            color: selected ? FtColors.plum : FtColors.line,
+            color: selected ? FtColors.clay : FtColors.line,
             width: 0.5,
           ),
           borderRadius: BorderRadius.circular(12),
@@ -398,7 +398,7 @@ class _OptionRow extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: selected ? FtColors.plum : FtColors.lineStrong,
+                  color: selected ? FtColors.clay : FtColors.lineStrong,
                   width: selected ? 5 : 1.5,
                 ),
                 color: FtColors.surface,

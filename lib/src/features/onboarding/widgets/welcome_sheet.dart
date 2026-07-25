@@ -45,15 +45,15 @@ Future<void> showOnboardingWelcomeSheet(
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: FtColors.moss.withValues(alpha: 0.12),
+                color: FtColors.clay.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
-                  color: FtColors.moss.withValues(alpha: 0.3),
+                  color: FtColors.clay.withValues(alpha: 0.3),
                   width: 0.5,
                 ),
               ),
               child: Icon(Icons.celebration_outlined,
-                  size: 24, color: FtColors.moss),
+                  size: 24, color: FtColors.clay),
             ),
             const SizedBox(height: 14),
             Text(

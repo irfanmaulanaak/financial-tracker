@@ -119,7 +119,11 @@ class _CategoryCell extends StatelessWidget {
           FtProgressBar(
             value: spent,
             max: budget <= 0 ? 1 : budget,
-            color: color,
+            color: ftProgressColor(
+              spent,
+              budget,
+              dangerWhenOver: true,
+            ),
             overflowColor: FtColors.danger,
             height: 3,
           ),

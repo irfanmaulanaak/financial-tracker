@@ -97,7 +97,8 @@ class CardInstallmentsInline extends ConsumerWidget {
                         child: FtProgressBar(
                           value: i.monthsPaid,
                           max: i.monthsTotal,
-                          color: FtColors.plum,
+                          color:
+                              ftProgressColor(i.monthsPaid, i.monthsTotal),
                           height: 4,
                         ),
                       ),

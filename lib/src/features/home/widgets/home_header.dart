@@ -122,7 +122,8 @@ class _ProfileAvatar extends StatelessWidget {
       child: Text(
         initialsOf(displayName),
         style: TextStyle(
-          fontFamily: 'Newsreader',
+          fontFamily: 'Geist',
+          fontFeatures: const [FontFeature.tabularFigures()],
           fontSize: 14,
           color: FtColors.ink,
           letterSpacing: 0.5,

@@ -138,6 +138,20 @@ class FtSectionHeader extends StatelessWidget {
   }
 }
 
+Color ftProgressColor(
+  num value,
+  num max, {
+  bool dangerWhenOver = false,
+}) {
+  if (dangerWhenOver && max > 0 && value > max) {
+    return FtColors.danger;
+  }
+  final ratio = max <= 0 ? 0.0 : value / max;
+  return ratio >= 0.8
+      ? FtColors.clay
+      : FtColors.clay.withValues(alpha: 0.55);
+}
+
 class FtProgressBar extends StatelessWidget {
   const FtProgressBar({
     super.key,
@@ -640,7 +654,7 @@ class _FtNavItem {
   final String path;
 }
 
-/// Sub-screen header: cream back button + serif title + optional trailing.
+/// Sub-screen header: cream back button + sans title + optional trailing.
 /// Honors top safe area (avoids status bar collision on phones without notch).
 class FtSubHeader extends StatelessWidget {
   const FtSubHeader({

@@ -125,7 +125,7 @@ class GoalsScreen extends ConsumerWidget {
                       FtProgressBar(
                         value: totalCurrent,
                         max: totalTarget <= 0 ? 1 : totalTarget,
-                        color: FtColors.moss,
+                        color: ftProgressColor(totalCurrent, totalTarget),
                         height: 6,
                       ),
                     ],

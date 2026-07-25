@@ -772,7 +772,7 @@ class _KartuSlide extends StatelessWidget {
               if (minPay > 0)
                 _Chip(
                   text: '${compactMoney(minPay)} min',
-                  color: FtColors.plum,
+                  color: FtColors.clay,
                 ),
             ],
           ),
@@ -886,7 +886,11 @@ class _SegmentedLimitBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final totalLimit = cards.fold<int>(0, (a, b) => a + b.limit);
     if (totalLimit <= 0) {
-      return FtProgressBar(value: 0, max: 1, color: FtColors.plum);
+      return FtProgressBar(
+        value: 0,
+        max: 1,
+        color: ftProgressColor(0, 1),
+      );
     }
     return SizedBox(
       height: 6,
@@ -923,7 +927,13 @@ class _SegmentTrack extends StatelessWidget {
           Container(color: FtColors.line),
           FractionallySizedBox(
             widthFactor: pct,
-            child: Container(color: FtColors.plum),
+            child: Container(
+              color: ftProgressColor(
+                used,
+                limit,
+                dangerWhenOver: true,
+              ),
+            ),
           ),
         ],
       ),

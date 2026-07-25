@@ -85,11 +85,11 @@ class _PickerRow extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
         decoration: BoxDecoration(
           color: active
-              ? FtColors.moss.withValues(alpha: 0.10)
+              ? FtColors.clay.withValues(alpha: 0.10)
               : FtColors.surface,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: active ? FtColors.moss : FtColors.line,
+            color: active ? FtColors.clay : FtColors.line,
             width: 0.5,
           ),
         ),
@@ -103,9 +103,9 @@ class _PickerRow extends StatelessWidget {
                   height: 16,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: active ? FtColors.moss : Colors.transparent,
+                    color: active ? FtColors.clay : Colors.transparent,
                     border: Border.all(
-                      color: active ? FtColors.moss : FtColors.lineStrong,
+                      color: active ? FtColors.clay : FtColors.lineStrong,
                       width: 1.5,
                     ),
                   ),

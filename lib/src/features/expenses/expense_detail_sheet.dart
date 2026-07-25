@@ -164,7 +164,7 @@ class ExpenseDetailSheet extends ConsumerWidget {
                       icon: Icons.timeline,
                       label: 'Cicilan',
                       value: 'Lewat tagihan kartu',
-                      valueColor: FtColors.plum,
+                      valueColor: FtColors.clay,
                     ),
                   ],
                 ],

@@ -38,7 +38,8 @@ class MemberHero extends StatelessWidget {
             child: Text(
               initialsOf(member.displayName),
               style: const TextStyle(
-                fontFamily: 'Newsreader',
+                fontFamily: 'Geist',
+                fontFeatures: [FontFeature.tabularFigures()],
                 color: Colors.white,
                 fontSize: 40,
                 fontWeight: FontWeight.w500,
@@ -68,7 +69,7 @@ class MemberHero extends StatelessWidget {
               if (member.isCreator)
                 _StatusPill(label: 'CREATOR', color: FtColors.clay)
               else
-                _StatusPill(label: 'AKTIF', color: FtColors.moss),
+                _StatusPill(label: 'AKTIF', color: FtColors.ink2),
             ],
           ),
         ],
@@ -375,7 +376,8 @@ class _Stat extends StatelessWidget {
           text: TextSpan(
             text: value,
             style: TextStyle(
-              fontFamily: 'Newsreader',
+              fontFamily: 'Geist',
+              fontFeatures: const [FontFeature.tabularFigures()],
               fontSize: 22,
               color: FtColors.ink,
               letterSpacing: -0.3,

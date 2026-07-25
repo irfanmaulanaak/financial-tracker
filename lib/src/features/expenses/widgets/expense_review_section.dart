@@ -79,7 +79,7 @@ class ExpenseReviewSection extends ConsumerWidget {
     final byName = household.memberOf(review.by)?.displayName ?? 'Anggota';
     final toName = household.memberOf(review.to)?.displayName ?? 'anggota';
     final done = review.done;
-    final tint = done ? FtColors.moss : FtColors.ochre;
+    final tint = done ? FtColors.ink3 : FtColors.clay;
 
     return Container(
       margin: const EdgeInsets.only(top: 12),

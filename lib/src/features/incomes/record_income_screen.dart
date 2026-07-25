@@ -127,7 +127,7 @@ class _RecordIncomeScreenState extends ConsumerState<RecordIncomeScreen> {
                 busy: _busy,
                 enabled: canSubmit,
                 onTap: _submit,
-                activeColor: FtColors.moss,
+                activeColor: FtColors.clay,
               ),
             ),
             Expanded(
@@ -141,7 +141,7 @@ class _RecordIncomeScreenState extends ConsumerState<RecordIncomeScreen> {
                       onChanged: (v) => setState(() => _amount = v),
                       eyebrow: 'Jumlah pendapatan',
                       prefix: '+Rp',
-                      activeColor: FtColors.moss,
+                      activeColor: FtColors.clay,
                     ),
                     const SizedBox(height: 24),
                     const Eyebrow('Sumber'),
@@ -159,7 +159,7 @@ class _RecordIncomeScreenState extends ConsumerState<RecordIncomeScreen> {
                     RecordAccountDropdownField(
                       accounts: accounts,
                       selectedId: _destinationAccountId,
-                      accent: FtColors.moss,
+                      accent: FtColors.clay,
                       sheetTitle: 'Pilih rekening tujuan',
                       onSelect: (id) {
                         FtHaptics.select();
@@ -215,15 +215,6 @@ class _SourceChips extends StatelessWidget {
     IncomeSource.refund: Icons.south_outlined,
     IncomeSource.other: Icons.more_horiz,
   };
-  static final _colors = {
-    IncomeSource.salary: FtColors.sage,
-    IncomeSource.freelance: FtColors.clay,
-    IncomeSource.invest: FtColors.moss,
-    IncomeSource.gift: FtColors.plum,
-    IncomeSource.refund: FtColors.sky,
-    IncomeSource.other: FtColors.ink3,
-  };
-
   @override
   Widget build(BuildContext context) {
     return Wrap(
@@ -240,10 +231,10 @@ class _SourceChips extends StatelessWidget {
               padding:
                   const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
               decoration: BoxDecoration(
-                color: selected == s ? _colors[s] : FtColors.surface,
+                color: selected == s ? FtColors.clay : FtColors.surface,
                 borderRadius: BorderRadius.circular(999),
                 border: Border.all(
-                  color: selected == s ? _colors[s]! : FtColors.line,
+                  color: selected == s ? FtColors.clay : FtColors.line,
                   width: 0.5,
                 ),
               ),
@@ -253,7 +244,7 @@ class _SourceChips extends StatelessWidget {
                   Icon(
                     _icons[s],
                     size: 13,
-                    color: selected == s ? Colors.white : _colors[s],
+                    color: selected == s ? Colors.white : FtColors.ink3,
                   ),
                   const SizedBox(width: 6),
                   Text(
@@ -272,4 +263,3 @@ class _SourceChips extends StatelessWidget {
     );
   }
 }
-

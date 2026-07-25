@@ -191,7 +191,8 @@ class _AllocationCard extends StatelessWidget {
                   style: TextStyle(
                     color: FtColors.ink,
                     fontSize: 13,
-                    fontFamily: 'Newsreader',
+                    fontFamily: 'Geist',
+                    fontFeatures: const [FontFeature.tabularFigures()],
                     height: 1.45,
                   ),
                 ),

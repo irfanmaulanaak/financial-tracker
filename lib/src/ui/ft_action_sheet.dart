@@ -267,7 +267,8 @@ class _ActionTile extends StatelessWidget {
                   Text(
                     action.label,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontFamily: 'Newsreader',
+                          fontFamily: 'Geist',
+                          fontFeatures: const [FontFeature.tabularFigures()],
                           fontSize: 16,
                           fontWeight: FontWeight.w500,
                           color: FtColors.ink,

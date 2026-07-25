@@ -28,9 +28,6 @@ class CategoryChipRow extends StatelessWidget {
         for (final c in categories)
           _Chip(
             label: c.label.split(' ').first,
-            color: Color(
-              int.parse('FF${c.color.replaceFirst('#', '')}', radix: 16),
-            ),
             iconKey: c.icon,
             selected: selected == c.id,
             onTap: () => onSelect(c.id),
@@ -43,14 +40,12 @@ class CategoryChipRow extends StatelessWidget {
 class _Chip extends StatelessWidget {
   const _Chip({
     required this.label,
-    required this.color,
     required this.iconKey,
     required this.selected,
     required this.onTap,
   });
 
   final String label;
-  final Color color;
   final String iconKey;
   final bool selected;
   final VoidCallback onTap;
@@ -76,10 +71,10 @@ class _Chip extends StatelessWidget {
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         decoration: BoxDecoration(
-          color: selected ? color : FtColors.surface,
+          color: selected ? FtColors.clay : FtColors.surface,
           borderRadius: BorderRadius.circular(999),
           border: Border.all(
-            color: selected ? color : FtColors.line,
+            color: selected ? FtColors.clay : FtColors.line,
             width: 0.5,
           ),
         ),
@@ -89,7 +84,7 @@ class _Chip extends StatelessWidget {
             Icon(
               _icons[iconKey] ?? Icons.category,
               size: 13,
-              color: selected ? Colors.white : color,
+              color: selected ? Colors.white : FtColors.ink3,
             ),
             const SizedBox(width: 6),
             Text(

@@ -102,7 +102,7 @@ class OnboardingChecklist extends ConsumerWidget {
           FtProgressBar(
             value: doneCount,
             max: steps.length,
-            color: FtColors.moss,
+            color: ftProgressColor(doneCount, steps.length),
             height: 4,
           ),
           const SizedBox(height: 12),
@@ -157,12 +157,12 @@ class _StepRow extends StatelessWidget {
               height: 30,
               decoration: BoxDecoration(
                 color: step.done
-                    ? FtColors.moss.withValues(alpha: 0.12)
+                    ? FtColors.clay.withValues(alpha: 0.12)
                     : FtColors.surfaceAlt,
                 borderRadius: BorderRadius.circular(9),
                 border: Border.all(
                   color: step.done
-                      ? FtColors.moss.withValues(alpha: 0.3)
+                      ? FtColors.clay.withValues(alpha: 0.3)
                       : FtColors.line,
                   width: 0.5,
                 ),
@@ -171,7 +171,7 @@ class _StepRow extends StatelessWidget {
               child: Icon(
                 step.done ? Icons.check_rounded : step.icon,
                 size: 15,
-                color: step.done ? FtColors.moss : FtColors.ink2,
+                color: step.done ? FtColors.clay : FtColors.ink2,
               ),
             ),
             const SizedBox(width: 12),

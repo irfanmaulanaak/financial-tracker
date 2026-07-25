@@ -262,7 +262,7 @@ class _DebtTile extends ConsumerWidget {
                 FtProgressBar(
                   value: debt.paid,
                   max: debt.amount <= 0 ? 1 : debt.amount,
-                  color: accent,
+                  color: ftProgressColor(debt.paid, debt.amount),
                   height: 3,
                 ),
               ],

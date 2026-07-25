@@ -43,7 +43,8 @@ class MemberChip extends StatelessWidget {
               first.isNotEmpty ? first.characters.first : '?',
               style: TextStyle(
                 color: Colors.white,
-                fontFamily: 'Newsreader',
+                fontFamily: 'Geist',
+                fontFeatures: const [FontFeature.tabularFigures()],
                 fontSize: size * 0.6,
                 fontWeight: FontWeight.w500,
               ),

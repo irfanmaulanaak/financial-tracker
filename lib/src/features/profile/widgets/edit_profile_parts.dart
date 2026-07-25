@@ -80,7 +80,8 @@ class AvatarPreview extends StatelessWidget {
           child: Text(
             initials,
             style: const TextStyle(
-              fontFamily: 'Newsreader',
+              fontFamily: 'Geist',
+              fontFeatures: [FontFeature.tabularFigures()],
               color: Colors.white,
               fontSize: 40,
               fontWeight: FontWeight.w500,

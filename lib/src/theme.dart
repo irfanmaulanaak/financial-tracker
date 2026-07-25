@@ -17,10 +17,10 @@ class FtColors {
   static bool get liquid => _liquid;
 
   // Backgrounds & surfaces
-  static Color get bg => _dark ? const Color(0xFF14130f) : const Color(0xFFF1EDE4);
-  static Color get bgAlt => _dark ? const Color(0xFF1c1a15) : const Color(0xFFE9E4D7);
-  static Color get surface => _dark ? const Color(0xFF1f1d18) : const Color(0xFFFBF8F1);
-  static Color get surfaceAlt => _dark ? const Color(0xFF26231d) : const Color(0xFFF6F2E8);
+  static Color get bg => _dark ? const Color(0xFF0F0E0B) : const Color(0xFFF1EDE4);
+  static Color get bgAlt => _dark ? const Color(0xFF14130F) : const Color(0xFFE9E4D7);
+  static Color get surface => _dark ? const Color(0xFF191813) : const Color(0xFFFBF8F1);
+  static Color get surfaceAlt => _dark ? const Color(0xFF1F1D17) : const Color(0xFFF6F2E8);
 
   // Text
   static Color get ink => _dark ? const Color(0xFFf1ede4) : const Color(0xFF1A1814);
@@ -86,13 +86,13 @@ ThemeData buildTheme(Brightness brightness, {bool liquid = false}) {
     onPrimary: Colors.white,
     primaryContainer: isDark ? const Color(0xFF3a2818) : const Color(0xFFE9D9C8),
     onPrimaryContainer: FtColors.ink,
-    secondary: FtColors.sage,
+    secondary: FtColors.clay,
     onSecondary: Colors.white,
-    secondaryContainer: isDark ? const Color(0xFF2a3a2e) : const Color(0xFFD9E2DC),
+    secondaryContainer: isDark ? const Color(0xFF3a2818) : const Color(0xFFE9D9C8),
     onSecondaryContainer: FtColors.ink,
-    tertiary: FtColors.sky,
+    tertiary: FtColors.clay,
     onTertiary: Colors.white,
-    tertiaryContainer: isDark ? const Color(0xFF253540) : const Color(0xFFD6E2EA),
+    tertiaryContainer: isDark ? const Color(0xFF3a2818) : const Color(0xFFE9D9C8),
     onTertiaryContainer: FtColors.ink,
     error: FtColors.danger,
     onError: Colors.white,
@@ -106,35 +106,36 @@ ThemeData buildTheme(Brightness brightness, {bool liquid = false}) {
     outlineVariant: FtColors.line,
   );
 
-  // Geist (sans) + Newsreader (serif) match the new design tokens.
-  // Both ship through google_fonts; Geist replaces the previous Inter family.
   final sans = GoogleFonts.geistTextTheme();
-  final serif = GoogleFonts.newsreaderTextTheme();
+  TextStyle? tabular(TextStyle? style) => style?.copyWith(
+        fontFeatures: const [FontFeature.tabularFigures()],
+      );
 
   final textTheme = sans.copyWith(
-    displayLarge: serif.displayLarge?.copyWith(
-        color: FtColors.ink, fontWeight: FontWeight.w500, letterSpacing: -1.5),
-    displayMedium: serif.displayMedium?.copyWith(
-        color: FtColors.ink, fontWeight: FontWeight.w500, letterSpacing: -1.0),
-    displaySmall: serif.displaySmall?.copyWith(
+    displayLarge: tabular(sans.displayLarge)?.copyWith(
+        color: FtColors.ink, fontWeight: FontWeight.w600, letterSpacing: -1.5),
+    displayMedium: tabular(sans.displayMedium)?.copyWith(
+        color: FtColors.ink, fontWeight: FontWeight.w600, letterSpacing: -1.0),
+    displaySmall: tabular(sans.displaySmall)?.copyWith(
+        color: FtColors.ink, fontWeight: FontWeight.w600, letterSpacing: -0.5),
+    headlineLarge: tabular(sans.headlineLarge)?.copyWith(
         color: FtColors.ink, fontWeight: FontWeight.w500, letterSpacing: -0.5),
-    headlineLarge: serif.headlineLarge?.copyWith(
-        color: FtColors.ink, fontWeight: FontWeight.w500, letterSpacing: -0.5),
-    headlineMedium: serif.headlineMedium?.copyWith(
+    headlineMedium: tabular(sans.headlineMedium)?.copyWith(
         color: FtColors.ink, fontWeight: FontWeight.w500, letterSpacing: -0.3),
-    headlineSmall: serif.headlineSmall?.copyWith(
+    headlineSmall: tabular(sans.headlineSmall)?.copyWith(
         color: FtColors.ink, fontWeight: FontWeight.w500, letterSpacing: -0.3),
-    titleLarge: serif.titleLarge?.copyWith(
+    titleLarge: tabular(sans.titleLarge)?.copyWith(
         color: FtColors.ink, fontWeight: FontWeight.w500),
-    titleMedium: sans.titleMedium?.copyWith(
+    titleMedium: tabular(sans.titleMedium)?.copyWith(
         color: FtColors.ink, fontWeight: FontWeight.w500),
-    bodyLarge: sans.bodyLarge?.copyWith(color: FtColors.ink2),
-    bodyMedium: sans.bodyMedium?.copyWith(color: FtColors.ink2),
-    bodySmall: sans.bodySmall?.copyWith(color: FtColors.ink3),
-    labelLarge: sans.labelLarge?.copyWith(
+    titleSmall: tabular(sans.titleSmall),
+    bodyLarge: tabular(sans.bodyLarge)?.copyWith(color: FtColors.ink2),
+    bodyMedium: tabular(sans.bodyMedium)?.copyWith(color: FtColors.ink2),
+    bodySmall: tabular(sans.bodySmall)?.copyWith(color: FtColors.ink3),
+    labelLarge: tabular(sans.labelLarge)?.copyWith(
         color: FtColors.ink, fontWeight: FontWeight.w500),
-    labelMedium: sans.labelMedium?.copyWith(color: FtColors.ink2),
-    labelSmall: sans.labelSmall?.copyWith(
+    labelMedium: tabular(sans.labelMedium)?.copyWith(color: FtColors.ink2),
+    labelSmall: tabular(sans.labelSmall)?.copyWith(
         color: FtColors.ink3, letterSpacing: 1.4, fontWeight: FontWeight.w500),
   );
 
@@ -179,7 +180,7 @@ ThemeData buildTheme(Brightness brightness, {bool liquid = false}) {
       foregroundColor: FtColors.ink,
       elevation: 0,
       centerTitle: false,
-      titleTextStyle: serif.titleLarge?.copyWith(
+      titleTextStyle: textTheme.titleLarge?.copyWith(
         color: FtColors.ink,
         fontWeight: FontWeight.w500,
         letterSpacing: -0.3,

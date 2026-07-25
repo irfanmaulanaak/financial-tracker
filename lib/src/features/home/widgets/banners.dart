@@ -25,7 +25,7 @@ class DueBanner extends StatelessWidget {
         : '$cardLabel jatuh tempo $daysUntil hari lagi · ${compactMoney(used)}';
     return AlertBand(
       icon: Icons.credit_card_rounded,
-      color: urgent ? FtColors.danger : FtColors.sage,
+      color: urgent ? FtColors.danger : FtColors.ochre,
       text: text,
       actionLabel: 'Lihat',
       onAction: () => context.push('/cards'),

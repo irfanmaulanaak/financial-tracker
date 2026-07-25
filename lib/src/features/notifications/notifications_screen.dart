@@ -275,11 +275,11 @@ _Tone _toneFor(NotificationKind kind) => switch (kind) {
       NotificationKind.overBudget =>
         _Tone(FtColors.danger, Icons.warning_amber_rounded),
       NotificationKind.dueSoon =>
-        _Tone(FtColors.plum, Icons.account_balance_rounded),
+        _Tone(FtColors.ochre, Icons.account_balance_rounded),
       NotificationKind.goalMilestone =>
-        _Tone(FtColors.moss, Icons.flag_rounded),
+        _Tone(FtColors.clay, Icons.flag_rounded),
       NotificationKind.memberSpend =>
-        _Tone(FtColors.sky, Icons.shopping_bag_outlined),
+        _Tone(FtColors.clay, Icons.shopping_bag_outlined),
       NotificationKind.investmentStale =>
         _Tone(FtColors.clay, Icons.trending_up_rounded),
     };

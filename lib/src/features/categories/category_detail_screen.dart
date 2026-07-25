@@ -276,7 +276,11 @@ class _HeaderCard extends StatelessWidget {
           FtProgressBar(
             value: spent,
             max: budget <= 0 ? 1 : budget,
-            color: color,
+            color: ftProgressColor(
+              spent,
+              budget,
+              dangerWhenOver: true,
+            ),
             height: 6,
           ),
           const SizedBox(height: 8),
@@ -479,7 +483,8 @@ class _MiniStat extends StatelessWidget {
           style: TextStyle(
             color: valueColor ?? FtColors.ink,
             fontSize: 20,
-            fontFamily: 'Newsreader',
+            fontFamily: 'Geist',
+            fontFeatures: const [FontFeature.tabularFigures()],
             letterSpacing: -0.3,
           ),
         ),

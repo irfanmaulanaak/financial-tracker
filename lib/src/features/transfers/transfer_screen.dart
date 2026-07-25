@@ -167,7 +167,7 @@ class _TransferScreenState extends ConsumerState<TransferScreen> {
                 busy: _busy,
                 enabled: canSubmit,
                 onTap: _submit,
-                activeColor: FtColors.sky,
+                activeColor: FtColors.clay,
               ),
             ),
             Expanded(
@@ -180,7 +180,7 @@ class _TransferScreenState extends ConsumerState<TransferScreen> {
                       amount: _amount,
                       onChanged: (v) => setState(() => _amount = v),
                       eyebrow: 'Jumlah pindah',
-                      activeColor: FtColors.sky,
+                      activeColor: FtColors.clay,
                     ),
                     const SizedBox(height: 14),
                     _FeeRow(
@@ -200,7 +200,7 @@ class _TransferScreenState extends ConsumerState<TransferScreen> {
                     RecordAccountDropdownField(
                       accounts: all,
                       selectedId: _sourceId,
-                      accent: FtColors.sky,
+                      accent: FtColors.clay,
                       sheetTitle: 'Pilih rekening sumber',
                       enableSubKindFilter: true,
                       onSelect: (id) {
@@ -219,7 +219,7 @@ class _TransferScreenState extends ConsumerState<TransferScreen> {
                       accounts:
                           all.where((a) => a.id != _sourceId).toList(),
                       selectedId: _destinationId,
-                      accent: FtColors.moss,
+                      accent: FtColors.clay,
                       sheetTitle: 'Pilih rekening tujuan',
                       enableSubKindFilter: true,
                       onSelect: (id) {
