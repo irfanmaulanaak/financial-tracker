@@ -244,37 +244,38 @@ class LiquidScene extends InheritedWidget {
         ).createShader(rect),
     );
 
-    // Aksen palette sudah punya varian gelap/terang sendiri di FtColors.
-    final colors = [
-      FtColors.clay,
-      FtColors.sky,
-      FtColors.ochre,
-      FtColors.sage,
-      FtColors.plum,
-      FtColors.sky,
-    ];
     const twoPi = 2 * math.pi;
-    for (var i = 0; i < _specs.length; i++) {
-      final b = _specs[i];
+    for (final b in _specs) {
       final cx =
           (b.cx + b.ax * math.sin(twoPi * b.freq * t + b.phase)) * size.width;
       final cy =
           (b.cy + b.ay * math.cos(twoPi * b.freq * t + b.phase)) * size.height;
       final r = size.shortestSide * b.r;
-      final color = colors[i].withValues(
-        alpha: dark ? b.alphaDark : b.alphaLight,
-      );
+      final base = dark ? b.dark : b.light;
+      final a = dark ? b.alphaDark : b.alphaLight;
       canvas.drawCircle(
         Offset(cx, cy),
         r,
         Paint()
+          // Falloff cekung piecewise (aproksimasi inverse-square) — ramp
+          // linear tunggal membuat blob terbaca sebagai piringan bertepi.
           ..shader = RadialGradient(
-            colors: [color, color.withValues(alpha: 0)],
+            colors: [
+              base.withValues(alpha: a),
+              base.withValues(alpha: a * 0.50),
+              base.withValues(alpha: a * 0.16),
+              base.withValues(alpha: 0),
+            ],
+            stops: const [0.0, 0.45, 0.75, 1.0],
           ).createShader(
             Rect.fromCircle(center: Offset(cx, cy), radius: r),
           ),
       );
     }
+
+    // Grain monokrom ±2%: memecah banding pada blur besar (banding sendiri
+    // adalah tell gradient generatif). Murah — ter-bake ke image bersama.
+    canvas.drawRect(rect, Paint()..shader = _grainShader());
   }
 
   @override
@@ -289,6 +290,8 @@ class _BlobSpec {
     required this.ax,
     required this.ay,
     required this.phase,
+    required this.light,
+    required this.dark,
     required this.alphaLight,
     required this.alphaDark,
     this.freq = 1,
@@ -298,34 +301,99 @@ class _BlobSpec {
   final double r; // radius (fraksi sisi terpendek)
   final double ax, ay; // amplitudo drift (fraksi)
   final double phase;
+  final Color light, dark; // warna blob per mode (dark: lebih dalam, BUKAN
+  // lebih terang — varian dark di-author terpisah ala wallpaper iOS 26)
   final double alphaLight, alphaDark;
   final double freq; // siklus per loop — bilangan bulat agar loop mulus
 }
 
-// Vivid ala wallpaper demo Apple: blob besar saling tumpang tindih, warna
-// hangat-dingin berselang supaya tidak muddy. Dark butuh alpha lebih tinggi
-// karena warna tenggelam di dasar gelap.
+// "Paper under warm light": SATU sumber cahaya hangat dari kanan-atas
+// (key + core keluarga clay/ochre, busur hue ±55°), pantulan lemah di
+// kiri-bawah, dan SATU nada dingin sebagai bayangan. Tangga alpha ±3:1
+// (hero → paling sunyi) itulah yang membentuk kesan sumber cahaya; sebaran
+// 5-6 hue rata se-roda warna justru tell gradient generatif. Tengah kanvas
+// sengaja kosong — ruang negatif tempat kartu duduk dan chrome kaca
+// mengambil sampel warna yang stabil (wash bgAlt sudah mencegah flat).
+// Drift ≤0.05 supaya scene bergerak sebagai satu atmosfer, bukan orb lepas.
 const _specs = [
+  // Key light — pusat di luar kanvas, terbesar dan paling kuat.
   _BlobSpec(
-      cx: 0.88, cy: 0.05, r: 0.70, ax: 0.14, ay: 0.10,
-      phase: 0, alphaLight: 0.46, alphaDark: 0.50),
+      cx: 0.86, cy: -0.12, r: 0.90, ax: 0.045, ay: 0.035,
+      phase: 0,
+      light: Color(0xFFE9B872), dark: Color(0xFFC98A3E),
+      alphaLight: 0.20, alphaDark: 0.17),
+  // Core clay — bersarang DI DALAM key: satu hot spot berdimensi,
+  // bukan dua lingkaran terpisah. Varian dark memakai clay bara yang lebih
+  // dalam (bukan token aksen dark yang justru lebih terang) supaya overlap
+  // key+core tidak menghasilkan patch oranye panas.
   _BlobSpec(
-      cx: 0.02, cy: 0.32, r: 0.75, ax: 0.12, ay: 0.14,
-      phase: 2.1, alphaLight: 0.38, alphaDark: 0.44, freq: 2),
+      cx: 0.98, cy: 0.14, r: 0.50, ax: 0.030, ay: 0.040,
+      phase: 1.6,
+      light: Color(0xFFC4612A), dark: Color(0xFFB05A28),
+      alphaLight: 0.12, alphaDark: 0.08, freq: 2),
+  // Bounce hangat — pantulan redup di seberang diagonal.
   _BlobSpec(
-      cx: 0.70, cy: 0.92, r: 0.65, ax: 0.15, ay: 0.10,
-      phase: 4.2, alphaLight: 0.38, alphaDark: 0.40),
+      cx: 0.28, cy: 1.06, r: 0.72, ax: 0.040, ay: 0.045,
+      phase: 3.2,
+      light: Color(0xFFD98E5A), dark: Color(0xFF8A5A3C),
+      alphaLight: 0.09, alphaDark: 0.11),
+  // Bayangan — satu-satunya nada dingin (sage keabu-abuan), muncul sekali.
   _BlobSpec(
-      cx: 0.22, cy: -0.05, r: 0.55, ax: 0.10, ay: 0.09,
-      phase: 1.0, alphaLight: 0.32, alphaDark: 0.38, freq: 2),
-  _BlobSpec(
-      cx: 0.12, cy: 0.95, r: 0.55, ax: 0.12, ay: 0.11,
-      phase: 5.3, alphaLight: 0.30, alphaDark: 0.34),
-  // Pengisi tengah — area mati antara blob pinggir tetap hidup.
-  _BlobSpec(
-      cx: 0.45, cy: 0.55, r: 0.50, ax: 0.16, ay: 0.13,
-      phase: 3.4, alphaLight: 0.22, alphaDark: 0.30, freq: 1),
+      cx: -0.06, cy: 0.60, r: 0.82, ax: 0.035, ay: 0.030,
+      phase: 4.8,
+      light: Color(0xFF78877E), dark: Color(0xFF3E5A55),
+      alphaLight: 0.07, alphaDark: 0.09),
 ];
+
+/// Shader grain di-cache (image + matrix tak pernah berubah) — membuat
+/// ImageShader baru tiap langkah = ~720 objek native/menit menunggu GC.
+ui.ImageShader _grainShader() {
+  return _grainShaderCached ??= ui.ImageShader(
+    _grainTile(),
+    ui.TileMode.repeated,
+    ui.TileMode.repeated,
+    Matrix4.identity().storage,
+  );
+}
+
+ui.ImageShader? _grainShaderCached;
+
+/// Tile noise 64×64 (dither hitam/putih ±2% alpha), dibuat sekali secara
+/// deterministik lalu di-tile lewat [_grainShader] saat scene di-render.
+ui.Image _grainTile() {
+  final cached = _grain;
+  if (cached != null) return cached;
+  const side = 64;
+  final rand = math.Random(7);
+  final white = <Offset>[];
+  final black = <Offset>[];
+  for (var y = 0; y < side; y++) {
+    for (var x = 0; x < side; x++) {
+      (rand.nextBool() ? white : black).add(Offset(x + 0.5, y + 0.5));
+    }
+  }
+  final recorder = ui.PictureRecorder();
+  final canvas = Canvas(recorder);
+  void dots(List<Offset> pts, Color color) {
+    canvas.drawPoints(
+      ui.PointMode.points,
+      pts,
+      Paint()
+        ..color = color
+        ..strokeWidth = 1
+        ..strokeCap = StrokeCap.square,
+    );
+  }
+
+  dots(white, const Color(0x05FFFFFF));
+  dots(black, const Color(0x05000000));
+  final picture = recorder.endRecording();
+  final image = picture.toImageSync(side, side);
+  picture.dispose();
+  return _grain = image;
+}
+
+ui.Image? _grain; // 16 KB, hidup selama app — sengaja tak pernah di-dispose.
 
 /// Blit image bersama ke layar penuh — satu drawImageRect per langkah,
 /// bukan melukis ulang scene prosedural per vsync.
