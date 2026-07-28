@@ -1,2 +1,6 @@
-# Konsolidasi domain: satukan sinyal SEO di finsist.site.
-https://finsist.pages.dev/* https://finsist.site/:splat 301
+# CATATAN: Pages `_redirects` hanya mendukung sumber berbasis PATH — aturan
+# lintas-host (https://finsist.pages.dev/* → finsist.site) TIDAK valid dan
+# diabaikan Cloudflare. Konsolidasi domain dilakukan lewat:
+#   1. Redirect JS di index.html (exact match hostname finsist.pages.dev)
+#   2. Bulk Redirects di dashboard Cloudflare (301 asli, account-level)
+# File ini dipertahankan untuk aturan path di masa depan.

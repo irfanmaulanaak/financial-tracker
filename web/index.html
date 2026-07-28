@@ -2,6 +2,17 @@
   <base href="$FLUTTER_BASE_HREF">
 
   <meta charset="UTF-8">
+
+  <!-- Konsolidasi domain: Pages `_redirects` tidak mendukung sumber lintas-host,
+       jadi redirect di klien. Exact match agar preview *.finsist.pages.dev dan
+       localhost tidak ikut. 301 asli menyusul via Bulk Redirects (dashboard). -->
+  <script>
+    if (location.hostname === 'finsist.pages.dev') {
+      location.replace('https://finsist.site' +
+          location.pathname + location.search + location.hash);
+    }
+  </script>
+
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="description" content="Catat pengeluaran, atur anggaran rumah tangga, pantau cicilan kartu kredit, dan capai tujuan menabung bersama pasangan. Gratis, dalam bahasa Indonesia.">
@@ -32,7 +43,7 @@
     "url": "https://finsist.site/",
     "description": "Aplikasi catatan keuangan rumah tangga untuk keluarga Indonesia: pengeluaran, anggaran, cicilan kartu kredit, dan tujuan menabung bersama.",
     "applicationCategory": "FinanceApplication",
-    "operatingSystem": "Web, Android, iOS",
+    "operatingSystem": "Web",
     "inLanguage": "id",
     "offers": { "@type": "Offer", "price": "0", "priceCurrency": "IDR" }
   }
@@ -90,11 +101,23 @@
     })();
   </script>
 
+  <!-- Sembunyikan (bukan hapus) blok konten crawlable saat app siap: teks tetap
+       ada di DOM hasil render Google. Didaftarkan SEBELUM flutter_bootstrap.js
+       supaya tidak kalah cepat dari event flutter-first-frame. -->
+  <script>
+    window.addEventListener('flutter-first-frame', function () {
+      var el = document.getElementById('seo-content');
+      if (el) {
+        el.style.display = 'none';
+        el.setAttribute('aria-hidden', 'true');
+      }
+    });
+  </script>
   <script src="flutter_bootstrap.js" async=""></script>
 
   <!-- Crawlable loading-state content: Flutter renders to <canvas>, so this
        block is the only real HTML search engines see. Shown under the splash
-       logo while the app boots, removed on flutter-first-frame (below). -->
+       logo while the app boots, hidden on flutter-first-frame (above). -->
   <style id="seo-content-style">
     #seo-content {
       position: relative;
@@ -110,7 +133,6 @@
     #seo-content .muted { color: #8a8577; margin-top: 2em; }
   </style>
 
-  <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
   <style id="splash-screen-style">
     html {
       height: 100%
@@ -213,14 +235,5 @@
 
     <p class="muted">Memuat aplikasi…</p>
   </main>
-
-  <script>
-    // Drop the crawlable loading-state block once the app paints. Uses the
-    // engine's own event, so it survives flutter_native_splash regeneration.
-    window.addEventListener('flutter-first-frame', function () {
-      var el = document.getElementById('seo-content');
-      if (el) el.remove();
-    });
-  </script>
 
 </body></html>
