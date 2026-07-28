@@ -244,6 +244,19 @@ class LiquidScene extends InheritedWidget {
         ).createShader(rect),
     );
 
+    // Cast kertas, KHUSUS liquid (fungsi ini tak berjalan saat OFF, mode
+    // non-liquid tetap pixel-identik): bg ±identik dengan ivory Anthropic
+    // (ΔE00 <1) sehingga kertasnya sendiri terbaca "palet Claude". Cast
+    // teal menggeser persepsi kertas ~ΔE00 2 — terlihat pada bidang penuh,
+    // tak terasa per piksel; kontras ink di atasnya tetap ≥14:1.
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..color = dark
+            ? const Color(0xFF31594F).withValues(alpha: 0.08)
+            : const Color(0xFF3F6662).withValues(alpha: 0.06),
+    );
+
     const twoPi = 2 * math.pi;
     for (final b in _specs) {
       final cx =
@@ -307,41 +320,48 @@ class _BlobSpec {
   final double freq; // siklus per loop — bilangan bulat agar loop mulus
 }
 
-// "Paper under warm light": SATU sumber cahaya hangat dari kanan-atas
-// (key + core keluarga clay/ochre, busur hue ±55°), pantulan lemah di
-// kiri-bawah, dan SATU nada dingin sebagai bayangan. Tangga alpha ±3:1
-// (hero → paling sunyi) itulah yang membentuk kesan sumber cahaya; sebaran
-// 5-6 hue rata se-roda warna justru tell gradient generatif. Tengah kanvas
-// sengaja kosong — ruang negatif tempat kartu duduk dan chrome kaca
-// mengambil sampel warna yang stabil (wash bgAlt sudah mencegah flat).
-// Drift ≤0.05 supaya scene bergerak sebagai satu atmosfer, bukan orb lepas.
+// "Ledger sage": SATU sumber cahaya teal-mineral dari kanan-atas (key +
+// core satu keluarga hue), pantulan redup di kiri-bawah, dan SATU nada
+// hangat brass sebagai penyeimbang. Tangga alpha ±2-3:1 (hero → paling
+// sunyi) itulah yang membentuk kesan sumber cahaya; sebaran 5-6 hue rata
+// se-roda warna justru tell gradient generatif. Tengah kanvas sengaja
+// kosong — ruang negatif tempat kartu duduk dan chrome kaca mengambil
+// sampel warna yang stabil (wash bgAlt sudah mencegah flat). Drift ≤0.05
+// supaya scene bergerak sebagai satu atmosfer, bukan orb lepas.
+//
+// Hue teal/brass SENGAJA di luar token aksen FtColors (sage/moss/ochre):
+// palet aksen diturunkan dari claude-design/theme.jsx dan kertas cream-nya
+// ±identik ivory Anthropic, jadi wallpaper yang memakai token itu langsung
+// terbaca "palet Claude". Teal-mineral aman ganda: bukan tetangga dekat
+// aksen dormant Anthropic mana pun (ΔE ≥ ~23), dan pada alpha wallpaper
+// tak menabrak makna semantik hijau/merah (healthOk/danger) di chip.
 const _specs = [
   // Key light — pusat di luar kanvas, terbesar dan paling kuat.
   _BlobSpec(
       cx: 0.86, cy: -0.12, r: 0.90, ax: 0.045, ay: 0.035,
       phase: 0,
-      light: Color(0xFFE9B872), dark: Color(0xFFC98A3E),
-      alphaLight: 0.20, alphaDark: 0.17),
-  // Core clay — bersarang DI DALAM key: satu hot spot berdimensi,
-  // bukan dua lingkaran terpisah. Varian dark memakai clay bara yang lebih
-  // dalam (bukan token aksen dark yang justru lebih terang) supaya overlap
-  // key+core tidak menghasilkan patch oranye panas.
+      light: Color(0xFF648C88), dark: Color(0xFF335D57),
+      alphaLight: 0.15, alphaDark: 0.13),
+  // Core — bersarang DI DALAM key: satu hot spot berdimensi, bukan dua
+  // lingkaran terpisah. Dark lebih dalam, bukan lebih terang.
   _BlobSpec(
       cx: 0.98, cy: 0.14, r: 0.50, ax: 0.030, ay: 0.040,
       phase: 1.6,
-      light: Color(0xFFC4612A), dark: Color(0xFFB05A28),
-      alphaLight: 0.12, alphaDark: 0.08, freq: 2),
-  // Bounce hangat — pantulan redup di seberang diagonal.
+      light: Color(0xFF28584F), dark: Color(0xFF20463F),
+      alphaLight: 0.09, alphaDark: 0.08, freq: 2),
+  // Bounce — pantulan redup satu keluarga dengan key, seberang diagonal.
   _BlobSpec(
       cx: 0.28, cy: 1.06, r: 0.72, ax: 0.040, ay: 0.045,
       phase: 3.2,
-      light: Color(0xFFD98E5A), dark: Color(0xFF8A5A3C),
-      alphaLight: 0.09, alphaDark: 0.11),
-  // Bayangan — satu-satunya nada dingin (sage keabu-abuan), muncul sekali.
+      light: Color(0xFF4C7166), dark: Color(0xFF2F5048),
+      alphaLight: 0.08, alphaDark: 0.10),
+  // Nada hangat — satu-satunya warna hangat (brass tua), muncul sekali
+  // sebagai penyeimbang; bukan ochre token supaya tak menyeret balik
+  // asosiasi parchment/emas Claude.
   _BlobSpec(
       cx: -0.06, cy: 0.60, r: 0.82, ax: 0.035, ay: 0.030,
       phase: 4.8,
-      light: Color(0xFF78877E), dark: Color(0xFF3E5A55),
+      light: Color(0xFFA98222), dark: Color(0xFF665014),
       alphaLight: 0.07, alphaDark: 0.09),
 ];
 
