@@ -4,8 +4,39 @@
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta name="description" content="Pelacak keuangan rumah tangga keluarga Indonesia.">
+  <meta name="description" content="Catat pengeluaran, atur anggaran rumah tangga, pantau cicilan kartu kredit, dan capai tujuan menabung bersama pasangan. Gratis, dalam bahasa Indonesia.">
   <meta name="theme-color" content="#F1EDE4">
+  <link rel="canonical" href="https://finsist.site/">
+
+  <!-- Social share cards (WhatsApp/Telegram read Open Graph). Image must be an
+       absolute URL; Icon-512 is a square stopgap until a 1200×630 og-image exists. -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="FinSist">
+  <meta property="og:locale" content="id_ID">
+  <meta property="og:url" content="https://finsist.site/">
+  <meta property="og:title" content="FinSist — Aplikasi Keuangan Rumah Tangga Keluarga Indonesia">
+  <meta property="og:description" content="Catat pengeluaran, atur anggaran, pantau cicilan kartu, dan menabung bersama pasangan. Gratis.">
+  <meta property="og:image" content="https://finsist.site/icons/Icon-512.png">
+  <meta property="og:image:width" content="512">
+  <meta property="og:image:height" content="512">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="FinSist — Aplikasi Keuangan Rumah Tangga Keluarga Indonesia">
+  <meta name="twitter:description" content="Catat pengeluaran, atur anggaran, pantau cicilan kartu, dan menabung bersama pasangan. Gratis.">
+  <meta name="twitter:image" content="https://finsist.site/icons/Icon-512.png">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "FinSist",
+    "url": "https://finsist.site/",
+    "description": "Aplikasi catatan keuangan rumah tangga untuk keluarga Indonesia: pengeluaran, anggaran, cicilan kartu kredit, dan tujuan menabung bersama.",
+    "applicationCategory": "FinanceApplication",
+    "operatingSystem": "Web, Android, iOS",
+    "inLanguage": "id",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "IDR" }
+  }
+  </script>
 
   <!-- iOS PWA: lets Safari "Add to Home Screen" run standalone -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -18,7 +49,7 @@
        Flutter icon. Bump when the favicon artwork changes. -->
   <link rel="icon" type="image/png" sizes="48x48" href="favicon.png?v=2">
 
-  <title>FinSist</title>
+  <title>FinSist — Aplikasi Keuangan Rumah Tangga Keluarga Indonesia</title>
   <link rel="manifest" href="manifest.json">
 
   <!-- PWA install bridge: capture beforeinstallprompt before Flutter boots,
@@ -60,8 +91,25 @@
   </script>
 
   <script src="flutter_bootstrap.js" async=""></script>
-  
-  
+
+  <!-- Crawlable loading-state content: Flutter renders to <canvas>, so this
+       block is the only real HTML search engines see. Shown under the splash
+       logo while the app boots, removed on flutter-first-frame (below). -->
+  <style id="seo-content-style">
+    #seo-content {
+      position: relative;
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 64vh 24px 48px;
+      font: 16px/1.6 -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      color: #3d3a31;
+    }
+    #seo-content h1 { font-size: 1.35rem; line-height: 1.35; }
+    #seo-content h2 { font-size: 1.1rem; margin-top: 1.6em; }
+    #seo-content h3 { font-size: 1rem; margin-bottom: 0.2em; }
+    #seo-content .muted { color: #8a8577; margin-top: 2em; }
+  </style>
+
   <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
   <style id="splash-screen-style">
     html {
@@ -134,5 +182,45 @@
       <source srcset="splash/img/dark-1x.png 1x, splash/img/dark-2x.png 2x, splash/img/dark-3x.png 3x, splash/img/dark-4x.png 4x" media="(prefers-color-scheme: dark)">
       <img class="center" aria-hidden="true" src="splash/img/light-1x.png" alt="">
   </picture>
+
+  <main id="seo-content">
+    <h1>FinSist — Catatan Keuangan Rumah Tangga untuk Keluarga Indonesia</h1>
+    <p>FinSist adalah aplikasi pencatat keuangan keluarga: satu rumah tangga, satu
+      catatan bersama. Catat pengeluaran dan pemasukan harian, atur anggaran
+      bulanan, kelola cicilan kartu kredit, dan capai tujuan menabung bersama
+      pasangan — semuanya dalam Rupiah dan bahasa Indonesia.</p>
+
+    <h2>Fitur utama</h2>
+    <ul>
+      <li>Pencatatan pengeluaran &amp; pemasukan harian yang cepat</li>
+      <li>Anggaran bulanan per kategori dengan angka &ldquo;aman dibelanjakan&rdquo; per hari</li>
+      <li>Kartu kredit &amp; cicilan: sisa utang, jatuh tempo, dan pengingat tagihan</li>
+      <li>Tujuan menabung bersama: dana darurat, liburan, DP rumah</li>
+      <li>Catatan utang &amp; piutang dengan teman atau keluarga</li>
+      <li>Sinkron otomatis antar anggota keluarga — suami, istri, dan anak</li>
+      <li>Rekap per siklus gajian, kalender tagihan, dan skor kesehatan finansial</li>
+    </ul>
+
+    <h2>Pertanyaan umum</h2>
+    <h3>Apakah FinSist gratis?</h3>
+    <p>Ya. FinSist gratis dan bisa langsung dipakai dari browser tanpa instal.</p>
+    <h3>Bisa dipakai berdua dengan pasangan?</h3>
+    <p>Bisa. Satu rumah tangga bisa diisi beberapa anggota; setiap transaksi
+      tercatat atas nama pencatatnya dan semua melihat data yang sama.</p>
+    <h3>Apakah ada aplikasi Android atau iPhone?</h3>
+    <p>FinSist berjalan di browser HP maupun laptop, dan bisa dipasang ke layar
+      utama (Add to Home Screen) sehingga terasa seperti aplikasi biasa.</p>
+
+    <p class="muted">Memuat aplikasi…</p>
+  </main>
+
+  <script>
+    // Drop the crawlable loading-state block once the app paints. Uses the
+    // engine's own event, so it survives flutter_native_splash regeneration.
+    window.addEventListener('flutter-first-frame', function () {
+      var el = document.getElementById('seo-content');
+      if (el) el.remove();
+    });
+  </script>
 
 </body></html>
