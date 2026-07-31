@@ -8,6 +8,7 @@ import '../../ui/ft_haptics.dart';
 import '../../ui/ft_input.dart';
 import 'auth_repository.dart';
 import 'auth_shell.dart';
+import 'auth_legal_links.dart';
 import 'google_sign_in_button.dart';
 
 class SignUpScreen extends ConsumerStatefulWidget {
@@ -175,15 +176,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
           },
         ),
         const SizedBox(height: 16),
-        Text(
-          'Dengan mendaftar, kamu menyetujui penggunaan data sesuai kebijakan internal aplikasi.',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: FtColors.ink4,
-            fontSize: 11,
-            height: 1.5,
-          ),
-        ),
+        const AuthLegalLinks(),
       ],
     );
   }

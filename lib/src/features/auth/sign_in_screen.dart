@@ -9,6 +9,7 @@ import '../../ui/ft_haptics.dart';
 import '../../ui/ft_input.dart';
 import 'auth_repository.dart';
 import 'auth_shell.dart';
+import 'auth_legal_links.dart';
 import 'google_sign_in_button.dart';
 
 class SignInScreen extends ConsumerStatefulWidget {
@@ -65,7 +66,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     return AuthShell(
       eyebrow: 'Masuk',
       headline: 'Selamat datang\nkembali.',
-      subtitle: 'Lanjutkan mengatur keuangan keluarga di tempat yang sama.',
+      subtitle:
+          'Catat pengeluaran, atur anggaran, pantau cicilan, dan menabung bersama keluarga.',
       quietFooter: Wrap(
         crossAxisAlignment: WrapCrossAlignment.center,
         alignment: WrapAlignment.center,
@@ -192,6 +194,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
             setState(() => _error = msg);
           },
         ),
+        const SizedBox(height: 16),
+        const AuthLegalLinks(),
       ],
     );
   }
