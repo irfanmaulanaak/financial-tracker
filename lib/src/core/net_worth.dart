@@ -49,12 +49,13 @@ NetWorth computeNetWorth({
   required Iterable<AccountBalance> savings,
   required Iterable<CardBalance> cards,
   int investments = 0,
+  int otherDebt = 0,
 }) {
   return NetWorth(
     cash: cash.fold<int>(0, (a, b) => a + b.value),
     savings: savings.fold<int>(0, (a, b) => a + b.value),
     investments: investments,
-    debt: cards.fold<int>(0, (a, b) => a + b.used),
+    debt: cards.fold<int>(0, (a, b) => a + b.used) + otherDebt,
   );
 }
 

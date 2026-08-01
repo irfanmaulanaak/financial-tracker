@@ -156,6 +156,13 @@ service cloud.firestore {
         allow write: if isMember() && canTxn();
       }
 
+      // Cicilan tetap non-kartu (leasing/KPR): pembayaran menyentuh saldo
+      // rekening, jadi full only (sama seperti cards).
+      match /obligations/{document=**} {
+        allow read: if isMember();
+        allow write: if isMember() && canFull();
+      }
+
       // Recurring tombstones: per-doc suppression markers written when a
       // user deletes an auto-materialised recurring expense. The runner
       // reads them to skip resurrecting that date. Create-only from the

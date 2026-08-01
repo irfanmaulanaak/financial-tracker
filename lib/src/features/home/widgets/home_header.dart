@@ -520,6 +520,11 @@ class _OverflowMenu extends StatelessWidget {
               icon: Icons.handshake_outlined, label: 'Utang & Piutang'),
         ),
         PopupMenuItem(
+          value: 'obligations',
+          child: _MenuRow(
+              icon: Icons.payments_outlined, label: 'Cicilan Tetap'),
+        ),
+        PopupMenuItem(
           value: 'members',
           child: _MenuRow(icon: Icons.group_rounded, label: 'Anggota'),
         ),

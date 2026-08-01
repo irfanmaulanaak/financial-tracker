@@ -32,6 +32,7 @@ import 'features/insights/recap_screen.dart';
 import 'features/members/member_detail_screen.dart';
 import 'features/members/member_list_screen.dart';
 import 'features/notifications/notifications_screen.dart';
+import 'features/obligations/obligations_screen.dart';
 import 'features/onboarding/creator_wizard.dart';
 import 'features/onboarding/join_household_screen.dart';
 import 'features/onboarding/landing_screen.dart';
@@ -143,6 +144,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       _fadeRoute('/subscriptions', (_) => const SubscriptionsScreen()),
       _fadeRoute('/calendar', (_) => const BillCalendarScreen()),
       _fadeRoute('/debts', (_) => const DebtsScreen()),
+      _fadeRoute('/obligations', (_) => const ObligationsScreen()),
       _fadeRoute('/settings', (_) => const SettingsScreen()),
       if (kDebugMode)
         _fadeRoute('/dev/liquid', (_) => const LiquidPreviewScreen()),

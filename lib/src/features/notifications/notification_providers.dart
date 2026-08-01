@@ -14,6 +14,7 @@ import '../household/household_providers.dart';
 import '../insights/insights_providers.dart'
     show previousCyclesExpensesProvider;
 import '../investments/investments_repository.dart' show investmentsProvider;
+import '../obligations/obligation_repository.dart' show obligationsProvider;
 
 /// Notification kinds drive the icon + tone in the UI.
 enum NotificationKind {
@@ -145,6 +146,26 @@ final notificationsProvider = Provider<List<AppNotification>>((ref) {
           : '$daysLeft hari lagi · Rp ${_short(c.used)}',
       ts: dueTs,
       route: '/cards',
+    ));
+  }
+
+  // Cicilan tetap due ≤5 days ------------------------------------------------
+  final obligations = ref.watch(obligationsProvider).value ?? const [];
+  for (final o in obligations) {
+    if (o.isComplete) continue;
+    final daysLeft = daysUntilDue(dueDay: o.dueDay, now: now);
+    if (daysLeft == null) continue;
+    final dueTs = _resolveDueDate(dueDay: o.dueDay, now: now);
+    out.add(AppNotification(
+      id: 'obligation-${o.id}',
+      kind: NotificationKind.dueSoon,
+      group: NotificationGroup.fresh,
+      title: '${o.label} jatuh tempo',
+      detail: daysLeft <= 0
+          ? 'Hari ini · Rp ${_short(o.monthly)}'
+          : '$daysLeft hari lagi · Rp ${_short(o.monthly)}',
+      ts: dueTs,
+      route: '/obligations',
     ));
   }
 

@@ -129,7 +129,7 @@ class _CardsScreenState extends ConsumerState<CardsScreen> {
                 a +
                 minimumPayment(balance: b.used, minPaymentPct: b.minPaymentPct),
           );
-          final income = ref.watch(currentCycleIncomeTotalProvider);
+          final income = ref.watch(stableSalaryProvider).value ?? 0;
           // Beban utang ratio — if monthly cards debt > 40% of income, warn.
           final debtRatio = income > 0 ? totalUsed / income : 0.0;
           final debtState = debtRatio > 0.4
@@ -391,6 +391,14 @@ class _CicilanTotalStat extends ConsumerWidget {
   }
 }
 
+/// Cicilan bulanan berjalan yang ikut DSR: multi-bulan saja, tenor 1×
+/// adalah tagihan sekali bayar.
+int monthlyInstallmentDsrTotal(Iterable<Installment> installments) {
+  return installments
+      .where((i) => !i.isComplete && i.monthsTotal > 1)
+      .fold(0, (total, i) => total + i.monthly);
+}
+
 /// "Saran" tip card at the bottom of the cards list — calls out high
 /// debt-service ratios and suggests action.
 class _SaranTip extends ConsumerWidget {
@@ -411,9 +419,7 @@ class _SaranTip extends ConsumerWidget {
               .watch(cardInstallmentsProvider((hid: hid, cardId: c.id)))
               .value ??
           const [];
-      for (final i in list) {
-        if (!i.isComplete) monthlyInstallments += i.monthly;
-      }
+      monthlyInstallments += monthlyInstallmentDsrTotal(list);
     }
     if (income <= 0) return const SizedBox.shrink();
     final ratio = monthlyInstallments / income;

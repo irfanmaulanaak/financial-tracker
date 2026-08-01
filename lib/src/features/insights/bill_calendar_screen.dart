@@ -6,6 +6,7 @@ import '../../core/formatters.dart';
 import '../../core/payday.dart';
 import '../../core/recurring.dart';
 import '../../core/recurring_runner.dart';
+import '../../core/reminder_times.dart';
 import '../../core/upcoming.dart';
 import '../../theme.dart';
 import '../../ui/ft_ui.dart';
@@ -14,6 +15,7 @@ import '../cards/credit_card.dart';
 import '../expenses/expense.dart';
 import '../expenses/expense_providers.dart';
 import '../household/household_providers.dart';
+import '../obligations/obligation_repository.dart';
 
 /// Kalender tagihan: semua jatuh tempo kartu + tagihan rutin sampai akhir
 /// siklus, dikelompokkan per tanggal, plus proyeksi sisa kas akhir siklus.
@@ -55,6 +57,13 @@ class BillCalendarScreen extends ConsumerWidget {
                   : (household.categoryOf(e.categoryId)?.label ?? 'Tagihan'),
               nextDate: nextMonthlyOccurrence(e.date),
               amount: e.amount,
+            ),
+        for (final o in ref.watch(obligationsProvider).value ?? const [])
+          if (!o.isComplete)
+            (
+              title: o.label,
+              nextDate: nextCardDueDate(o.dueDay, now),
+              amount: o.monthly,
             ),
       ],
       now: now,

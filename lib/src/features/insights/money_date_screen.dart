@@ -9,6 +9,7 @@ import '../../core/money_date.dart';
 import '../../core/payday.dart';
 import '../../core/recurring.dart';
 import '../../core/recurring_runner.dart';
+import '../../core/reminder_times.dart';
 import '../../core/upcoming.dart';
 import '../../theme.dart';
 import '../../ui/ft_celebrate.dart';
@@ -24,6 +25,7 @@ import '../household/household_providers.dart';
 import '../household/name_format.dart';
 import '../incomes/income.dart';
 import '../incomes/income_providers.dart';
+import '../obligations/obligation_repository.dart';
 import 'insights_providers.dart';
 
 /// "Money Date" — review siklus terpandu ±7 menit, 4 langkah, maks 1
@@ -118,6 +120,13 @@ class _MoneyDateScreenState extends ConsumerState<MoneyDateScreen> {
                   : (household.categoryOf(e.categoryId)?.label ?? 'Tagihan'),
               nextDate: nextMonthlyOccurrence(e.date),
               amount: e.amount,
+            ),
+        for (final o in ref.watch(obligationsProvider).value ?? const [])
+          if (!o.isComplete)
+            (
+              title: o.label,
+              nextDate: nextCardDueDate(o.dueDay, now),
+              amount: o.monthly,
             ),
       ],
       now: now,

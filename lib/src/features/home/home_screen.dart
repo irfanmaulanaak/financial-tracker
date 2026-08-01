@@ -20,6 +20,7 @@ import '../../ui/ft_ui.dart';
 import '../auth/auth_repository.dart';
 import '../cards/credit_card.dart';
 import '../cards/cards_screen.dart';
+import '../cards/widgets/installment_list.dart' show cardInstallmentsProvider;
 import '../household/household.dart';
 import '../household/name_format.dart';
 import '../expenses/expense.dart';
@@ -27,8 +28,10 @@ import '../expenses/expense_providers.dart';
 import '../goals/goal.dart';
 import '../goals/goals_screen.dart';
 import '../household/household_providers.dart';
+import '../../core/disposable_income.dart';
 import '../incomes/income.dart';
 import '../incomes/income_providers.dart';
+import '../obligations/obligation_repository.dart';
 import '../insights/insights_providers.dart';
 import '../investments/investment.dart';
 import '../investments/investments_repository.dart' show investmentsProvider;
@@ -40,6 +43,7 @@ import 'net_worth_snapshot.dart';
 import 'net_worth_snapshot_repository.dart';
 import 'widgets/banners.dart';
 import 'widgets/category_grid.dart';
+import 'widgets/home_formatters.dart' show compactMoney;
 import 'widgets/daily_insight_line.dart';
 import 'widgets/goals_preview.dart';
 import 'widgets/home_header.dart';
@@ -185,6 +189,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             .fold<int>(0, (a, b) => a + b.amount))
                         .fold<int>(0, (a, b) => a + b) ~/
                     prevCycles.length;
+          final obligations =
+              ref.watch(obligationsProvider).value ?? const [];
+          final activeObligations =
+              obligations.where((o) => !o.isComplete).toList();
+          final obligationsMonthly =
+              activeObligations.fold<int>(0, (a, o) => a + o.monthly);
+          final obligationsPrincipal = activeObligations.fold<int>(
+              0, (a, o) => a + (o.outstandingPrincipal ?? 0));
           final invTotal =
               investments.fold<int>(0, (a, i) => a + i.currentValue);
           final nw = computeNetWorth(
@@ -209,6 +221,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
             ],
             investments: invTotal,
+            otherDebt: obligationsPrincipal,
           );
           final assets = householdAssetsAndDebt(
             household,
@@ -253,6 +266,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               if (daysUntilDue(dueDay: c.dueDay, now: now) case final d?)
                 if (c.used > 0)
                   DueBanner(cardLabel: c.label, daysUntil: d, used: c.used),
+            for (final o in activeObligations)
+              if (daysUntilDue(dueDay: o.dueDay, now: now) case final d?)
+                DueBanner(cardLabel: o.label, daysUntil: d, used: o.monthly),
           ];
           final streak = ref.watch(recordingStreakProvider);
 
@@ -304,6 +320,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           final daysLeftCycle = cycleNow.endExclusive
               .difference(Dates.dayKey(now))
               .inDays;
+          var ccMonthly = 0;
+          for (final c in cards) {
+            ccMonthly += monthlyInstallmentDsrTotal(ref
+                    .watch(cardInstallmentsProvider(
+                        (hid: household.id, cardId: c.id)))
+                    .value ??
+                const []);
+          }
+          final stableGaji = ref.watch(stableSalaryProvider).value ?? 0;
+          final debtSummary = debtServiceSummary(
+            stableSalary: stableGaji,
+            fixedObligationsMonthly: obligationsMonthly,
+            multiMonthCardMonthly: ccMonthly,
+          );
+          final overcommit = budgetOvercommit(
+            monthlyBudgetTotal: household.monthlyBudgetTotal,
+            disposable: debtSummary.disposable,
+          );
+
           final sts = safeToSpend(
             totalBudget: budgetTotal,
             spent: totalSpentValue,
@@ -371,6 +406,42 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                   for (var i = 0; i < dueBanners.length; i++)
                     section(dueBanners[i], index: 2 + i),
+                  if (debtSummary.dsr > dsrMaxOjk)
+                    section(
+                      AlertBand(
+                        icon: Icons.warning_amber_rounded,
+                        color: FtColors.danger,
+                        text:
+                            'Cicilan ${compactMoney(debtSummary.totalMonthlyDebt)}/bln = ${(debtSummary.dsr * 100).round()}% gaji — lewat batas OJK 30%',
+                        actionLabel: 'Lihat',
+                        onAction: () => context.push('/obligations'),
+                      ),
+                      index: 2 + dueBanners.length,
+                    )
+                  else if (overcommit > 0 && obligationsMonthly > 0)
+                    section(
+                      AlertBand(
+                        icon: Icons.warning_amber_rounded,
+                        color: FtColors.ochre,
+                        text:
+                            'Budget ${compactMoney(household.monthlyBudgetTotal)} > uang siap pakai ${compactMoney(debtSummary.disposable)} (gaji − cicilan)',
+                        actionLabel: 'Atur',
+                        onAction: () => context.push('/spend'),
+                      ),
+                      index: 2 + dueBanners.length,
+                    )
+                  else if (obligationsMonthly > 0)
+                    section(
+                      AlertBand(
+                        icon: Icons.request_quote_rounded,
+                        color: FtColors.clay,
+                        text:
+                            'Cicilan tetap ${compactMoney(obligationsMonthly)}/bln jalan — uang siap pakai ${compactMoney(debtSummary.disposable)}',
+                        actionLabel: 'Lihat',
+                        onAction: () => context.push('/obligations'),
+                      ),
+                      index: 2 + dueBanners.length,
+                    ),
                   if (streak >= minVisibleStreak)
                     section(
                       StreakBanner(streak: streak),
@@ -430,6 +501,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         context.push('/calendar');
       case 'debts':
         context.push('/debts');
+      case 'obligations':
+        context.push('/obligations');
       case 'members':
         context.push('/members');
       case 'export':
