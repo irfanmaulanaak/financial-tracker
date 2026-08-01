@@ -26,6 +26,18 @@ void main() {
       expect(r.disposable, 0);
     });
 
+    test('sewa (non-utang) potong disposable tapi TIDAK ikut DSR', () {
+      final r = debtServiceSummary(
+        stableSalary: 42_000_000,
+        fixedObligationsMonthly: 14_104_000,
+        multiMonthCardMonthly: 0,
+        nonDebtMonthly: 3_667_000,
+      );
+      expect(r.totalMonthlyDebt, 14_104_000);
+      expect(r.dsr, closeTo(14_104_000 / 42_000_000, 0.0001));
+      expect(r.disposable, 42_000_000 - 14_104_000 - 3_667_000);
+    });
+
     test('cicilan > gaji: disposable clamp 0, dsr > batas OJK', () {
       final r = debtServiceSummary(
         stableSalary: 5_000_000,

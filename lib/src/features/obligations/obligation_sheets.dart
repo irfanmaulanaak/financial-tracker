@@ -143,6 +143,7 @@ class _ObligationFormSheetState extends ConsumerState<ObligationFormSheet> {
   );
   late int _monthly = widget.initial?.monthly ?? 0;
   late int _outstanding = widget.initial?.outstandingPrincipal ?? 0;
+  late bool _isDebt = widget.initial?.isDebt ?? true;
   bool _busy = false;
 
   @override
@@ -187,6 +188,7 @@ class _ObligationFormSheetState extends ConsumerState<ObligationFormSheet> {
           monthsPaid: monthsPaid,
           dueDay: dueDay,
           createdBy: uid,
+          isDebt: _isDebt,
           outstandingPrincipal: _outstanding > 0 ? _outstanding : null,
         );
       } else {
@@ -199,6 +201,7 @@ class _ObligationFormSheetState extends ConsumerState<ObligationFormSheet> {
             'monthsTotal': monthsTotal,
             'monthsPaid': monthsPaid,
             'dueDay': dueDay,
+            'isDebt': _isDebt,
             'outstandingPrincipal': _outstanding > 0 ? _outstanding : null,
           },
         );
@@ -290,17 +293,32 @@ class _ObligationFormSheetState extends ConsumerState<ObligationFormSheet> {
                   labelText: 'Tanggal jatuh tempo (1–31)',
                 ),
               ),
-              const SizedBox(height: 16),
-              MoneyField(
-                amount: _outstanding,
-                onChanged: (value) => setState(() => _outstanding = value),
-                eyebrow: 'Sisa pokok (opsional)',
-                autofocus: false,
+              const SizedBox(height: 8),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Utang', style: TextStyle(fontSize: 13.5)),
+                subtitle: Text(
+                  _isDebt
+                      ? 'Leasing/KPR — ikut rasio cicilan (batas OJK 30%)'
+                      : 'Biaya tetap (sewa dll) — tidak ikut rasio cicilan',
+                  style: TextStyle(color: FtColors.ink3, fontSize: 11),
+                ),
+                value: _isDebt,
+                onChanged: (v) => setState(() => _isDebt = v),
               ),
-              Text(
-                'Sisa pokok dari leasing/bank (opsional)',
-                style: TextStyle(color: FtColors.ink3, fontSize: 11),
-              ),
+              if (_isDebt) ...[
+                const SizedBox(height: 8),
+                MoneyField(
+                  amount: _outstanding,
+                  onChanged: (value) => setState(() => _outstanding = value),
+                  eyebrow: 'Sisa pokok (opsional)',
+                  autofocus: false,
+                ),
+                Text(
+                  'Sisa pokok dari leasing/bank (opsional)',
+                  style: TextStyle(color: FtColors.ink3, fontSize: 11),
+                ),
+              ],
               const SizedBox(height: 20),
               FilledButton(
                 onPressed: _busy ? null : _save,

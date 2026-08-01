@@ -193,10 +193,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ref.watch(obligationsProvider).value ?? const [];
           final activeObligations =
               obligations.where((o) => !o.isComplete).toList();
-          final obligationsMonthly =
-              activeObligations.fold<int>(0, (a, o) => a + o.monthly);
-          final obligationsPrincipal = activeObligations.fold<int>(
-              0, (a, o) => a + (o.outstandingPrincipal ?? 0));
+          final debtMonthly = activeObligations
+              .where((o) => o.isDebt)
+              .fold<int>(0, (a, o) => a + o.monthly);
+          final nonDebtMonthly = activeObligations
+              .where((o) => !o.isDebt)
+              .fold<int>(0, (a, o) => a + o.monthly);
+          final obligationsMonthly = debtMonthly + nonDebtMonthly;
+          final obligationsPrincipal = activeObligations
+              .where((o) => o.isDebt)
+              .fold<int>(0, (a, o) => a + (o.outstandingPrincipal ?? 0));
           final invTotal =
               investments.fold<int>(0, (a, i) => a + i.currentValue);
           final nw = computeNetWorth(
@@ -331,8 +337,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           final stableGaji = ref.watch(stableSalaryProvider).value ?? 0;
           final debtSummary = debtServiceSummary(
             stableSalary: stableGaji,
-            fixedObligationsMonthly: obligationsMonthly,
+            fixedObligationsMonthly: debtMonthly,
             multiMonthCardMonthly: ccMonthly,
+            nonDebtMonthly: nonDebtMonthly,
           );
           final overcommit = budgetOvercommit(
             monthlyBudgetTotal: household.monthlyBudgetTotal,

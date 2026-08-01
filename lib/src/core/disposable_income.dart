@@ -1,6 +1,6 @@
-/// DSR = cicilan / gaji stabil PENUH (definisi OJK, batas 30%).
-/// Uang siap pakai = gaji stabil − cicilan; hanya untuk budget/safe-to-spend.
-/// Tagihan kartu 1× bayar bukan cicilan — tidak ikut DSR.
+/// DSR = cicilan UTANG / gaji stabil PENUH (definisi OJK, batas 30%).
+/// Biaya tetap non-utang (sewa) tidak ikut DSR tapi ikut mengurangi
+/// uang siap pakai. Tagihan kartu 1× bayar bukan cicilan.
 library;
 
 const double dsrMaxOjk = 0.30;
@@ -9,13 +9,14 @@ const double dsrMaxOjk = 0.30;
   required int stableSalary,
   required int fixedObligationsMonthly,
   required int multiMonthCardMonthly,
+  int nonDebtMonthly = 0,
 }) {
-  final total = fixedObligationsMonthly + multiMonthCardMonthly;
-  final dsr = stableSalary > 0 ? total / stableSalary : 0.0;
+  final debt = fixedObligationsMonthly + multiMonthCardMonthly;
+  final dsr = stableSalary > 0 ? debt / stableSalary : 0.0;
   return (
-    totalMonthlyDebt: total,
+    totalMonthlyDebt: debt,
     dsr: dsr,
-    disposable: (stableSalary - total).clamp(0, stableSalary),
+    disposable: (stableSalary - debt - nonDebtMonthly).clamp(0, stableSalary),
   );
 }
 

@@ -33,6 +33,7 @@ class ObligationRepository {
     required int monthsPaid,
     required int dueDay,
     required String createdBy,
+    bool isDebt = true,
     int? outstandingPrincipal,
   }) async {
     final ref = _col(hid).doc();
@@ -43,6 +44,7 @@ class ObligationRepository {
       monthsTotal: monthsTotal,
       monthsPaid: monthsPaid,
       dueDay: dueDay,
+      isDebt: isDebt,
       outstandingPrincipal: outstandingPrincipal,
       startedAt: DateTime.now(),
       createdBy: createdBy,
