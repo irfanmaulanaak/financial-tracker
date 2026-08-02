@@ -108,6 +108,16 @@ jobs:
           flutter build web --release \
             --dart-define=APP_VERSION=${{ steps.ver.outputs.v }}
 
+      # index.html di-serve no-cache, jadi query ini ikut berubah tiap
+      # commit dan memaksa browser mengambil bundle baru — tanpa itu
+      # main.dart.js/bootstrap nyangkut di cache 4 jam milik Pages.
+      - name: Cache-bust bootstrap + main bundle
+        run: |
+          cd build/web
+          sed -i "s|src=\"flutter_bootstrap.js\"|src=\"flutter_bootstrap.js?v=${GITHUB_SHA::7}\"|" index.html
+          sed -i "s|\"main.dart.js\"|\"main.dart.js?v=${GITHUB_SHA::7}\"|g" flutter_bootstrap.js
+          grep -o 'flutter_bootstrap.js?v=[a-f0-9]*' index.html | head -1
+
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
