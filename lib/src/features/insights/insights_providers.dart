@@ -64,8 +64,9 @@ final cycleBillsProvider =
           ),
     ],
     now: now,
-    // -1: tagihan tepat di hari gajian berikutnya milik siklus depan.
-    withinDays: daysLeft - 1,
+    // Termasuk hari gajian berikutnya: tagihan yang jatuh tempo hari itu
+    // tetap harus siap dari kas yang ada (gaji bisa masuk belakangan).
+    withinDays: daysLeft,
   );
 
   final liquid = [
