@@ -71,6 +71,7 @@ class AccountsRepository {
     int? value,
     AccountSubKind? subKind,
     AccountKind? newKind,
+    bool? liquid,
   }) async {
     final ref = _doc(householdId);
     await _db.runTransaction((tx) async {
@@ -92,6 +93,7 @@ class AccountsRepository {
                     hint: hint,
                     value: value,
                     subKind: subKind,
+                    liquid: liquid,
                   )
                 : a)
             .toList();

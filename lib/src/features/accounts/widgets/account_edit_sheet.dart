@@ -12,6 +12,7 @@ class AccountDraft {
   final String? hint;
   final int value;
   final bool deltaMode;
+  final bool liquid;
   const AccountDraft({
     required this.kind,
     required this.label,
@@ -19,6 +20,7 @@ class AccountDraft {
     required this.value,
     this.subKind = AccountSubKind.bank,
     this.deltaMode = false,
+    this.liquid = true,
   });
 }
 
@@ -81,12 +83,14 @@ class _AccountEditSheetState extends State<AccountEditSheet> {
   AccountKind _kind = AccountKind.cash;
   AccountSubKind _subKind = AccountSubKind.bank;
   bool _deltaMode = false;
+  bool _liquid = true;
 
   @override
   void initState() {
     super.initState();
     _kind = widget.initial?.kind ?? widget.initialKind ?? AccountKind.cash;
     _subKind = widget.initial?.subKind ?? AccountSubKind.bank;
+    _liquid = widget.initial?.liquid ?? true;
   }
 
   @override
@@ -117,6 +121,7 @@ class _AccountEditSheetState extends State<AccountEditSheet> {
           subKind: _subKind,
           label: label,
           hint: hint,
+          liquid: _kind == AccountKind.cash || _liquid,
           value: delta,
           deltaMode: true,
         ),
@@ -130,6 +135,7 @@ class _AccountEditSheetState extends State<AccountEditSheet> {
           subKind: _subKind,
           label: label,
           hint: hint,
+          liquid: _kind == AccountKind.cash || _liquid,
           value: value,
         ),
       );
@@ -205,6 +211,19 @@ class _AccountEditSheetState extends State<AccountEditSheet> {
                 hintText: 'mis. BCA 1234',
               ),
             ),
+            if (_kind == AccountKind.savings)
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Cash ready', style: TextStyle(fontSize: 13.5)),
+                subtitle: Text(
+                  _liquid
+                      ? 'Bisa dipakai kapan saja — ikut proyeksi kas'
+                      : 'Terkunci (deposito dll) — aset saja, tidak ikut proyeksi kas',
+                  style: TextStyle(color: FtColors.ink3, fontSize: 11),
+                ),
+                value: _liquid,
+                onChanged: (v) => setState(() => _liquid = v),
+              ),
             const SizedBox(height: 16),
             if (isEdit)
               SegmentedButton<bool>(

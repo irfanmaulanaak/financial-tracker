@@ -239,6 +239,7 @@ class _AccountTabState extends ConsumerState<AccountTab> {
               value: result.value,
               subKind: result.kind == AccountKind.cash ? result.subKind : null,
               newKind: result.kind != a.kind ? result.kind : null,
+              liquid: result.kind == AccountKind.savings ? result.liquid : null,
             );
       }
     } catch (e) {

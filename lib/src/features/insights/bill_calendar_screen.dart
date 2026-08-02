@@ -73,7 +73,7 @@ class BillCalendarScreen extends ConsumerWidget {
     // Proyeksi: kas sekarang − tagihan terjadwal − estimasi belanja harian.
     final liquid = [
       ...household.cashAccounts,
-      ...household.savingsAccounts,
+      ...household.savingsAccounts.where((a) => a.liquid),
     ].fold<int>(0, (a, acc) => a + acc.value);
     final expenses =
         ref.watch(cycleExpensesProvider).value ?? const <Expense>[];

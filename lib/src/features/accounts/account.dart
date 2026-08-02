@@ -32,6 +32,11 @@ class Account {
   final int value;
   final int sortOrder;
 
+  /// Cash ready: bisa dipakai belanja kapan saja. Tunai selalu true;
+  /// tabungan bisa false (deposito terkunci dll) supaya proyeksi kas
+  /// tidak menghitungnya.
+  final bool liquid;
+
   const Account({
     required this.id,
     required this.kind,
@@ -40,6 +45,7 @@ class Account {
     required this.value,
     required this.sortOrder,
     this.subKind = AccountSubKind.bank,
+    this.liquid = true,
   });
 
   Account copyWith({
@@ -48,6 +54,7 @@ class Account {
     int? value,
     int? sortOrder,
     AccountSubKind? subKind,
+    bool? liquid,
   }) =>
       Account(
         id: id,
@@ -57,6 +64,7 @@ class Account {
         hint: hint ?? this.hint,
         value: value ?? this.value,
         sortOrder: sortOrder ?? this.sortOrder,
+        liquid: liquid ?? this.liquid,
       );
 
   Map<String, dynamic> toMap() => {
@@ -68,6 +76,7 @@ class Account {
         // Persist subKind only on cash accounts; savings accounts ignore it.
         if (kind == AccountKind.cash)
           'subKind': accountSubKindToString(subKind),
+        if (kind == AccountKind.savings) 'liquid': liquid,
       };
 
   static Account fromMap(Map<String, dynamic> m, AccountKind kind) => Account(
@@ -78,5 +87,6 @@ class Account {
         hint: m['hint'] as String?,
         value: (m['value'] as num?)?.toInt() ?? 0,
         sortOrder: (m['sortOrder'] as num?)?.toInt() ?? 0,
+        liquid: kind == AccountKind.cash ? true : (m['liquid'] as bool? ?? true),
       );
 }
