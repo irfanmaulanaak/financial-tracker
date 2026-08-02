@@ -113,6 +113,38 @@
       }
     });
   </script>
+  <!-- Auto-update: service worker baru biasanya nunggu semua tab lama
+       ditutup (di iOS PWA praktis tidak pernah). skipWaiting memaksa versi
+       baru aktif, controllerchange reload sekali supaya langsung dipakai. -->
+  <script>
+    (function () {
+      if (!('serviceWorker' in navigator)) return;
+      var reloaded = false;
+      navigator.serviceWorker.addEventListener('controllerchange', function () {
+        if (reloaded) return;
+        reloaded = true;
+        window.location.reload();
+      });
+      navigator.serviceWorker.ready.then(function (reg) {
+        function activate(w) { if (w) w.postMessage('skipWaiting'); }
+        activate(reg.waiting);
+        reg.addEventListener('updatefound', function () {
+          var w = reg.installing;
+          if (!w) return;
+          w.addEventListener('statechange', function () {
+            if (w.state === 'installed' && navigator.serviceWorker.controller) {
+              activate(w);
+            }
+          });
+        });
+        // PWA di home screen bisa hidup berhari-hari tanpa reload —
+        // cek update tiap kali app dibuka lagi dari background.
+        document.addEventListener('visibilitychange', function () {
+          if (document.visibilityState === 'visible') reg.update();
+        });
+      });
+    })();
+  </script>
   <script src="flutter_bootstrap.js" async=""></script>
 
   <!-- Crawlable loading-state content: Flutter renders to <canvas>, so this
