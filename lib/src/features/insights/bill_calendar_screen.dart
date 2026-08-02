@@ -4,18 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/cash_projection.dart';
 import '../../core/formatters.dart';
 import '../../core/payday.dart';
-import '../../core/recurring.dart';
-import '../../core/recurring_runner.dart';
-import '../../core/reminder_times.dart';
 import '../../core/upcoming.dart';
 import '../../theme.dart';
 import '../../ui/ft_ui.dart';
-import '../cards/cards_screen.dart';
-import '../cards/credit_card.dart';
-import '../expenses/expense.dart';
-import '../expenses/expense_providers.dart';
 import '../household/household_providers.dart';
-import '../obligations/obligation_repository.dart';
+import 'insights_providers.dart';
 
 /// Kalender tagihan: semua jatuh tempo kartu + tagihan rutin sampai akhir
 /// siklus, dikelompokkan per tanggal, plus proyeksi sisa kas akhir siklus.
@@ -32,62 +25,13 @@ class BillCalendarScreen extends ConsumerWidget {
     final today = DateTime(now.year, now.month, now.day);
     final cycle = currentCycle(now, payday: household.payday);
     final daysLeft = cycle.endExclusive.difference(today).inDays;
-    final daysElapsed = today.difference(cycle.start).inDays + 1;
 
-    final cards =
-        ref.watch(cardsProvider(household.id)).value ?? const <CreditCard>[];
-    final recurring =
-        ref.watch(recurringExpensesYearProvider).value ?? const <Expense>[];
-    final latest = latestPerKey<Expense>(
-      recurring,
-      keyOf: expenseTemplateKey,
-      dateOf: (e) => e.date,
-      isRecurring: (e) => e.recurring,
-    );
-    final items = upcomingItems(
-      cards: [
-        for (final c in cards) (label: c.label, dueDay: c.dueDay, used: c.used),
-      ],
-      bills: [
-        for (final e in recurring)
-          if (latest[expenseTemplateKey(e)] == e.date)
-            (
-              title: (e.note?.isNotEmpty ?? false)
-                  ? e.note!
-                  : (household.categoryOf(e.categoryId)?.label ?? 'Tagihan'),
-              nextDate: nextMonthlyOccurrence(e.date),
-              amount: e.amount,
-            ),
-        for (final o in ref.watch(obligationsProvider).value ?? const [])
-          if (!o.isComplete && !o.paidForMonth(nextCardDueDate(o.dueDay, now)))
-            (
-              title: o.label,
-              nextDate: nextCardDueDate(o.dueDay, now),
-              amount: o.monthly,
-            ),
-      ],
-      now: now,
-      // -1: tagihan tepat di hari gajian berikutnya milik siklus depan.
-      withinDays: daysLeft - 1,
-    );
-
-    // Proyeksi: kas sekarang − tagihan terjadwal − estimasi belanja harian.
-    final liquid = [
-      ...household.cashAccounts,
-      ...household.savingsAccounts.where((a) => a.liquid),
-    ].fold<int>(0, (a, acc) => a + acc.value);
-    final expenses =
-        ref.watch(cycleExpensesProvider).value ?? const <Expense>[];
-    final variableSpent = expenses
-        .where((e) => !e.recurring && e.cardId == null)
-        .fold<int>(0, (a, e) => a + e.amount);
-    final projection = projectEndOfCycle(
-      liquidNow: liquid,
-      upcomingBillsTotal: items.fold(0, (a, i) => a + i.amount),
-      variableSpentSoFar: variableSpent,
-      daysElapsed: daysElapsed,
-      daysLeft: daysLeft,
-    );
+    final bills = ref.watch(cycleBillsProvider);
+    if (bills == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    final items = bills.items;
+    final projection = bills.projection;
 
     // Kelompokkan per tanggal.
     final groups = <DateTime, List<UpcomingItem>>{};

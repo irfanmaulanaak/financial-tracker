@@ -18,6 +18,7 @@ import '../../../ui/ft_haptics.dart';
 import '../../../ui/ft_sparkline.dart';
 import '../../../ui/ft_ui.dart';
 import '../../cards/credit_card.dart';
+import '../../insights/insights_providers.dart';
 import 'home_formatters.dart';
 import 'safe_to_spend_slide.dart';
 
@@ -397,7 +398,54 @@ class _AsetSlideState extends ConsumerState<_AsetSlide> {
               ),
             ],
           ),
+          _CommitmentLine(hidden: hidden),
         ],
+      ),
+    );
+  }
+}
+
+/// "Uang yang sudah ada pemiliknya": total tagihan terjadwal sisa siklus +
+/// perkiraan sisa kas setelahnya. Angka sama persis dengan Kalender Tagihan
+/// (satu provider). Tap → kalender.
+class _CommitmentLine extends ConsumerWidget {
+  const _CommitmentLine({required this.hidden});
+  final bool hidden;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final bills = ref.watch(cycleBillsProvider);
+    if (bills == null || bills.items.isEmpty) return const SizedBox.shrink();
+    final total = bills.projection.upcomingBills;
+    final sisa = bills.projection.projected;
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => context.push('/calendar'),
+        child: Row(
+          children: [
+            Icon(Icons.event_note_rounded, size: 13, color: FtColors.ink3),
+            const SizedBox(width: 5),
+            Expanded(
+              child: Text(
+                hidden
+                    ? 'Tagihan siklus ini ···· · sisa kas ····'
+                    : 'Tagihan siklus ini ${compactMoney(total)} · '
+                        'sisa kas ±${compactMoney(sisa)}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: sisa < 0 && !hidden ? FtColors.danger : FtColors.ink3,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded, size: 14, color: FtColors.ink3),
+          ],
+        ),
       ),
     );
   }
