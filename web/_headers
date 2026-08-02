@@ -1,0 +1,16 @@
+# Entry points harus selalu revalidasi — tanpa ini Safari pakai heuristic
+# caching (index.html tidak punya max-age) dan versi lama nempel berjam-jam.
+# File besar (main.dart.js, canvaskit) tetap di-cache; versioning-nya
+# ditangani service worker + revalidasi bootstrap.
+/
+  Cache-Control: no-cache
+/index.html
+  Cache-Control: no-cache
+/flutter_bootstrap.js
+  Cache-Control: no-cache
+/flutter_service_worker.js
+  Cache-Control: no-cache
+/version.json
+  Cache-Control: no-cache
+/main.dart.js
+  Cache-Control: no-cache
