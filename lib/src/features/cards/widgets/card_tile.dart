@@ -109,6 +109,8 @@ class CardTile extends StatelessWidget {
               items: [
                 FtStatItem(label: 'Pemilik', value: ownerName),
                 FtStatItem(label: 'Limit', value: Money.format(card.limit)),
+                FtStatItem(
+                    label: 'Tagihan keluar', value: 'Tgl ${card.billingDay}'),
                 FtStatItem(label: 'Jatuh tempo', value: 'Tgl ${card.dueDay}'),
               ],
             ),

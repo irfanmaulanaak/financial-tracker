@@ -109,7 +109,8 @@ class _MoneyDateScreenState extends ConsumerState<MoneyDateScreen> {
     );
     final upcoming = upcomingItems(
       cards: [
-        for (final c in cards) (label: c.label, dueDay: c.dueDay, used: c.used),
+        for (final c in cards)
+          (label: c.label, billingDay: c.billingDay, used: c.used),
       ],
       bills: [
         for (final e in recurring)

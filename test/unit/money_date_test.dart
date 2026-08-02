@@ -47,9 +47,9 @@ void main() {
       final now = DateTime(2026, 6, 11);
       final items = upcomingItems(
         cards: [
-          (label: 'BCA', dueDay: 15, used: 500000), // 15 Jun → masuk
-          (label: 'Mandiri', dueDay: 25, used: 100000), // 25 Jun → keluar
-          (label: 'Kosong', dueDay: 12, used: 0), // tanpa tagihan → skip
+          (label: 'BCA', billingDay: 15, used: 500000), // 15 Jun → masuk
+          (label: 'Mandiri', billingDay: 25, used: 100000), // 25 Jun → keluar
+          (label: 'Kosong', billingDay: 12, used: 0), // tanpa tagihan → skip
         ],
         bills: [
           (title: 'Listrik', nextDate: DateTime(2026, 6, 13), amount: 300000),

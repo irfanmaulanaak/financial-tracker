@@ -231,7 +231,7 @@ class _BillRow extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  isCard ? 'Jatuh tempo kartu' : 'Tagihan rutin (perkiraan)',
+                  isCard ? 'Tagihan kartu keluar' : 'Tagihan rutin (perkiraan)',
                   style: TextStyle(color: FtColors.ink3, fontSize: 11),
                 ),
               ],

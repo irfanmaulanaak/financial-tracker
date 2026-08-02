@@ -21,10 +21,12 @@ class UpcomingItem {
   final UpcomingKind kind;
 }
 
-/// Gabungkan kartu (due date berikutnya, hanya yang ada tagihan) dan
-/// tagihan rutin, saring sampai [withinDays] ke depan, urut tanggal.
+/// Gabungkan kartu (hanya yang ada tagihan) dan tagihan rutin, saring
+/// sampai [withinDays] ke depan, urut tanggal. Tanggal kartu =
+/// [billingDay] (tagihan keluar) — momen uang perlu siap; dueDay hanya
+/// deadline dan tetap dipakai banner/reminder.
 List<UpcomingItem> upcomingItems({
-  required List<({String label, int dueDay, int used})> cards,
+  required List<({String label, int billingDay, int used})> cards,
   required List<({String title, DateTime nextDate, int amount})> bills,
   required DateTime now,
   int withinDays = 7,
@@ -36,7 +38,7 @@ List<UpcomingItem> upcomingItems({
       if (c.used > 0)
         UpcomingItem(
           title: c.label,
-          date: nextCardDueDate(c.dueDay, now),
+          date: nextCardDueDate(c.billingDay, now),
           amount: c.used,
           kind: UpcomingKind.cardDue,
         ),
