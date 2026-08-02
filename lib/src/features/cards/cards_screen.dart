@@ -18,6 +18,7 @@ import 'credit_card.dart';
 import 'edit_card_sheet.dart';
 import 'widgets/card_tile.dart';
 import 'widgets/installment_list.dart';
+import 'widgets/obligations_section.dart';
 
 final cardsProvider = StreamProvider.family<List<CreditCard>, String>((
   ref,
@@ -276,6 +277,7 @@ class _CardsScreenState extends ConsumerState<CardsScreen> {
                     household.members.first.userId,
                   ),
                 ),
+                const ObligationsSection(),
                 if (items.isNotEmpty)
                   _SaranTip(
                     hid: household.id,
@@ -376,13 +378,10 @@ class _CicilanTotalStat extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     var total = 0;
     for (final c in cards) {
-      final list = ref
+      total += monthlyInstallmentDsrTotal(ref
               .watch(cardInstallmentsProvider((hid: hid, cardId: c.id)))
               .value ??
-          const [];
-      for (final i in list) {
-        if (!i.isComplete) total += i.monthly;
-      }
+          const []);
     }
     return _LabeledStat(
       label: 'Cicilan/bln',

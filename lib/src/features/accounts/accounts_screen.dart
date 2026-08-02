@@ -136,6 +136,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen>
             hint: draft.hint,
             value: draft.value,
             subKind: draft.subKind,
+            liquid: draft.liquid,
           );
     } catch (e) {
       if (context.mounted) {

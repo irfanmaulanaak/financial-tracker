@@ -24,6 +24,7 @@ class AccountsRepository {
     String? hint,
     int value = 0,
     AccountSubKind subKind = AccountSubKind.bank,
+    bool liquid = true,
   }) async {
     final account = Account(
       id: shortId(),
@@ -31,6 +32,7 @@ class AccountsRepository {
       subKind: subKind,
       label: label,
       hint: hint,
+      liquid: liquid,
       value: value,
       sortOrder: 0,
     );
@@ -46,6 +48,7 @@ class AccountsRepository {
         id: account.id,
         kind: kind,
         subKind: subKind,
+        liquid: account.liquid,
         label: account.label,
         hint: account.hint,
         value: account.value,
@@ -112,6 +115,9 @@ class AccountsRepository {
           subKind: targetKind == AccountKind.cash
               ? (subKind ?? AccountSubKind.bank)
               : AccountSubKind.bank,
+          liquid: targetKind == AccountKind.cash
+              ? true
+              : (liquid ?? src.liquid),
           label: label ?? src.label,
           hint: hint ?? src.hint,
           value: value ?? src.value,

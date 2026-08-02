@@ -13,9 +13,12 @@ class Obligation {
   final bool isDebt;
 
   /// Sisa pokok (opsional). `monthly × sisa bulan` termasuk bunga, bukan
-  /// pokok — net worth hanya pakai field ini.
+  /// pokok — net worth hanya pakai field ini. Tidak dikurangi otomatis
+  /// saat bayar (angsuran termasuk bunga); user update manual dari
+  /// info leasing/bank.
   final int? outstandingPrincipal;
   final DateTime startedAt;
+  final DateTime? lastPaidAt;
   final String createdBy;
 
   const Obligation({
@@ -28,11 +31,19 @@ class Obligation {
     this.isDebt = true,
     required this.outstandingPrincipal,
     required this.startedAt,
+    this.lastPaidAt,
     required this.createdBy,
   });
 
   bool get isComplete => monthsPaid >= monthsTotal;
   int get remainingMonths => (monthsTotal - monthsPaid).clamp(0, monthsTotal);
+
+  /// Sudah dibayar untuk jatuh tempo di bulan [dueDate]? Meredam banner/
+  /// notifikasi/kalender setelah user menandai bayar bulan itu.
+  bool paidForMonth(DateTime dueDate) =>
+      lastPaidAt != null &&
+      lastPaidAt!.year == dueDate.year &&
+      lastPaidAt!.month == dueDate.month;
 
   Map<String, dynamic> toMap() => {
         'label': label,
@@ -44,6 +55,7 @@ class Obligation {
         if (outstandingPrincipal != null)
           'outstandingPrincipal': outstandingPrincipal,
         'startedAt': Timestamp.fromDate(startedAt),
+        if (lastPaidAt != null) 'lastPaidAt': Timestamp.fromDate(lastPaidAt!),
         'createdBy': createdBy,
       };
 
@@ -59,6 +71,7 @@ class Obligation {
       isDebt: m['isDebt'] as bool? ?? true,
       outstandingPrincipal: (m['outstandingPrincipal'] as num?)?.toInt(),
       startedAt: (m['startedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      lastPaidAt: (m['lastPaidAt'] as Timestamp?)?.toDate(),
       createdBy: m['createdBy'] as String? ?? '',
     );
   }

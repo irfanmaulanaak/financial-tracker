@@ -153,9 +153,10 @@ final notificationsProvider = Provider<List<AppNotification>>((ref) {
   final obligations = ref.watch(obligationsProvider).value ?? const [];
   for (final o in obligations) {
     if (o.isComplete) continue;
+    final dueTs = _resolveDueDate(dueDay: o.dueDay, now: now);
+    if (o.paidForMonth(dueTs)) continue;
     final daysLeft = daysUntilDue(dueDay: o.dueDay, now: now);
     if (daysLeft == null) continue;
-    final dueTs = _resolveDueDate(dueDay: o.dueDay, now: now);
     out.add(AppNotification(
       id: 'obligation-${o.id}',
       kind: NotificationKind.dueSoon,

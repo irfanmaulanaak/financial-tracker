@@ -59,7 +59,7 @@ class BillCalendarScreen extends ConsumerWidget {
               amount: e.amount,
             ),
         for (final o in ref.watch(obligationsProvider).value ?? const [])
-          if (!o.isComplete)
+          if (!o.isComplete && !o.paidForMonth(nextCardDueDate(o.dueDay, now)))
             (
               title: o.label,
               nextDate: nextCardDueDate(o.dueDay, now),
@@ -67,7 +67,8 @@ class BillCalendarScreen extends ConsumerWidget {
             ),
       ],
       now: now,
-      withinDays: daysLeft,
+      // -1: tagihan tepat di hari gajian berikutnya milik siklus depan.
+      withinDays: daysLeft - 1,
     );
 
     // Proyeksi: kas sekarang − tagihan terjadwal − estimasi belanja harian.

@@ -45,6 +45,7 @@ class _PayObligationSheetState extends ConsumerState<PayObligationSheet> {
             hid: household.id,
             obligationId: widget.obligation.id,
             accountId: _accountId!,
+            expectedMonthsPaid: widget.obligation.monthsPaid,
           );
       if (mounted) {
         FtHaptics.success();

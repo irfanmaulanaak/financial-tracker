@@ -1,6 +1,22 @@
 import 'package:financial_tracker/src/core/payday.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+void _paydayEdgeTests() {
+  test('payday 1: rollback lintas bulan tidak menghasilkan siklus 0 hari', () {
+    // 1 Agu 2026 = Sabtu → payday mundur ke Jumat 31 Jul. Pada 2 Agu,
+    // start = 31 Jul; payday nominal 1 Sep (Selasa) jadi endExclusive.
+    final c = currentCycle(DateTime(2026, 8, 2), payday: 1);
+    expect(c.start, DateTime(2026, 7, 31));
+    expect(c.endExclusive.isAfter(c.start), isTrue);
+    expect(cycleLengthDays(c), greaterThan(0));
+  });
+
+  test('payday 2: 2 Agu 2026 (Minggu) rollback, siklus tetap valid', () {
+    final c = currentCycle(DateTime(2026, 8, 2), payday: 2);
+    expect(c.endExclusive.isAfter(c.start), isTrue);
+  });
+}
+
 void main() {
   group('resolvePayday', () {
     test('returns the target day when it is a weekday', () {
@@ -39,6 +55,8 @@ void main() {
   });
 
   group('currentCycle', () {
+    _paydayEdgeTests();
+
     test('uses this-month payday when now is on/after it', () {
       // Now = 5 Oct 2025; payday = 30. Sept 30 2025 = Tue → cycle starts Sept 30.
       final cycle = currentCycle(DateTime(2025, 10, 5), payday: 30);

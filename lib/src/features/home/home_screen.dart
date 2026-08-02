@@ -12,6 +12,7 @@ import '../../core/net_worth.dart';
 import '../../core/payday.dart';
 import '../../core/providers.dart';
 import '../../core/recurring_runner.dart';
+import '../../core/reminder_times.dart';
 import '../../core/safe_to_spend.dart';
 import '../../core/streak.dart';
 import '../../theme.dart';
@@ -200,7 +201,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               .where((o) => !o.isDebt)
               .fold<int>(0, (a, o) => a + o.monthly);
           final obligationsMonthly = debtMonthly + nonDebtMonthly;
-          final obligationsPrincipal = activeObligations
+          // Semua obligation utang, termasuk yang tenornya tamat — pokok
+          // positif tetap utang riil sampai user menolkannya.
+          final obligationsPrincipal = obligations
               .where((o) => o.isDebt)
               .fold<int>(0, (a, o) => a + (o.outstandingPrincipal ?? 0));
           final invTotal =
@@ -260,7 +263,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               incomeThisCycle: income,
               monthlyBudget: household.monthlyBudgetTotal,
               savingsBalance: assets.savingsBalance,
-              cardDebt: assets.cardDebt,
+              cardDebt: assets.cardDebt + obligationsPrincipal,
               avgMonthlySpend: avgPrev,
               investmentCount: investments
                   .where((i) => i.currentValue > 0)
@@ -273,8 +276,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 if (c.used > 0)
                   DueBanner(cardLabel: c.label, daysUntil: d, used: c.used),
             for (final o in activeObligations)
-              if (daysUntilDue(dueDay: o.dueDay, now: now) case final d?)
-                DueBanner(cardLabel: o.label, daysUntil: d, used: o.monthly),
+              if (!o.paidForMonth(nextCardDueDate(o.dueDay, now)))
+                if (daysUntilDue(dueDay: o.dueDay, now: now) case final d?)
+                  DueBanner(cardLabel: o.label, daysUntil: d, used: o.monthly),
           ];
           final streak = ref.watch(recordingStreakProvider);
 
@@ -346,8 +350,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             disposable: debtSummary.disposable,
           );
 
+          // Budget dibatasi uang siap pakai: kalau budget yang diketik lebih
+          // besar dari gaji − cicilan, sisanya tidak nyata untuk dibelanjakan.
+          final hasCommitments = debtSummary.totalMonthlyDebt > 0 ||
+              nonDebtMonthly > 0;
+          final effectiveBudget = hasCommitments && stableGaji > 0
+              ? (household.monthlyBudgetTotal < debtSummary.disposable
+                      ? household.monthlyBudgetTotal
+                      : debtSummary.disposable) +
+                  carryTotal
+              : budgetTotal;
           final sts = safeToSpend(
-            totalBudget: budgetTotal,
+            totalBudget: effectiveBudget,
             spent: totalSpentValue,
             daysLeft: daysLeftCycle,
           );
@@ -425,7 +439,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ),
                       index: 2 + dueBanners.length,
                     )
-                  else if (overcommit > 0 && obligationsMonthly > 0)
+                  else if (overcommit > 0 && hasCommitments)
                     section(
                       AlertBand(
                         icon: Icons.warning_amber_rounded,

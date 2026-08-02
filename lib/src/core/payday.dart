@@ -31,7 +31,15 @@ DateTime resolvePayday(int year, int month, int day) {
   final start = !now.isBefore(thisMonthPayday)
       ? thisMonthPayday
       : resolvePayday(now.year, now.month - 1, payday);
-  final endExclusive = resolvePayday(start.year, start.month + 1, payday);
+  // Payday 1-2 + weekend rollback bisa membuat payday bulan berikutnya
+  // jatuh di tanggal yang sama dengan start (siklus 0 hari) — maju terus
+  // sampai benar-benar lewat start.
+  var m = 1;
+  var endExclusive = resolvePayday(start.year, start.month + m, payday);
+  while (!endExclusive.isAfter(start)) {
+    m++;
+    endExclusive = resolvePayday(start.year, start.month + m, payday);
+  }
   return (start: start, endExclusive: endExclusive);
 }
 

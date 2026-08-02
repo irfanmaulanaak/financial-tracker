@@ -122,7 +122,7 @@ class _MoneyDateScreenState extends ConsumerState<MoneyDateScreen> {
               amount: e.amount,
             ),
         for (final o in ref.watch(obligationsProvider).value ?? const [])
-          if (!o.isComplete)
+          if (!o.isComplete && !o.paidForMonth(nextCardDueDate(o.dueDay, now)))
             (
               title: o.label,
               nextDate: nextCardDueDate(o.dueDay, now),

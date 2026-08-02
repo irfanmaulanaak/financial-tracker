@@ -14,6 +14,7 @@ import '../expenses/expense_providers.dart';
 import '../household/household_providers.dart';
 import '../insights/insights_providers.dart';
 import '../investments/investments_repository.dart' show investmentsProvider;
+import '../obligations/obligation_repository.dart' show obligationsProvider;
 import 'widgets/health_findings.dart';
 import 'widgets/health_hero.dart';
 import 'widgets/health_recommendations.dart';
@@ -67,13 +68,17 @@ class HealthScreen extends ConsumerWidget {
       // True obligation (incl. unbilled cicilan), matching home/net worth.
       cards.map((c) => (limit: c.limit, used: c.outstanding)),
     );
+    final obligationsPrincipal =
+        (ref.watch(obligationsProvider).value ?? const [])
+            .where((o) => o.isDebt)
+            .fold<int>(0, (a, o) => a + (o.outstandingPrincipal ?? 0));
     final score = computeHealthScore(
       HealthScoreInputs(
         spendThisCycle: totalSpentValue,
         incomeThisCycle: income,
         monthlyBudget: household.monthlyBudgetTotal,
         savingsBalance: assets.savingsBalance,
-        cardDebt: assets.cardDebt,
+        cardDebt: assets.cardDebt + obligationsPrincipal,
         avgMonthlySpend: avgPrev,
         investmentCount:
             investments.where((i) => i.currentValue > 0).length,

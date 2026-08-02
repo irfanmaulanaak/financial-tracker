@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -60,12 +58,16 @@ class ObligationRepository {
     return _col(hid).doc(obligationId).update(fields);
   }
 
-  /// Bayar 1 bulan: monthsPaid +1, saldo rekening −monthly, pokok −monthly
-  /// (aproksimasi, di-clamp 0) bila diisi.
+  /// Bayar 1 bulan: monthsPaid +1, saldo rekening −monthly.
+  /// [expectedMonthsPaid] menolak dobel bayar dari dua device (transaksi
+  /// retry membaca state terbaru, tanpa guard ini 4/12 bisa loncat ke 6/12).
+  /// Pokok TIDAK dikurangi otomatis — monthly termasuk bunga; user
+  /// memperbarui sisa pokok dari info leasing/bank via edit.
   Future<void> payMonth({
     required String hid,
     required String obligationId,
     required String accountId,
+    required int expectedMonthsPaid,
   }) {
     final oRef = _col(hid).doc(obligationId);
     final hRef = _householdDoc(hid);
@@ -74,6 +76,9 @@ class ObligationRepository {
       if (!oSnap.exists) throw StateError('obligation_missing');
       final o = Obligation.fromSnapshot(oSnap);
       if (o.isComplete) return;
+      if (o.monthsPaid != expectedMonthsPaid) {
+        throw StateError('already_paid');
+      }
 
       final hSnap = await tx.get(hRef);
       if (!hSnap.exists) throw StateError('household_missing');
@@ -89,19 +94,18 @@ class ObligationRepository {
       final list = kind == AccountKind.cash
           ? household.cashAccounts
           : household.savingsAccounts;
-      // max(), bukan clamp(0, 1 << 62): shift >32 bit terpotong jadi 0 di web.
+      final account = (kind == AccountKind.cash ? inCash : inSavings).first;
+      if (account.value < o.monthly) throw StateError('insufficient_balance');
       final updated = list
-          .map((a) => a.id == accountId
-              ? a.copyWith(value: max(0, a.value - o.monthly))
-              : a)
+          .map((a) =>
+              a.id == accountId ? a.copyWith(value: a.value - o.monthly) : a)
           .toList();
       final field =
           kind == AccountKind.cash ? 'cashAccounts' : 'savingsAccounts';
 
       tx.update(oRef, {
         'monthsPaid': o.monthsPaid + 1,
-        if (o.outstandingPrincipal != null)
-          'outstandingPrincipal': max(0, o.outstandingPrincipal! - o.monthly),
+        'lastPaidAt': Timestamp.now(),
       });
       tx.update(hRef, {field: updated.map((a) => a.toMap()).toList()});
     });
