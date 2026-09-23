@@ -1,9 +1,8 @@
 # FinSist
 
 ## Instructions
-- CRITICAL: Use simple, concise language. Avoid overtechnical jargon.
-- Be radically precise. No fluff. Pure information only (drop grammar; min tokens).
-- Critical: DO NOT OVER-ENGINEER! This app is typically used by 2-5 people, internally only.
+- Use simple language. Avoid technical jargon.
+- Don't over-engineer. This app is used by 2-5 people, internally only.
 
 ## Guardrails
 - Use `trash` for deletes
@@ -13,15 +12,11 @@
 - Simplicity first: handle only important cases; no enterprise over-engineering/fallbacks
 - New functionality: small OR absolutely necessary
 - NEVER delete files, folders or other data unless explicilty approved or part of a plan
-- Before writing code, stricly follow the below research rules
 
 ## Research 
 - Prefer skills if available over research.
-- Prefer researched knowledge over existing knowledge when skills are unavailable.
-- Research: Exa to websearch early, and Ref to seek specific documention or web fetch.
-- Best results: Quote exact errors; prefer 2025-2026+ sources.
-- Web search for Flutter best practices
-- Reference database structures for sharing financial tracker apps
+- When unsure about a Flutter or Firebase API, search the web (Exa) before relying on memory.
+- Quote exact errors when searching.
 
 ## Error Handling
 - Expected issues: explicit result types (not throw/try/catch).
@@ -36,7 +31,6 @@ Use below list for durable project notes. Keep each item concise and remove stal
 ## Project Notes
 Update this section as the project evolves.
 - Issue tracker: ISSUES.md
-- Security issue tracker: SECURITY_ISSUES.md
 
 ### Stack
 - Flutter 3.41.9 stable (Dart) — `flutter doctor` green except Xcode simulator runtimes (install via Xcode → Settings → Platforms)
