@@ -73,22 +73,30 @@ class AlertBand extends StatelessWidget {
   Widget build(BuildContext context) {
     final band = Container(
       margin: const EdgeInsets.fromLTRB(22, 0, 22, 10),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      padding: const EdgeInsets.fromLTRB(12, 10, 14, 10),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.26), width: 0.5),
+        color: FtColors.surface,
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
         children: [
-          Icon(icon, color: color, size: 18),
-          const SizedBox(width: 8),
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: FtColors.tileFor(color),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: color, size: 18),
+          ),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
               text,
               style: TextStyle(
-                color: color,
-                fontSize: 12,
+                color: FtColors.ink,
+                fontSize: 13,
+                height: 1.35,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -98,14 +106,12 @@ class AlertBand extends StatelessWidget {
             Text(
               actionLabel!,
               style: TextStyle(
-                color: color,
-                fontSize: 11.5,
+                color: FtColors.clay,
+                fontSize: 13,
                 fontWeight: FontWeight.w700,
-                decoration: TextDecoration.underline,
-                decorationColor: color,
               ),
             ),
-            Icon(Icons.chevron_right_rounded, color: color, size: 16),
+            Icon(Icons.chevron_right_rounded, color: FtColors.clay, size: 18),
           ],
         ],
       ),

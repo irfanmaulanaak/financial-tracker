@@ -74,22 +74,34 @@ class _DailyInsightLineState extends State<DailyInsightLine> {
   Widget build(BuildContext context) {
     final text = _text;
     if (text == null) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(26, 0, 26, 10),
+    return Container(
+      margin: const EdgeInsets.fromLTRB(22, 0, 22, 16),
+      padding: const EdgeInsets.fromLTRB(14, 12, 16, 12),
+      decoration: BoxDecoration(
+        color: FtColors.surface,
+        borderRadius: BorderRadius.circular(20),
+      ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.tips_and_updates_outlined,
-              size: 14, color: FtColors.ochre),
-          const SizedBox(width: 8),
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: FtColors.tileFor(FtColors.catTransport),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(Icons.lightbulb_outline_rounded,
+                size: 18, color: FtColors.sage),
+          ),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
               text,
               style: TextStyle(
-                color: FtColors.ink2,
-                fontSize: 12,
-                height: 1.45,
-                fontStyle: FontStyle.italic,
+                color: FtColors.ink,
+                fontSize: 13.5,
+                height: 1.4,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ),

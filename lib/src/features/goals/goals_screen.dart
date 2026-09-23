@@ -18,6 +18,7 @@ import 'goal.dart';
 import 'goal_repository.dart';
 import 'widgets/goal_card.dart';
 import 'widgets/goal_funding_sheet.dart';
+import '../accounts/widgets/aset_tujuan_switch.dart';
 
 final goalsProvider = StreamProvider.family<List<Goal>, String>((ref, hid) {
   return ref.watch(goalRepositoryProvider).watchAll(hid);
@@ -96,12 +97,14 @@ class GoalsScreen extends ConsumerWidget {
               ),
               children: [
                 FtSubHeader(
-                  title: 'Tujuan',
+                  title: 'Aset',
+                  isTab: true,
                   trailing: FtAddButton(
                     tooltip: 'Tujuan baru',
                     onTap: () => context.push('/goals/new'),
                   ),
                 ),
+                const AsetTujuanSwitch(goalsActive: true),
                 FtCard(
                   margin: const EdgeInsets.fromLTRB(22, 4, 22, 18),
                   child: Column(

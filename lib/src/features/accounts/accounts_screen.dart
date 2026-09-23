@@ -13,6 +13,7 @@ import 'account.dart';
 import 'accounts_repository.dart';
 import 'widgets/account_edit_sheet.dart';
 import 'widgets/alokasi_tab.dart';
+import 'widgets/aset_tujuan_switch.dart';
 import 'widgets/assets_hero.dart';
 import 'widgets/cash_tab.dart';
 import 'widgets/investasi_list.dart';
@@ -66,7 +67,8 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen>
         current: FtTab.assets,
         child: Column(
           children: [
-            const FtSubHeader(title: 'Aset'),
+            const FtSubHeader(title: 'Aset', isTab: true),
+            const AsetTujuanSwitch(goalsActive: false),
             AssetsHero(
               cash: cashTotal,
               savings: savingsTotal,

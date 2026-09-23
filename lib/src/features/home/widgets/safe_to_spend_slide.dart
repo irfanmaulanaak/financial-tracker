@@ -29,14 +29,19 @@ class SafeToSpendSlide extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final over = hasBudget && remaining <= 0;
-    final tint = over ? FtColors.danger : FtColors.moss;
+    // Always on the peach hero fill, so colors are fixed (both themes).
+    const ink = FtColors.onPeach;
+    final ink2 = ink.withValues(alpha: 0.78);
+    final ink3 = ink.withValues(alpha: 0.62);
+    final tint = over ? const Color(0xFFA02631) : ink;
 
     return FtCard(
+      backgroundColor: FtColors.peach,
       onTap: () => context.push('/spend'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Eyebrow('Aman dibelanjakan'),
+          Eyebrow('Aman dibelanjakan', color: ink2),
           Expanded(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -48,13 +53,13 @@ class SafeToSpendSlide extends StatelessWidget {
                     style: Theme.of(context)
                         .textTheme
                         .headlineLarge
-                        ?.copyWith(fontSize: 24),
+                        ?.copyWith(fontSize: 24, color: ink),
                   ),
                   const SizedBox(height: 6),
                   Text(
                     'Setelah ada budget, angka "aman dibelanjakan per hari" muncul di sini. Tap untuk mulai.',
                     style: TextStyle(
-                        color: FtColors.ink3, fontSize: 12, height: 1.45),
+                        color: ink3, fontSize: 12, height: 1.45),
                   ),
                 ] else if (over) ...[
                   Text(
@@ -62,14 +67,14 @@ class SafeToSpendSlide extends StatelessWidget {
                     style: Theme.of(context)
                         .textTheme
                         .headlineLarge
-                        ?.copyWith(fontSize: 34, color: tint),
+                        ?.copyWith(fontSize: 38, color: tint),
                   ),
                   const SizedBox(height: 6),
                   Text(
                     'Anggaran siklus ini sudah terpakai '
                     '${Money.compact(-remaining)} lebih. Geser anggaran atau tahan dulu. Gajian ${Dates.dayMonth(nextPayday)}.',
                     style: TextStyle(
-                        color: FtColors.ink2, fontSize: 12, height: 1.45),
+                        color: ink2, fontSize: 12, height: 1.45),
                   ),
                 ] else ...[
                   Row(
@@ -83,7 +88,7 @@ class SafeToSpendSlide extends StatelessWidget {
                             style: Theme.of(context)
                                 .textTheme
                                 .headlineLarge
-                                ?.copyWith(fontSize: 34, color: tint),
+                                ?.copyWith(fontSize: 38, color: tint),
                           ),
                         ),
                       ),
@@ -92,7 +97,7 @@ class SafeToSpendSlide extends StatelessWidget {
                         child: Text(
                           '/hari',
                           style:
-                              TextStyle(color: FtColors.ink3, fontSize: 13),
+                              TextStyle(color: ink3, fontSize: 13),
                         ),
                       ),
                     ],
@@ -102,7 +107,7 @@ class SafeToSpendSlide extends StatelessWidget {
                   Text(
                     '= sisa anggaran ${Money.compact(remaining)} ÷ $daysLeft hari sampai gajian (${Dates.dayMonth(nextPayday)})',
                     style: TextStyle(
-                        color: FtColors.ink3, fontSize: 11.5, height: 1.4),
+                        color: ink3, fontSize: 11.5, height: 1.4),
                   ),
                 ],
               ],
@@ -111,11 +116,11 @@ class SafeToSpendSlide extends StatelessWidget {
           Row(
             children: [
               Icon(Icons.pie_chart_outline_rounded,
-                  size: 13, color: FtColors.ink4),
+                  size: 13, color: ink3),
               const SizedBox(width: 6),
               Text(
                 'Tap untuk rincian per kategori',
-                style: TextStyle(color: FtColors.ink4, fontSize: 10.5),
+                style: TextStyle(color: ink3, fontSize: 10.5),
               ),
             ],
           ),

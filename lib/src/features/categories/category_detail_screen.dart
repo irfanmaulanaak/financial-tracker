@@ -483,7 +483,6 @@ class _MiniStat extends StatelessWidget {
           style: TextStyle(
             color: valueColor ?? FtColors.ink,
             fontSize: 20,
-            fontFamily: 'Geist',
             fontFeatures: const [FontFeature.tabularFigures()],
             letterSpacing: -0.3,
           ),

@@ -28,12 +28,12 @@ class CategoryGrid extends StatelessWidget {
     return Column(
       children: [
         FtSectionHeader(
-          title: 'Pengeluaran Siklus Ini',
+          title: 'Pengeluaran siklus ini',
           actionLabel: 'Lihat semua',
           onAction: onTap,
         ),
-        FtCard(
-          margin: const EdgeInsets.fromLTRB(22, 0, 22, 16),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(22, 0, 22, 16),
           child: GridView.count(
             crossAxisCount: context.isAtLeastExpanded
                 ? 4
@@ -42,17 +42,20 @@ class CategoryGrid extends StatelessWidget {
                     : 2,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
             // 1.45 left cells ~1px short of the content's min height at
             // some widths (debug "BOTTOM OVERFLOWED BY 0.8 PIXELS" stripes).
-            childAspectRatio: 1.38,
+            childAspectRatio: 1.25,
             children: [
-              for (final c in categories)
-                _CategoryCell(
-                  category: c,
-                  spent: totals[c.id] ?? 0,
-                  carry: carries[c.id] ?? 0,
+              for (var i = 0; i < categories.length; i++)
+                FtListReveal(
+                  index: i,
+                  child: _CategoryCell(
+                    category: categories[i],
+                    spent: totals[categories[i].id] ?? 0,
+                    carry: carries[categories[i].id] ?? 0,
+                  ),
                 ),
             ],
           ),
@@ -79,11 +82,10 @@ class _CategoryCell extends StatelessWidget {
     final budget = category.monthlyBudget + carry;
     final pct = budget > 0 ? (spent / budget * 100).round() : 0;
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: FtColors.surfaceAlt,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: FtColors.line, width: 0.5),
+        color: FtColors.tileFor(color),
+        borderRadius: BorderRadius.circular(22),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -98,9 +100,9 @@ class _CategoryCell extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: FtColors.ink2,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 11,
+                    color: FtColors.ink,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12.5,
                   ),
                 ),
               ),
@@ -111,21 +113,21 @@ class _CategoryCell extends StatelessWidget {
             compactMoney(spent),
             style: TextStyle(
               color: FtColors.ink,
-              fontWeight: FontWeight.w700,
-              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              fontSize: 16,
             ),
           ),
           const SizedBox(height: 8),
           FtProgressBar(
-            value: spent,
+            // No budget: empty track (not a full "over budget" bar).
+            value: budget > 0 ? spent : 0,
             max: budget <= 0 ? 1 : budget,
-            color: ftProgressColor(
-              spent,
-              budget,
-              dangerWhenOver: true,
-            ),
+            color: budget > 0 && spent > budget
+                ? FtColors.danger
+                : FtColors.ink,
             overflowColor: FtColors.danger,
-            height: 3,
+            trackColor: FtColors.surface.withValues(alpha: 0.7),
+            height: 8,
           ),
           const SizedBox(height: 5),
           Text(
@@ -133,8 +135,9 @@ class _CategoryCell extends StatelessWidget {
             style: TextStyle(
               color: budget > 0 && spent > budget
                   ? FtColors.danger
-                  : FtColors.ink3,
-              fontSize: 10,
+                  : FtColors.ink2,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],

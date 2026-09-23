@@ -9,7 +9,7 @@ import 'ft_motion.dart';
 import 'ft_ui.dart' show FtTab;
 
 /// Wide-screen counterpart to `FtBottomNav` — vertical side rail with the
-/// same five destinations. Used by `FtAppChrome` on `medium`+ breakpoints.
+/// same four destinations. Used by `FtAppChrome` on `medium`+ breakpoints.
 class FtSideNav extends StatelessWidget {
   const FtSideNav({super.key, required this.current});
 
@@ -21,14 +21,14 @@ class FtSideNav extends StatelessWidget {
       _SideItem(FtTab.home, Icons.home_rounded, Icons.home_outlined,
           'Beranda', '/home'),
       _SideItem(FtTab.spend, Icons.donut_large_rounded,
-          Icons.donut_large_outlined, 'Pengeluaran', '/spend'),
-      _SideItem(FtTab.assets, Icons.pie_chart_rounded,
-          Icons.pie_chart_outline_rounded, 'Aset', '/accounts'),
-      _SideItem(FtTab.goals, Icons.flag_rounded, Icons.flag_outlined,
-          'Tujuan', '/goals'),
+          Icons.donut_large_outlined, 'Belanja', '/spend'),
       _SideItem(FtTab.cards, Icons.credit_card_rounded,
           Icons.credit_card_outlined, 'Utang', '/cards'),
+      _SideItem(FtTab.assets, Icons.pie_chart_rounded,
+          Icons.pie_chart_outline_rounded, 'Aset', '/accounts'),
     ];
+    // Tujuan lives behind Aset (Aset | Tujuan switch), same as the pill nav.
+    final effective = current == FtTab.goals ? FtTab.assets : current;
 
     final extended = context.isAtLeastExpanded;
     return SafeArea(
@@ -57,7 +57,7 @@ class FtSideNav extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 3),
                   child: _SideButton(
                     item: item,
-                    active: current == item.tab,
+                    active: effective == item.tab,
                     extended: extended,
                   ),
                 ),

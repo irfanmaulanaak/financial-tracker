@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Warm editorial palette. Supports both light and dark modes via a static
+/// Warm "Ceria keluarga" palette. Supports both light and dark modes via a static
 /// brightness toggle so existing widgets don't need to change.
 class FtColors {
   static Brightness _brightness = Brightness.light;
@@ -16,46 +16,63 @@ class FtColors {
   static void setLiquid(bool on) => _liquid = on;
   static bool get liquid => _liquid;
 
-  // Backgrounds & surfaces
-  static Color get bg => _dark ? const Color(0xFF0F0E0B) : const Color(0xFFF1EDE4);
-  static Color get bgAlt => _dark ? const Color(0xFF14130F) : const Color(0xFFE9E4D7);
-  static Color get surface => _dark ? const Color(0xFF191813) : const Color(0xFFFBF8F1);
-  static Color get surfaceAlt => _dark ? const Color(0xFF1F1D17) : const Color(0xFFF6F2E8);
+  // Backgrounds & surfaces. "Ceria keluarga" palette (Sep 2026): cream
+  // canvas + white cards in light, warm cocoa in dark.
+  static Color get bg => _dark ? const Color(0xFF15110E) : const Color(0xFFFFF6EC);
+  static Color get bgAlt => _dark ? const Color(0xFF1A1512) : const Color(0xFFF7EADB);
+  static Color get surface => _dark ? const Color(0xFF211B17) : const Color(0xFFFFFFFF);
+  static Color get surfaceAlt => _dark ? const Color(0xFF2A221D) : const Color(0xFFFBF1E6);
 
   // Text
-  static Color get ink => _dark ? const Color(0xFFf1ede4) : const Color(0xFF1A1814);
-  static Color get ink2 => _dark ? const Color(0xFFc8c0b0) : const Color(0xFF4B463D);
-  static Color get ink3 => _dark ? const Color(0xFF8a8272) : const Color(0xFF807868);
-  static Color get ink4 => _dark ? const Color(0xFF56514a) : const Color(0xFFB8B0A0);
+  static Color get ink => _dark ? const Color(0xFFF6ECE4) : const Color(0xFF2A160C);
+  static Color get ink2 => _dark ? const Color(0xFFD9C8BC) : const Color(0xFF5A4033);
+  static Color get ink3 => _dark ? const Color(0xFFB39E90) : const Color(0xFF7A5A48);
+  static Color get ink4 => _dark ? const Color(0xFF6E5E54) : const Color(0xFFB8A294);
 
   // Lines
-  static Color get line => _dark ? const Color(0x14f1ede4) : const Color(0x141A1814);
-  static Color get lineStrong => _dark ? const Color(0x29f1ede4) : const Color(0x291A1814);
+  static Color get line => _dark ? const Color(0x14F6ECE4) : const Color(0x142A160C);
+  static Color get lineStrong => _dark ? const Color(0x29F6ECE4) : const Color(0x292A160C);
 
-  // Accents
-  static Color get clay => _dark ? const Color(0xFFe08a4a) : const Color(0xFFC4612A);
-  static Color get sage => _dark ? const Color(0xFF8aab92) : const Color(0xFF5E7A64);
-  static Color get moss => _dark ? const Color(0xFF6ea088) : const Color(0xFF2D5040);
-  static Color get plum => _dark ? const Color(0xFFb56f80) : const Color(0xFF7A3F4E);
-  static Color get ochre => _dark ? const Color(0xFFd4ab55) : const Color(0xFFB89030);
-  static Color get danger => _dark ? const Color(0xFFd56a6a) : const Color(0xFF9A2F2F);
-  static Color get sky => _dark ? const Color(0xFF7aa3bd) : const Color(0xFF3A6075);
+  // Accents. `clay` stays the single action accent (links, selection).
+  static Color get clay => _dark ? const Color(0xFFFFB38A) : const Color(0xFFB8431F);
+  static Color get sage => _dark ? const Color(0xFF9FD8B5) : const Color(0xFF2E6B46);
+  static Color get moss => _dark ? const Color(0xFF7FC4A0) : const Color(0xFF235A3E);
+  static Color get plum => _dark ? const Color(0xFFF29AA5) : const Color(0xFFA02631);
+  static Color get ochre => _dark ? const Color(0xFFE6D48E) : const Color(0xFF9A7A12);
+  static Color get danger => _dark ? const Color(0xFFF29AA5) : const Color(0xFFA02631);
+  static Color get sky => _dark ? const Color(0xFFB9C8FF) : const Color(0xFF3A5BA8);
   static Color get blush => _dark ? const Color(0xFFE8A8B8) : const Color(0xFFE8B4C0);
 
-  // Health
-  static Color get healthOk => _dark ? const Color(0xFF8aab92) : const Color(0xFF5E7A64);
-  static Color get healthWarn => _dark ? const Color(0xFFd4ab55) : const Color(0xFFB89030);
-  static Color get healthBad => _dark ? const Color(0xFFd56a6a) : const Color(0xFF9A2F2F);
+  /// Hero fill (safe-to-spend, debt total). Text on it is always [onPeach].
+  static const Color peach = Color(0xFFFFB38A);
+  static const Color onPeach = Color(0xFF2A160C);
 
-  // Category palette (used by donut + category chips). Light/dark pairs taken
-  // from `claude-design/design/theme.jsx`.
-  static Color get catFood => _dark ? const Color(0xFFe08a4a) : const Color(0xFFC4612A);
-  static Color get catTransport => _dark ? const Color(0xFF8aab92) : const Color(0xFF5E7A64);
-  static Color get catBills => _dark ? const Color(0xFFd4ab55) : const Color(0xFFB89030);
-  static Color get catShopping => _dark ? const Color(0xFFb56f80) : const Color(0xFF7A3F4E);
-  static Color get catEntertainment => _dark ? const Color(0xFF7aa3bd) : const Color(0xFF3A6075);
-  static Color get catHealth => _dark ? const Color(0xFF6ea088) : const Color(0xFF2D5040);
-  static Color get catOther => _dark ? const Color(0xFF807668) : const Color(0xFFA89880);
+  /// Floating pill nav: latte bar in light, cocoa bar in dark.
+  static Color get navBar => _dark ? const Color(0xFF241D18) : const Color(0xFFE6CFBA);
+  static Color get navActive => _dark ? const Color(0xFF3A2E25) : const Color(0xFFFFF6EC);
+  static Color get navActiveInk => _dark ? const Color(0xFFFFB38A) : const Color(0xFF7A4A30);
+  static Color get navIcon => _dark ? const Color(0xFFB39E90) : const Color(0xFF6B4A38);
+  static Color get fab => _dark ? const Color(0xFFFFB38A) : const Color(0xFF7A4A30);
+  static Color get onFab => _dark ? const Color(0xFF2A160C) : const Color(0xFFFFF6EC);
+
+  // Health
+  static Color get healthOk => sage;
+  static Color get healthWarn => ochre;
+  static Color get healthBad => danger;
+
+  // Category palette (donut, dots, icons).
+  static Color get catFood => _dark ? const Color(0xFFFFB38A) : const Color(0xFFD9692F);
+  static Color get catTransport => _dark ? const Color(0xFF9FD8B5) : const Color(0xFF3F8A5C);
+  static Color get catBills => _dark ? const Color(0xFFE6D48E) : const Color(0xFFB8900F);
+  static Color get catShopping => _dark ? const Color(0xFFF29AA5) : const Color(0xFFC94A5E);
+  static Color get catEntertainment => _dark ? const Color(0xFFB9C8FF) : const Color(0xFF5B7FD6);
+  static Color get catHealth => _dark ? const Color(0xFF7FC4A0) : const Color(0xFF2F8A66);
+  static Color get catOther => _dark ? const Color(0xFFB39E90) : const Color(0xFFA08878);
+
+  /// Pastel tile behind a category (budget tiles, transaction icons).
+  static Color tileFor(Color cat) => _dark
+      ? Color.alphaBlend(cat.withValues(alpha: 0.18), surface)
+      : Color.alphaBlend(cat.withValues(alpha: 0.20), const Color(0xFFFFFFFF));
 }
 
 /// Marks every element dirty so the whole tree rebuilds on the next frame.
@@ -83,16 +100,16 @@ ThemeData buildTheme(Brightness brightness, {bool liquid = false}) {
   final scheme = ColorScheme(
     brightness: brightness,
     primary: FtColors.clay,
-    onPrimary: Colors.white,
-    primaryContainer: isDark ? const Color(0xFF3a2818) : const Color(0xFFE9D9C8),
+    onPrimary: isDark ? FtColors.onPeach : Colors.white,
+    primaryContainer: isDark ? const Color(0xFF3A2E25) : const Color(0xFFFFE1C7),
     onPrimaryContainer: FtColors.ink,
     secondary: FtColors.clay,
-    onSecondary: Colors.white,
-    secondaryContainer: isDark ? const Color(0xFF3a2818) : const Color(0xFFE9D9C8),
+    onSecondary: isDark ? FtColors.onPeach : Colors.white,
+    secondaryContainer: isDark ? const Color(0xFF3A2E25) : const Color(0xFFFFE1C7),
     onSecondaryContainer: FtColors.ink,
     tertiary: FtColors.clay,
-    onTertiary: Colors.white,
-    tertiaryContainer: isDark ? const Color(0xFF3a2818) : const Color(0xFFE9D9C8),
+    onTertiary: isDark ? FtColors.onPeach : Colors.white,
+    tertiaryContainer: isDark ? const Color(0xFF3A2E25) : const Color(0xFFFFE1C7),
     onTertiaryContainer: FtColors.ink,
     error: FtColors.danger,
     onError: Colors.white,
@@ -106,28 +123,28 @@ ThemeData buildTheme(Brightness brightness, {bool liquid = false}) {
     outlineVariant: FtColors.line,
   );
 
-  final sans = GoogleFonts.geistTextTheme();
+  final sans = GoogleFonts.plusJakartaSansTextTheme();
   TextStyle? tabular(TextStyle? style) => style?.copyWith(
         fontFeatures: const [FontFeature.tabularFigures()],
       );
 
   final textTheme = sans.copyWith(
     displayLarge: tabular(sans.displayLarge)?.copyWith(
-        color: FtColors.ink, fontWeight: FontWeight.w600, letterSpacing: -1.5),
+        color: FtColors.ink, fontWeight: FontWeight.w800, letterSpacing: -1.5),
     displayMedium: tabular(sans.displayMedium)?.copyWith(
-        color: FtColors.ink, fontWeight: FontWeight.w600, letterSpacing: -1.0),
+        color: FtColors.ink, fontWeight: FontWeight.w800, letterSpacing: -1.0),
     displaySmall: tabular(sans.displaySmall)?.copyWith(
-        color: FtColors.ink, fontWeight: FontWeight.w600, letterSpacing: -0.5),
+        color: FtColors.ink, fontWeight: FontWeight.w800, letterSpacing: -0.5),
     headlineLarge: tabular(sans.headlineLarge)?.copyWith(
-        color: FtColors.ink, fontWeight: FontWeight.w500, letterSpacing: -0.5),
+        color: FtColors.ink, fontWeight: FontWeight.w700, letterSpacing: -0.5),
     headlineMedium: tabular(sans.headlineMedium)?.copyWith(
-        color: FtColors.ink, fontWeight: FontWeight.w500, letterSpacing: -0.3),
+        color: FtColors.ink, fontWeight: FontWeight.w700, letterSpacing: -0.3),
     headlineSmall: tabular(sans.headlineSmall)?.copyWith(
-        color: FtColors.ink, fontWeight: FontWeight.w500, letterSpacing: -0.3),
+        color: FtColors.ink, fontWeight: FontWeight.w700, letterSpacing: -0.3),
     titleLarge: tabular(sans.titleLarge)?.copyWith(
-        color: FtColors.ink, fontWeight: FontWeight.w500),
+        color: FtColors.ink, fontWeight: FontWeight.w700),
     titleMedium: tabular(sans.titleMedium)?.copyWith(
-        color: FtColors.ink, fontWeight: FontWeight.w500),
+        color: FtColors.ink, fontWeight: FontWeight.w600),
     titleSmall: tabular(sans.titleSmall),
     bodyLarge: tabular(sans.bodyLarge)?.copyWith(color: FtColors.ink2),
     bodyMedium: tabular(sans.bodyMedium)?.copyWith(color: FtColors.ink2),
@@ -191,7 +208,7 @@ ThemeData buildTheme(Brightness brightness, {bool liquid = false}) {
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(22),
         side: BorderSide(color: FtColors.line, width: 0.5),
       ),
     ),
@@ -205,23 +222,23 @@ ThemeData buildTheme(Brightness brightness, {bool liquid = false}) {
       fillColor: FtColors.surface,
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         borderSide: BorderSide(color: FtColors.line, width: 0.5),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         borderSide: BorderSide(color: FtColors.line, width: 0.5),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         borderSide: BorderSide(color: FtColors.ink, width: 1),
       ),
       errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         borderSide: BorderSide(color: FtColors.danger, width: 0.5),
       ),
       focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         borderSide: BorderSide(color: FtColors.danger, width: 1),
       ),
       labelStyle: sans.bodyMedium?.copyWith(color: FtColors.ink3),
@@ -232,9 +249,9 @@ ThemeData buildTheme(Brightness brightness, {bool liquid = false}) {
         backgroundColor: FtColors.ink,
         foregroundColor: FtColors.bg,
         minimumSize: const Size.fromHeight(52),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: const StadiumBorder(),
         textStyle: sans.labelLarge
-            ?.copyWith(fontWeight: FontWeight.w500, fontSize: 14),
+            ?.copyWith(fontWeight: FontWeight.w700, fontSize: 14),
       ).copyWith(
         overlayColor: WidgetStateProperty.resolveWith((s) {
           if (s.contains(WidgetState.pressed)) {
@@ -254,7 +271,7 @@ ThemeData buildTheme(Brightness brightness, {bool liquid = false}) {
         backgroundColor: FtColors.surface,
         minimumSize: const Size.fromHeight(52),
         side: BorderSide(color: FtColors.lineStrong, width: 0.5),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         textStyle: sans.labelLarge
             ?.copyWith(fontWeight: FontWeight.w500, fontSize: 14),
       ).copyWith(
@@ -277,8 +294,8 @@ ThemeData buildTheme(Brightness brightness, {bool liquid = false}) {
       ),
     ),
     floatingActionButtonTheme: FloatingActionButtonThemeData(
-      backgroundColor: FtColors.ink,
-      foregroundColor: FtColors.bg,
+      backgroundColor: FtColors.fab,
+      foregroundColor: FtColors.onFab,
     ),
   );
 }
@@ -316,7 +333,7 @@ class _FtFadeUpTransitionsBuilder extends PageTransitionsBuilder {
   }
 }
 
-/// Small uppercase "eyebrow" label used above sections + form fields.
+/// Small "eyebrow" label used above sections + form fields.
 class Eyebrow extends StatelessWidget {
   const Eyebrow(this.text, {super.key, this.color});
   final String text;
@@ -325,12 +342,11 @@ class Eyebrow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Text(
-      text.toUpperCase(),
+      text,
       style: TextStyle(
-        fontSize: 10.5,
-        letterSpacing: 1.4,
+        fontSize: 13,
         color: color ?? FtColors.ink3,
-        fontWeight: FontWeight.w500,
+        fontWeight: FontWeight.w600,
       ),
     );
   }

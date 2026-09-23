@@ -48,7 +48,8 @@ class FtCard extends StatelessWidget {
     // Liquid: kartu jadi kaca versi lite — wallpaper terlihat menembus
     // (lensa prosedural, tanpa BackdropFilter per kartu yang mahal di list).
     // Kartu dengan backgroundColor eksplisit (aksen) tetap solid.
-    final liquid = FtColors.liquid &&
+    final liquid =
+        FtColors.liquid &&
         backgroundColor == null &&
         !MediaQuery.highContrastOf(context);
     final Widget card = liquid
@@ -79,24 +80,14 @@ class FtCard extends StatelessWidget {
             // Flat surface during flight — Material default forces an
             // opaque container which clashes with our cream theme.
             flightShuttleBuilder: (_, animation, _, _, _) {
-              return Material(
-                color: Colors.transparent,
-                child: card,
-              );
+              return Material(color: Colors.transparent, child: card);
             },
-            child: Material(
-              color: Colors.transparent,
-              child: card,
-            ),
+            child: Material(color: Colors.transparent, child: card),
           );
 
     final wrapped = onTap == null && onLongPress == null
         ? maybeHero
-        : FtTapScale(
-            onTap: onTap,
-            onLongPress: onLongPress,
-            child: maybeHero,
-          );
+        : FtTapScale(onTap: onTap, onLongPress: onLongPress, child: maybeHero);
 
     if (margin == null) return wrapped;
     return Padding(padding: margin!, child: wrapped);
@@ -121,7 +112,17 @@ class FtSectionHeader extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(22, 4, 22, 10),
       child: Row(
         children: [
-          Expanded(child: Eyebrow(title)),
+          Expanded(
+            child: Text(
+              title,
+              style: TextStyle(
+                color: FtColors.ink,
+                fontSize: 17,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.2,
+              ),
+            ),
+          ),
           if (actionLabel != null)
             TextButton(
               onPressed: onAction,
@@ -130,7 +131,14 @@ class FtSectionHeader extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
-              child: Text(actionLabel!, style: const TextStyle(fontSize: 11)),
+              child: Text(
+                actionLabel!,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: FtColors.clay,
+                ),
+              ),
             ),
         ],
       ),
@@ -138,18 +146,12 @@ class FtSectionHeader extends StatelessWidget {
   }
 }
 
-Color ftProgressColor(
-  num value,
-  num max, {
-  bool dangerWhenOver = false,
-}) {
+Color ftProgressColor(num value, num max, {bool dangerWhenOver = false}) {
   if (dangerWhenOver && max > 0 && value > max) {
     return FtColors.danger;
   }
   final ratio = max <= 0 ? 0.0 : value / max;
-  return ratio >= 0.8
-      ? FtColors.clay
-      : FtColors.clay.withValues(alpha: 0.55);
+  return ratio >= 0.8 ? FtColors.ink : FtColors.ink.withValues(alpha: 0.7);
 }
 
 class FtProgressBar extends StatelessWidget {
@@ -310,21 +312,13 @@ class FtStatItem extends StatelessWidget {
 
 /// Bottom inset for vertical scrollables hosted by [FtAppChrome].
 ///
-/// Clears the floating nav, the 56px action FAB, and device safe area.
-const double kFtFabClearance = 176;
+/// Clears the floating pill nav (64 + 22 gap) and device safe area.
+const double kFtFabClearance = 128;
 
-/// App chrome: keeps the floating bottom nav above the screen body, plus a
-/// separate "Catat Aktivitas" FAB hovering above the right side of the nav.
-/// App chrome: keeps the floating bottom nav above the screen body, plus a
-/// separate "Catat Aktivitas" FAB hovering above the right side of the nav.
-/// On `medium`+ breakpoints, switches the bottom nav for a side rail (FtSideNav)
-/// so wide-screen layouts don't waste vertical space on a pill that's mostly
-/// air on tablets/desktop.
-/// App chrome: keeps the floating bottom nav above the screen body, plus a
-/// separate "Catat Aktivitas" FAB hovering above the right side of the nav.
-/// On `medium`+ breakpoints, switches the bottom nav for a side rail (FtSideNav)
-/// and width-constrains the body via `FtPageContainer` so wide-screen layouts
-/// stay readable instead of stretching edge-to-edge.
+/// App chrome: keeps the floating pill nav above the screen body. The
+/// "Catat Aktivitas" button lives inside the pill on phones. On `medium`+
+/// breakpoints the pill becomes a side rail (FtSideNav) with a separate FAB,
+/// and the body is width-constrained via `FtPageContainer`.
 class FtAppChrome extends StatelessWidget {
   const FtAppChrome({
     super.key,
@@ -339,7 +333,7 @@ class FtAppChrome extends StatelessWidget {
   final Widget child;
   final bool showNav;
 
-  /// Hide the floating "+" on screens that already have a contextual entry
+  /// Hide the "+" on screens that already have a contextual entry
   /// (e.g. the dedicated record-expense/record-income screens).
   final bool showActionFab;
 
@@ -385,35 +379,28 @@ class FtAppChrome extends StatelessWidget {
             bottom: 0,
             child: SafeArea(
               top: false,
-              minimum: const EdgeInsets.only(bottom: 14),
+              minimum: const EdgeInsets.only(bottom: 22),
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-                child: FtBottomNav(current: current),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: FtBottomNav(current: current, showAction: showActionFab),
               ),
             ),
-          ),
-        if (showNav && showActionFab)
-          Positioned(
-            right: 16,
-            // Lift the FAB so it sits clearly above the nav pill while still
-            // overlapping its top edge — matches the floating-button feel.
-            bottom: MediaQuery.paddingOf(context).bottom + 78,
-            child: const _CatatAktivitasFab(),
           ),
       ],
     );
   }
 }
 
+/// Whether the current member may record anything (hides "+" for view-only).
+bool _canRecord(WidgetRef ref) =>
+    ref.watch(canRecordTxnProvider) || ref.watch(canWriteAllProvider);
+
 class _CatatAktivitasFab extends ConsumerWidget {
   const _CatatAktivitasFab();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Hide the FAB for view-only members — nothing to record from here.
-    if (!ref.watch(canRecordTxnProvider) && !ref.watch(canWriteAllProvider)) {
-      return const SizedBox.shrink();
-    }
+    if (!_canRecord(ref)) return const SizedBox.shrink();
     return FtTapScale(
       scale: 0.88,
       onTap: () => ActionChooserSheet.show(context),
@@ -421,23 +408,18 @@ class _CatatAktivitasFab extends ConsumerWidget {
         width: 56,
         height: 56,
         decoration: BoxDecoration(
-          color: FtColors.ink,
+          color: FtColors.fab,
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.25),
+              color: Colors.black.withValues(alpha: 0.18),
               blurRadius: 18,
               offset: const Offset(0, 6),
-            ),
-            BoxShadow(
-              color: FtColors.ink.withValues(alpha: 0.2),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
             ),
           ],
         ),
         alignment: Alignment.center,
-        child: Icon(Icons.add_rounded, size: 26, color: FtColors.bg),
+        child: Icon(Icons.add_rounded, size: 26, color: FtColors.onFab),
       ),
     );
   }
@@ -445,119 +427,117 @@ class _CatatAktivitasFab extends ConsumerWidget {
 
 enum FtTab { home, spend, assets, goals, cards }
 
-/// Floating glass-pill bottom nav with 5 evenly-spaced tabs. Mirrors the
-/// design's `TabBar` in `claude-design/app.jsx` — no central action button.
-/// Floating glass-pill bottom nav with 5 evenly-spaced tabs. Mirrors the
-/// design's `TabBar` in `claude-design/app.jsx` — no central action button.
-///
-/// The active state is a single floating pill that slides horizontally
-/// between tabs (280ms easeOutCubic) instead of each button toggling its
-/// own background, so tab switches read as a continuous flow.
-/// Floating glass-pill bottom nav with 5 evenly-spaced tabs. Mirrors the
-/// design's `TabBar` in `claude-design/app.jsx` — no central action button.
-///
-/// The active state is a single floating pill that slides horizontally
-/// between tabs (280ms easeOutCubic) instead of each button toggling its
-/// own background, so tab switches read as a continuous flow.
-class FtBottomNav extends StatelessWidget {
-  const FtBottomNav({super.key, required this.current});
+/// Floating pill bottom nav ("Gelap tenang" style): 4 tabs with the record
+/// button in the middle. The active tab grows into a chip with icon +
+/// label; the others are icon-only.
+class FtBottomNav extends ConsumerWidget {
+  const FtBottomNav({super.key, required this.current, this.showAction = true});
 
   final FtTab current;
 
+  /// Show the "+" record button inside the pill.
+  final bool showAction;
+
+  static const _items = [
+    _FtNavItem(
+      FtTab.home,
+      Icons.home_rounded,
+      Icons.home_outlined,
+      'Beranda',
+      '/home',
+    ),
+    _FtNavItem(
+      FtTab.spend,
+      Icons.donut_large_rounded,
+      Icons.donut_large_outlined,
+      'Belanja',
+      '/spend',
+    ),
+    _FtNavItem(
+      FtTab.cards,
+      Icons.credit_card_rounded,
+      Icons.credit_card_outlined,
+      'Utang',
+      '/cards',
+    ),
+    _FtNavItem(
+      FtTab.assets,
+      Icons.pie_chart_rounded,
+      Icons.pie_chart_outline_rounded,
+      'Aset',
+      '/accounts',
+    ),
+  ];
+
   @override
-  Widget build(BuildContext context) {
-    final width = MediaQuery.sizeOf(context).width;
-    final compact = width < 360;
-    final labelSize = compact ? 9.0 : 9.5;
-    final iconSize = compact ? 19.0 : 20.0;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final action = showAction && _canRecord(ref);
+    // Tujuan lives behind the Aset tab (Aset | Tujuan switch).
+    final effective = current == FtTab.goals ? FtTab.assets : current;
+    Widget side(List<_FtNavItem> items) => Expanded(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          for (final item in items)
+            if (item.tab == effective)
+              // May shrink (label scales down) on narrow phones or with
+              // large text, instead of overflowing the pill.
+              Flexible(child: _FtNavButton(item: item, active: true))
+            else
+              _FtNavButton(item: item, active: false),
+        ],
+      ),
+    );
 
-    final items = const [
-      _FtNavItem(FtTab.home, Icons.home_rounded, Icons.home_outlined,
-          'Beranda', '/home'),
-      _FtNavItem(FtTab.spend, Icons.donut_large_rounded,
-          Icons.donut_large_outlined, 'Pengeluaran', '/spend'),
-      _FtNavItem(FtTab.assets, Icons.pie_chart_rounded,
-          Icons.pie_chart_outline_rounded, 'Aset', '/accounts'),
-      _FtNavItem(FtTab.goals, Icons.flag_rounded, Icons.flag_outlined,
-          'Tujuan', '/goals'),
-      _FtNavItem(FtTab.cards, Icons.credit_card_rounded,
-          Icons.credit_card_outlined, 'Utang', '/cards'),
-    ];
-
-    final activeIndex = items.indexWhere((it) => it.tab == current);
-    // Maps the active index to a -1..1 range over `tabCount-1` cells, so the
-    // pill lands exactly under the active cell at every step.
-    final align = items.length <= 1
-        ? -1.0
-        : (activeIndex / (items.length - 1)) * 2 - 1;
-
-    final liquid = FtColors.liquid;
     return FtGlass(
-      borderRadius: BorderRadius.circular(28),
-      fallbackAlpha: 0.88,
-      fallbackBlurSigma: 18,
-      fallbackBorderColor: FtColors.lineStrong,
-      boxShadow: const [
+      borderRadius: BorderRadius.circular(32),
+      baseColor: FtColors.navBar,
+      fallbackBorderColor: FtColors.line,
+      boxShadow: [
         BoxShadow(
-          color: Color(0x1A000000),
-          blurRadius: 24,
-          offset: Offset(0, 8),
+          color: FtColors.navActiveInk.withValues(alpha: 0.18),
+          blurRadius: 26,
+          offset: const Offset(0, 10),
         ),
       ],
-      padding: const EdgeInsets.all(6),
+      padding: const EdgeInsets.all(8),
       sweep: true,
-      // IntrinsicHeight forces the Stack to size to the Row's natural
-      // height (icon + label + padding ≈ 48). Without it the Stack would
-      // try to be 0 high because the AnimatedAlign pill has no intrinsic
-      // height of its own.
-      child: IntrinsicHeight(
-        child: Stack(
+      child: SizedBox(
+        height: 48,
+        // Two tabs each side of the "+"; the "+" stays dead centre and the
+        // active chip only takes space from its own side.
+        child: Row(
           children: [
-            // Floating pill — fractionally 1/N wide so it lands under one
-            // cell regardless of available width. Positioned.fill gives
-            // it the full Stack to align within.
-            Positioned.fill(
-              child: AnimatedAlign(
-                // Liquid: spring dengan overshoot kecil biar pill terasa
-                // membal; klasik tetap easeOutCubic.
-                duration: Duration(milliseconds: liquid ? 420 : 280),
-                curve: liquid ? Curves.easeOutBack : Curves.easeOutCubic,
-                alignment: Alignment(align, 0),
-                child: FractionallySizedBox(
-                  widthFactor: 1.0 / items.length,
-                  heightFactor: 1.0,
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 2),
-                    decoration: BoxDecoration(
-                      color: liquid
-                          ? FtColors.bg.withValues(alpha: 0.78)
-                          : FtColors.bg,
-                      borderRadius: BorderRadius.circular(22),
-                      border: liquid
-                          ? Border.all(
-                              color: Colors.white.withValues(alpha: 0.35),
-                              width: 0.8,
-                            )
-                          : null,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            Row(
-              children: [
-                for (final item in items)
-                  Expanded(
-                    child: _FtNavButton(
-                      item: item,
-                      active: current == item.tab,
-                      labelSize: labelSize,
-                      iconSize: iconSize,
-                    ),
-                  ),
-              ],
-            ),
+            side(_items.sublist(0, 2)),
+            if (action) const _NavRecordButton(),
+            side(_items.sublist(2)),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NavRecordButton extends StatelessWidget {
+  const _NavRecordButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: 'Catat aktivitas',
+      child: FtTapScale(
+        scale: 0.88,
+        onTap: () => ActionChooserSheet.show(context),
+        child: Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: FtColors.fab,
+            shape: BoxShape.circle,
+          ),
+          alignment: Alignment.center,
+          child: Icon(Icons.add_rounded, size: 26, color: FtColors.onFab),
         ),
       ),
     );
@@ -565,73 +545,90 @@ class FtBottomNav extends StatelessWidget {
 }
 
 class _FtNavButton extends StatelessWidget {
-  const _FtNavButton({
-    required this.item,
-    required this.active,
-    required this.labelSize,
-    required this.iconSize,
-  });
+  const _FtNavButton({required this.item, required this.active});
 
   final _FtNavItem item;
   final bool active;
-  final double labelSize;
-  final double iconSize;
 
   @override
   Widget build(BuildContext context) {
-    return FtTapScale(
-      scale: 0.92,
-      haptic: false,
-      onTap: active
-          ? null
-          : () {
-              FtHaptics.select();
-              context.go(item.path);
-            },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 220),
-        curve: Curves.easeOutCubic,
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
-        // The active pill is now drawn by the parent Stack — leave the button
-        // background transparent so the slide animation isn't double-drawn.
-        decoration: const BoxDecoration(color: Colors.transparent),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 200),
-              transitionBuilder: (child, anim) =>
-                  FadeTransition(opacity: anim, child: child),
-              child: Icon(
-                active ? item.iconActive : item.icon,
-                key: ValueKey(active),
-                size: iconSize,
-                color: active ? FtColors.ink : FtColors.ink3,
-              ),
-            ),
-            const SizedBox(height: 3),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 2),
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: AnimatedDefaultTextStyle(
-                  duration: const Duration(milliseconds: 220),
-                  curve: Curves.easeOutCubic,
-                  style: TextStyle(
-                    color: active ? FtColors.ink : FtColors.ink3,
-                    fontSize: labelSize,
-                    fontWeight: active ? FontWeight.w600 : FontWeight.w500,
-                    letterSpacing: 0.2,
-                  ),
-                  child: Text(
-                    item.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+    final color = active ? FtColors.navActiveInk : FtColors.navIcon;
+    final icon = Icon(
+      active ? item.iconActive : item.icon,
+      size: 20,
+      color: color,
+    );
+    return Semantics(
+      button: true,
+      selected: active,
+      label: item.label,
+      excludeSemantics: true,
+      child: FtTapScale(
+        scale: 0.92,
+        haptic: false,
+        onTap: active
+            ? null
+            : () {
+                FtHaptics.select();
+                context.go(item.path);
+              },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          width: active ? null : 42,
+          height: 48,
+          padding: active
+              ? const EdgeInsets.symmetric(horizontal: 12)
+              : EdgeInsets.zero,
+          decoration: BoxDecoration(
+            color: active ? FtColors.navActive : Colors.transparent,
+            borderRadius: BorderRadius.circular(24),
+          ),
+          alignment: Alignment.center,
+          // Small phones (< 360 wide): icon only, so the pill never overflows.
+          child: !active || MediaQuery.sizeOf(context).width < 360
+              ? icon
+              : FittedBox(
+                  fit: BoxFit.scaleDown,
+                  // Each tab screen builds its own nav, so "switching tabs"
+                  // is a fresh mount: grow the label in from the icon so the
+                  // chip reads as expanding into place.
+                  child: TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0, end: 1),
+                    duration: MediaQuery.disableAnimationsOf(context)
+                        ? Duration.zero
+                        : const Duration(milliseconds: 380),
+                    curve: Curves.easeOutBack,
+                    builder: (context, t, label) => Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        icon,
+                        ClipRect(
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            widthFactor: t.clamp(0.0, 1.0),
+                            child: Opacity(
+                              opacity: t.clamp(0.0, 1.0),
+                              child: label,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 6),
+                      child: Text(
+                        item.label,
+                        maxLines: 1,
+                        style: TextStyle(
+                          color: color,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
-          ],
         ),
       ),
     );
@@ -639,13 +636,7 @@ class _FtNavButton extends StatelessWidget {
 }
 
 class _FtNavItem {
-  const _FtNavItem(
-    this.tab,
-    this.iconActive,
-    this.icon,
-    this.label,
-    this.path,
-  );
+  const _FtNavItem(this.tab, this.iconActive, this.icon, this.label, this.path);
 
   final FtTab tab;
   final IconData iconActive;
@@ -662,24 +653,53 @@ class FtSubHeader extends StatelessWidget {
     required this.title,
     this.trailing,
     this.onBack,
+    this.isTab = false,
   });
 
   final String title;
   final Widget? trailing;
   final VoidCallback? onBack;
 
+  /// Tab root screens (bottom-nav destinations): big bold title, no back
+  /// button — the nav already says where you are.
+  final bool isTab;
+
   @override
   Widget build(BuildContext context) {
     // Add system top inset so the header is never under the status bar — works
     // whether or not the parent screen wrapped us in a SafeArea.
     final topPad = MediaQuery.paddingOf(context).top;
+    if (isTab) {
+      return Padding(
+        padding: EdgeInsets.fromLTRB(22, topPad + 20, 16, 14),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: FtColors.ink,
+                  fontSize: 27,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.6,
+                ),
+              ),
+            ),
+            ?trailing,
+          ],
+        ),
+      );
+    }
     return Padding(
       padding: EdgeInsets.fromLTRB(16, topPad + 10, 16, 10),
       child: Row(
         children: [
           FtTapScale(
             scale: 0.9,
-            onTap: onBack ??
+            onTap:
+                onBack ??
                 () {
                   if (Navigator.of(context).canPop()) {
                     context.pop();
@@ -710,14 +730,14 @@ class FtSubHeader extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontSize: 19,
-                    letterSpacing: -0.3,
-                    // Pin to the live brightness — `textTheme.titleLarge.color`
-                    // is baked at theme-build time; this guards against any
-                    // mismatch between the cached color and the active scheme.
-                    color: FtColors.ink,
-                    fontWeight: FontWeight.w500,
-                  ),
+                fontSize: 19,
+                letterSpacing: -0.3,
+                // Pin to the live brightness — `textTheme.titleLarge.color`
+                // is baked at theme-build time; this guards against any
+                // mismatch between the cached color and the active scheme.
+                color: FtColors.ink,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
           ?trailing,
@@ -877,10 +897,7 @@ class FtAddButton extends StatelessWidget {
       child: Container(
         width: 38,
         height: 38,
-        decoration: BoxDecoration(
-          color: FtColors.ink,
-          shape: BoxShape.circle,
-        ),
+        decoration: BoxDecoration(color: FtColors.ink, shape: BoxShape.circle),
         alignment: Alignment.center,
         child: Icon(Icons.add_rounded, size: 20, color: FtColors.bg),
       ),
@@ -947,9 +964,7 @@ class _FtShimmerState extends State<FtShimmer>
                 FtColors.surfaceAlt,
               ],
               stops: const [0.0, 0.5, 1.0],
-              transform: _SlideGradientTransform(
-                percent: _ctrl.value,
-              ),
+              transform: _SlideGradientTransform(percent: _ctrl.value),
             ).createShader(bounds);
           },
           blendMode: BlendMode.srcIn,
@@ -967,10 +982,6 @@ class _SlideGradientTransform extends GradientTransform {
 
   @override
   Matrix4? transform(Rect bounds, {TextDirection? textDirection}) {
-    return Matrix4.translationValues(
-      bounds.width * (percent * 2 - 0.5),
-      0,
-      0,
-    );
+    return Matrix4.translationValues(bounds.width * (percent * 2 - 0.5), 0, 0);
   }
 }

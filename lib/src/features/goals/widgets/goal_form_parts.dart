@@ -273,7 +273,6 @@ class GoalProjectionCard extends StatelessWidget {
               style: TextStyle(
                 color: FtColors.ink,
                 fontSize: 13,
-                fontFamily: 'Geist',
                 fontFeatures: const [FontFeature.tabularFigures()],
                 height: 1.45,
               ),

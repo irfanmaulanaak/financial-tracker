@@ -153,7 +153,8 @@ class _CardsScreenState extends ConsumerState<CardsScreen> {
               ),
               children: [
                 FtSubHeader(
-                  title: 'Utang & Kartu Kredit',
+                  title: 'Utang',
+                  isTab: true,
                   trailing: IconButton(
                     tooltip: 'Hitung ulang semua kartu',
                     icon: _recalcAllRunning
@@ -171,15 +172,19 @@ class _CardsScreenState extends ConsumerState<CardsScreen> {
                 ),
                 FtCard(
                   heroTag: 'ft-kartu-hero',
+                  backgroundColor: FtColors.tileFor(FtColors.catFood),
                   margin: const EdgeInsets.fromLTRB(22, 4, 22, 18),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Eyebrow('Akumulasi Tagihan'),
+                      const Eyebrow('Total utang kartu'),
                       const SizedBox(height: 6),
                       Text(
                         Money.format(totalUsed),
-                        style: Theme.of(context).textTheme.headlineLarge,
+                        style: Theme.of(context)
+                            .textTheme
+                            .headlineLarge
+                            ?.copyWith(fontSize: 34, fontWeight: FontWeight.w800),
                       ),
                       const SizedBox(height: 12),
                       FtProgressBar(
@@ -238,10 +243,7 @@ class _CardsScreenState extends ConsumerState<CardsScreen> {
                     ],
                   ),
                 ),
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(22, 0, 22, 8),
-                  child: Eyebrow('Kartu Aktif'),
-                ),
+                const FtSectionHeader(title: 'Kartu kredit'),
                 if (items.isEmpty)
                   Padding(
                     padding: EdgeInsets.symmetric(vertical: 48),
@@ -445,7 +447,6 @@ class _SaranTip extends ConsumerWidget {
                     ? 'Saat ini belum ada cicilan aktif. Pastikan rasio pembayaran tetap di bawah 30% dari pendapatan.'
                     : 'Cicilan ${compactMoney(monthlyInstallments)} ($pct% dari pendapatan), masih dalam batas sehat.',
             style: TextStyle(
-              fontFamily: 'Geist',
               fontFeatures: const [FontFeature.tabularFigures()],
               color: FtColors.ink,
               fontSize: 14,

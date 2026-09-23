@@ -34,7 +34,16 @@ class RecentList extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(18, 16, 18, 10),
             child: Row(
               children: [
-                const Expanded(child: Eyebrow('Aktivitas Terbaru')),
+                Expanded(
+                  child: Text(
+                    'Aktivitas terbaru',
+                    style: TextStyle(
+                      color: FtColors.ink,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
                 TextButton(
                   onPressed: onTap,
                   style: TextButton.styleFrom(
@@ -45,9 +54,13 @@ class RecentList extends StatelessWidget {
                     ),
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
-                  child: const Text(
+                  child: Text(
                     'Lihat semua',
-                    style: TextStyle(fontSize: 11),
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: FtColors.clay,
+                    ),
                   ),
                 ),
               ],
@@ -136,17 +149,16 @@ class ExpenseActivityRow extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 34,
-            height: 34,
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: color.withValues(alpha: 0.22)),
+              color: FtColors.tileFor(color),
+              borderRadius: BorderRadius.circular(14),
             ),
             child: Icon(
               iconFor(category?.icon ?? 'category'),
               color: color,
-              size: 16,
+              size: 18,
             ),
           ),
           const SizedBox(width: 12),
@@ -195,8 +207,8 @@ class ExpenseActivityRow extends StatelessWidget {
             compactMoney(expense.amount),
             style: TextStyle(
               color: FtColors.ink,
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
             ),
           ),
         ],

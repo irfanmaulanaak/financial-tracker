@@ -118,7 +118,6 @@ class _BudgetMoveSheetState extends ConsumerState<BudgetMoveSheet> {
           Text(
             'Geser anggaran ke "${to?.label ?? '?'}"',
             style: TextStyle(
-              fontFamily: 'Geist',
               fontFeatures: const [FontFeature.tabularFigures()],
               fontSize: 20,
               color: FtColors.ink,

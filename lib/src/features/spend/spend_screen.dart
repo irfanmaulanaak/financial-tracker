@@ -135,7 +135,7 @@ class _SpendScreenState extends ConsumerState<SpendScreen> {
             parent: AlwaysScrollableScrollPhysics(),
           ),
           children: [
-            const FtSubHeader(title: 'Pengeluaran Bulanan'),
+            const FtSubHeader(title: 'Belanja', isTab: true),
             _Hero(
               total: total,
               displayAmount: focusedAmount ?? total,
@@ -159,10 +159,8 @@ class _SpendScreenState extends ConsumerState<SpendScreen> {
                 });
               },
             ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(22, 14, 22, 8),
-              child: Eyebrow('Rincian Kategori'),
-            ),
+            const SizedBox(height: 18),
+            const FtSectionHeader(title: 'Rincian kategori'),
             FtCard(
               margin: const EdgeInsets.fromLTRB(22, 0, 22, 16),
               padding: EdgeInsets.zero,
@@ -209,10 +207,8 @@ class _SpendScreenState extends ConsumerState<SpendScreen> {
                 ],
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(22, 14, 22, 8),
-              child: Eyebrow('Belanja Harian'),
-            ),
+            const SizedBox(height: 4),
+            const FtSectionHeader(title: 'Belanja harian'),
             const SpendCalendar(),
             SpendActivityList(expenses: active, household: household),
           ],
@@ -272,7 +268,10 @@ class _Hero extends StatelessWidget {
                         style: Theme.of(context)
                             .textTheme
                             .headlineLarge
-                            ?.copyWith(fontSize: 30, letterSpacing: -0.5),
+                            ?.copyWith(
+                                fontSize: 34,
+                                letterSpacing: -0.8,
+                                fontWeight: FontWeight.w800),
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -370,10 +369,11 @@ class _PeriodChip extends StatelessWidget {
       onTap: active ? null : onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+        padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 6),
         decoration: BoxDecoration(
-          color: active ? FtColors.ink : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
+          color: active ? FtColors.ink : FtColors.surfaceAlt,
+          borderRadius: BorderRadius.circular(999),
+          border: active ? null : Border.all(color: FtColors.line),
         ),
         alignment: Alignment.center,
         // Date-range labels ("25 Apr–24 Mei") can outgrow a quarter-width
@@ -385,8 +385,8 @@ class _PeriodChip extends StatelessWidget {
             maxLines: 1,
             style: TextStyle(
               color: active ? FtColors.bg : FtColors.ink2,
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ),
@@ -438,12 +438,13 @@ class _CategoryRow extends StatelessWidget {
           child: Row(
             children: [
               Container(
-                width: 10,
-                height: 10,
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: BorderRadius.circular(3),
+                  color: FtColors.tileFor(color),
+                  borderRadius: BorderRadius.circular(14),
                 ),
+                child: Icon(iconFor(category.icon), size: 18, color: color),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -461,8 +462,8 @@ class _CategoryRow extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               color: FtColors.ink,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         ),

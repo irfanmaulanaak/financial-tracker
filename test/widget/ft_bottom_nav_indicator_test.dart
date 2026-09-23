@@ -13,10 +13,11 @@ void main() {
           path: '/',
           builder: (_, _) => Scaffold(
             backgroundColor: FtColors.bg,
-            body: SizedBox(
-              width: 400,
-              height: 80,
-              child: FtBottomNav(current: tab),
+            body: Center(
+              child: SizedBox(
+                width: 358,
+                child: FtBottomNav(current: tab, showAction: false),
+              ),
             ),
           ),
         ),
@@ -33,23 +34,16 @@ void main() {
     await tester.pump();
   }
 
-  testWidgets('FtBottomNav renders an AnimatedAlign pill at active tab',
-      (tester) async {
+  testWidgets('Only the active tab shows its label', (tester) async {
     await pumpNav(tester, FtTab.spend);
-    // The sliding pill is implemented with AnimatedAlign.
-    expect(find.byType(AnimatedAlign), findsOneWidget);
+    expect(find.text('Belanja'), findsOneWidget);
+    expect(find.text('Beranda'), findsNothing);
+    expect(find.text('Utang'), findsNothing);
   });
 
-  testWidgets('Pill alignment differs between two active tabs',
-      (tester) async {
-    await pumpNav(tester, FtTab.home);
-    final firstAlign =
-        tester.widget<AnimatedAlign>(find.byType(AnimatedAlign)).alignment
-            as Alignment;
+  testWidgets('Label follows the active tab', (tester) async {
     await pumpNav(tester, FtTab.cards);
-    final secondAlign =
-        tester.widget<AnimatedAlign>(find.byType(AnimatedAlign)).alignment
-            as Alignment;
-    expect(firstAlign.x, isNot(equals(secondAlign.x)));
+    expect(find.text('Utang'), findsOneWidget);
+    expect(find.text('Belanja'), findsNothing);
   });
 }

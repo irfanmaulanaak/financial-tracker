@@ -20,10 +20,8 @@ class ObligationsSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.fromLTRB(22, 16, 22, 8),
-          child: Eyebrow('Cicilan Tetap'),
-        ),
+        const SizedBox(height: 12),
+        const FtSectionHeader(title: 'Cicilan tetap'),
         if (active.isEmpty)
           FtDashedAdd(
             margin: const EdgeInsets.fromLTRB(22, 0, 22, 8),

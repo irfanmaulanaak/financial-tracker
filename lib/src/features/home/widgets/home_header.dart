@@ -54,39 +54,26 @@ class HomeHeader extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  household.name,
+                  _greeting(),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: FtColors.ink3,
-                    fontSize: 11,
-                    letterSpacing: 0.3,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
                 const SizedBox(height: 2),
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final style =
-                        Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontSize: 17,
-                              color: FtColors.ink,
-                            );
-                    final fullText = '${_greeting()}, $displayName';
-                    final painter = TextPainter(
-                      text: TextSpan(text: fullText, style: style),
-                      maxLines: 1,
-                      textDirection: Directionality.of(context),
-                    )..layout();
-                    final showFullGreeting =
-                        painter.width <= constraints.maxWidth;
-                    painter.dispose();
-                    return Text(
-                      showFullGreeting ? fullText : displayName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: style,
-                    );
-                  },
+                Text(
+                  displayName.split(' ').first,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.4,
+                    color: FtColors.ink,
+                  ),
                 ),
               ],
             ),
@@ -111,23 +98,21 @@ class _ProfileAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 38,
-      height: 38,
+      width: 44,
+      height: 44,
       decoration: BoxDecoration(
-        color: FtColors.surfaceAlt,
+        color: FtColors.tileFor(FtColors.catFood),
         shape: BoxShape.circle,
-        border: Border.all(color: FtColors.lineStrong, width: 0.5),
       ),
       alignment: Alignment.center,
       child: Text(
         initialsOf(displayName),
         style: TextStyle(
-          fontFamily: 'Geist',
           fontFeatures: const [FontFeature.tabularFigures()],
           fontSize: 14,
           color: FtColors.ink,
           letterSpacing: 0.5,
-          fontWeight: FontWeight.w500,
+          fontWeight: FontWeight.w800,
         ),
       ),
     );

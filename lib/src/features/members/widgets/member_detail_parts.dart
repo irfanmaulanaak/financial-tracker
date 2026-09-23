@@ -38,7 +38,6 @@ class MemberHero extends StatelessWidget {
             child: Text(
               initialsOf(member.displayName),
               style: const TextStyle(
-                fontFamily: 'Geist',
                 fontFeatures: [FontFeature.tabularFigures()],
                 color: Colors.white,
                 fontSize: 40,
@@ -376,7 +375,6 @@ class _Stat extends StatelessWidget {
           text: TextSpan(
             text: value,
             style: TextStyle(
-              fontFamily: 'Geist',
               fontFeatures: const [FontFeature.tabularFigures()],
               fontSize: 22,
               color: FtColors.ink,

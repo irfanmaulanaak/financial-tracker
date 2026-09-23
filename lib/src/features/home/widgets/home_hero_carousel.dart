@@ -97,7 +97,7 @@ class _HomeHeroCarouselState extends State<HomeHeroCarousel> {
       child: Column(
         children: [
           SizedBox(
-            height: 240,
+            height: 256,
             // Default web/desktop scroll behavior excludes mouse drags, which
             // made slides 2-4 unreachable with a mouse. Opt the PageView in.
             child: ScrollConfiguration(
@@ -271,6 +271,7 @@ class _AsetSlideState extends ConsumerState<_AsetSlide> {
         FtDonutSegment(value: nw.investments.toDouble(), color: FtColors.clay),
     ];
     return FtCard(
+      backgroundColor: FtColors.tileFor(FtColors.catTransport),
       heroTag: 'ft-aset-hero',
       onTap: () => context.push('/accounts'),
       child: Column(
@@ -568,6 +569,7 @@ class _RatioSlide extends StatelessWidget {
     final pct = hasGaji ? (spend / gajiIncome * 100).round() : 0;
 
     return FtCard(
+      backgroundColor: FtColors.tileFor(FtColors.catBills),
       onTap: () => context.push('/incomes'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -809,6 +811,7 @@ class _KartuSlide extends StatelessWidget {
     }
 
     return FtCard(
+      backgroundColor: FtColors.tileFor(FtColors.catShopping),
       heroTag: 'ft-kartu-hero',
       onTap: () => context.push('/cards'),
       child: Column(
@@ -1041,6 +1044,7 @@ class _KesehatanSlide extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = _stateColor();
     return FtCard(
+      backgroundColor: FtColors.tileFor(FtColors.catEntertainment),
       heroTag: 'ft-kesehatan-hero',
       onTap: () => context.push('/health'),
       child: Column(
