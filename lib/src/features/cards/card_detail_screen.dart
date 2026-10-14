@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/cicilan.dart';
 import '../../core/formatters.dart';
 import '../../theme.dart';
 import '../../ui/ft_refresh.dart';
@@ -145,7 +146,8 @@ class CardDetailScreen extends ConsumerWidget {
               ),
             );
           }
-          final available = (card.limit - card.used).clamp(0, card.limit);
+          final available =
+              availableLimit(limit: card.limit, outstanding: card.outstanding);
           return SafeArea(
             child: FtAppChrome(
               current: FtTab.cards,

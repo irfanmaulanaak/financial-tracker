@@ -46,17 +46,39 @@ void main() {
   });
 
   group('CardBalance.available', () {
-    test('limit - used, clamped at 0', () {
+    // Changed from the old `limit - used` rule: BCA blocks the full unpaid
+    // cicilan remainder (`outstanding`) from the limit, so available uses
+    // `outstanding`. When outstanding is omitted it defaults to `used`.
+    test('limit - outstanding, clamped at 0', () {
+      // outstanding > used: available drops below limit - used.
+      expect(
+        const CardBalance(
+          id: 'c',
+          label: 'x',
+          limit: 25000000,
+          used: 0,
+          outstanding: 5260000,
+        ).available,
+        19740000,
+      );
+      // Over-limit (shouldn't happen but guard): clamp to 0.
+      expect(
+        const CardBalance(
+          id: 'c',
+          label: 'x',
+          limit: 1000000,
+          used: 0,
+          outstanding: 1500000,
+        ).available,
+        0,
+      );
+    });
+
+    test('outstanding defaults to used when omitted', () {
       expect(
         const CardBalance(id: 'c', label: 'x', limit: 1000000, used: 250000)
             .available,
         750000,
-      );
-      // Over-limit (shouldn't happen but guard): clamp to 0.
-      expect(
-        const CardBalance(id: 'c', label: 'x', limit: 1000000, used: 1500000)
-            .available,
-        0,
       );
     });
   });

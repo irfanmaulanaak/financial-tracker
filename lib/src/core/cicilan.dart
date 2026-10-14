@@ -305,3 +305,12 @@ typedef CicilanPlanState = ({
     outstanding: remaining + plainOutstanding,
   );
 }
+
+/// Available ("Tersedia") limit the card still lets you spend.
+///
+/// Uses `outstanding`, NOT `used`: BCA blocks the FULL unpaid cicilan
+/// remainder from the limit until the plan finishes — even the months not
+/// yet billed into `used`. So available = limit − outstanding, clamped to
+/// 0..limit.
+int availableLimit({required int limit, required int outstanding}) =>
+    (limit - outstanding).clamp(0, limit);

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/cicilan.dart';
 import '../../core/formatters.dart';
 import '../../theme.dart';
 import '../../ui/ft_motion.dart';
@@ -59,7 +60,8 @@ class _CardTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final accent = FtColors.clay;
-    final remaining = card.limit - card.used;
+    final remaining =
+        availableLimit(limit: card.limit, outstanding: card.outstanding);
     return FtTapScale(
       scale: 0.97,
       haptic: false,

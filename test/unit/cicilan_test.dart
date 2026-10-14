@@ -480,4 +480,19 @@ void main() {
       expect(minimumPayment(balance: 30000, minPaymentPct: 0.10), 30000);
     });
   });
+
+  group('availableLimit', () {
+    test('uses outstanding, not used (BCA blocks full cicilan remainder)', () {
+      // Real data 13 Oct 2026: limit 25M, used 0, outstanding 5.26M.
+      // BCA shows Remaining Limit 19.74M = limit - outstanding.
+      expect(
+        availableLimit(limit: 25000000, outstanding: 5260000),
+        19740000,
+      );
+    });
+
+    test('clamps to 0 when outstanding exceeds limit', () {
+      expect(availableLimit(limit: 1000000, outstanding: 1500000), 0);
+    });
+  });
 }

@@ -2,6 +2,8 @@
 /// (extracted from the embedded household arrays + cards subcollection).
 library;
 
+import 'cicilan.dart';
+
 class AccountBalance {
   final String id;
   final String label;
@@ -18,14 +20,20 @@ class CardBalance {
   final String label;
   final int limit;
   final int used;
+
+  /// True remaining obligation (full unpaid cicilan remainder + unpaid plain
+  /// charges). Drives [available]; defaults to [used] for callers that only
+  /// care about net-worth debt. See [availableLimit].
+  final int outstanding;
   const CardBalance({
     required this.id,
     required this.label,
     required this.limit,
     required this.used,
-  });
+    int? outstanding,
+  }) : outstanding = outstanding ?? used;
 
-  int get available => (limit - used).clamp(0, limit);
+  int get available => availableLimit(limit: limit, outstanding: outstanding);
 }
 
 class NetWorth {
