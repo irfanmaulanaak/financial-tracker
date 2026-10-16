@@ -19,6 +19,22 @@ String compactMoney(num value) {
 
 String moneyNoSymbol(num value) => Money.format(value).replaceFirst('Rp', '');
 
+/// Splits a compact amount into the three parts the hero number renders at
+/// different sizes: the "Rp" prefix, the number, and the "rb"/"jt"/"M" suffix.
+/// `414000 → (Rp, 414,  rb)`, `5800000 → (Rp, 5,8,  jt)`, `0 → (Rp, 0, )`.
+({String prefix, String number, String suffix}) heroMoneyParts(int value) {
+  final full = compactMoney(value); // e.g. "Rp414 rb", "Rp5,8 jt", "Rp0"
+  final neg = full.startsWith('-');
+  var s = neg ? full.substring(1) : full;
+  s = s.replaceFirst('Rp', '');
+  final parts = s.split(' ');
+  return (
+    prefix: neg ? '-Rp' : 'Rp',
+    number: parts.first,
+    suffix: parts.length > 1 ? ' ${parts[1]}' : '',
+  );
+}
+
 /// Masked placeholder for asset/balance amounts when the user has toggled
 /// "hide assets" on (BCA-style privacy). Keep style consistent across
 /// hero/breakdown displays.

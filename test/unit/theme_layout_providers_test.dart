@@ -21,7 +21,14 @@ void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
   group('paletteProvider', () {
-    test('defaults to hangat when nothing stored', () async {
+    test('defaults to daun when nothing stored', () async {
+      final container = await _settledContainer((c) => c.read(paletteProvider));
+      addTearDown(container.dispose);
+      expect(container.read(paletteProvider), FtPalette.daun);
+    });
+
+    test('a saved palette (e.g. hangat) is kept', () async {
+      SharedPreferences.setMockInitialValues({'ft_palette': 'hangat'});
       final container = await _settledContainer((c) => c.read(paletteProvider));
       addTearDown(container.dispose);
       expect(container.read(paletteProvider), FtPalette.hangat);
@@ -38,11 +45,11 @@ void main() {
       expect(reloaded.read(paletteProvider), FtPalette.laut);
     });
 
-    test('unknown stored value falls back to hangat', () async {
+    test('unknown stored value falls back to daun', () async {
       SharedPreferences.setMockInitialValues({'ft_palette': 'nonexistent'});
       final container = await _settledContainer((c) => c.read(paletteProvider));
       addTearDown(container.dispose);
-      expect(container.read(paletteProvider), FtPalette.hangat);
+      expect(container.read(paletteProvider), FtPalette.daun);
     });
   });
 

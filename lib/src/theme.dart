@@ -16,7 +16,7 @@ class FtColors {
   /// "Warna" setting (Settings → Tampilan). Default [FtPalette.hangat] is
   /// the original look; flipping it follows the same static + rebuild
   /// pattern as [setBrightness] (see `ftRebuildAllWidgets`).
-  static FtPalette _palette = FtPalette.hangat;
+  static FtPalette _palette = FtPalette.daun;
   static void setPalette(FtPalette p) => _palette = p;
   static FtPalette get palette => _palette;
   static FtSwatch get _swatch => paletteSwatches[_palette]!.pick(_dark);
@@ -76,6 +76,11 @@ class FtColors {
   static Color get fab => _swatch.fab;
   static Color get onFab => _swatch.onFab;
 
+  /// Due-date tile (DESIGN.md section 2): a soft amber fill + its ink. Semantic
+  /// and fixed across every "Warna" palette, like [danger].
+  static Color get warnTile => _dark ? const Color(0xFF3A2F16) : const Color(0xFFFFF3D1);
+  static Color get onWarnTile => _dark ? const Color(0xFFF7D489) : const Color(0xFF8A5212);
+
   // Health
   static Color get healthOk => sage;
   static Color get healthWarn => ochre;
@@ -125,7 +130,7 @@ void ftRebuildAllWidgets() {
 ThemeData buildTheme(
   Brightness brightness, {
   bool liquid = false,
-  FtPalette palette = FtPalette.hangat,
+  FtPalette palette = FtPalette.daun,
 }) {
   FtColors.setBrightness(brightness);
   FtColors.setLiquid(liquid);

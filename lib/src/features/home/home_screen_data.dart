@@ -14,7 +14,6 @@ import '../../core/payday.dart';
 import '../../core/providers.dart';
 import '../../core/reminder_times.dart';
 import '../../core/safe_to_spend.dart';
-import '../../theme.dart';
 import '../cards/credit_card.dart';
 import '../cards/cards_screen.dart';
 import '../cards/widgets/installment_list.dart' show cardInstallmentsProvider;
@@ -28,6 +27,7 @@ import '../obligations/obligation_repository.dart';
 import '../insights/insights_providers.dart';
 import '../investments/investment.dart';
 import '../investments/investments_repository.dart' show investmentsProvider;
+import 'eling/eling_mood.dart';
 import 'net_worth_snapshot.dart';
 import 'net_worth_snapshot_repository.dart';
 import 'widgets/banners.dart';
@@ -58,6 +58,12 @@ typedef HomeViewData = ({
   }) safe,
   String? insightCandidate,
   List<AttentionItem> attentionItems,
+  // Hero scene inputs.
+  DateTime cycleStart,
+  int daysElapsed,
+  int cycleLength,
+  bool noSpendYesterday,
+  ElingMood mood,
 });
 
 HomeViewData buildHomeViewData({
@@ -203,35 +209,42 @@ HomeViewData buildHomeViewData({
       investmentCount: investments.where((i) => i.currentValue > 0).length,
     ),
   );
+  String dueSubtitle(int d, DateTime date) => d <= 0
+      ? 'Jatuh tempo hari ini'
+      : 'Jatuh tempo ${Dates.weekday(date)}, $d hari lagi';
   final dueItems = [
     for (final c in cards)
-      if (daysUntilDue(dueDay: c.dueDay, now: now) case final d?)
-        if (c.used > 0)
-          AttentionItem(
-            icon: Icons.credit_card_rounded,
-            color: d <= 0 ? FtColors.danger : FtColors.ochre,
-            text: d <= 0
-                ? '${c.label} jatuh tempo hari ini · ${compactMoney(c.used)}'
-                : '${c.label} jatuh tempo $d hari lagi · ${compactMoney(c.used)}',
+      if (c.used > 0)
+        if (daysUntilDue(dueDay: c.dueDay, now: now) case final d?)
+          AttentionItem.due(
+            date: nextCardDueDate(c.dueDay, now),
+            title: 'Bayar ${c.label}',
+            subtitle: dueSubtitle(d, nextCardDueDate(c.dueDay, now)),
+            amount: c.used,
+            danger: d <= 0,
             onTap: () => context.push('/cards'),
           ),
     for (final o in activeObligations)
       if (!o.paidForMonth(nextCardDueDate(o.dueDay, now)))
         if (daysUntilDue(dueDay: o.dueDay, now: now) case final d?)
-          AttentionItem(
-            icon: Icons.request_quote_rounded,
-            color: d <= 0 ? FtColors.danger : FtColors.ochre,
-            text: d <= 0
-                ? '${o.label} jatuh tempo hari ini · ${compactMoney(o.monthly)}'
-                : '${o.label} jatuh tempo $d hari lagi · ${compactMoney(o.monthly)}',
+          AttentionItem.due(
+            date: nextCardDueDate(o.dueDay, now),
+            title: 'Bayar ${o.label}',
+            subtitle: dueSubtitle(d, nextCardDueDate(o.dueDay, now)),
+            amount: o.monthly,
+            danger: d <= 0,
             onTap: () => context.push('/obligations'),
           ),
   ];
 
   // Insight 1 kalimat/hari — kandidat dihitung dari data terkini,
-  // dikunci per-hari oleh DailyInsightLine.
+  // dikunci per-hari oleh dailyInsightLockProvider.
   final cycleNow = currentCycle(now, payday: household.payday);
+  final cycleLen = cycleLengthDays(cycleNow);
+  final daysElapsed = Dates.dayKey(now).difference(cycleNow.start).inDays + 1;
   final yesterdayKey = Dates.dayKey(now).subtract(const Duration(days: 1));
+  final noSpendYesterday = !cycleNow.start.isAfter(yesterdayKey) &&
+      expenses.every((e) => Dates.dayKey(e.date) != yesterdayKey);
   final insightCandidate = dailyInsight(
     categories: [
       for (final c in categories)
@@ -245,10 +258,9 @@ HomeViewData buildHomeViewData({
     prevSpentById: prevByCat,
     totalSpent: totalSpentValue,
     totalBudget: household.monthlyBudgetTotal,
-    daysElapsed: Dates.dayKey(now).difference(cycleNow.start).inDays + 1,
-    cycleLength: cycleLengthDays(cycleNow),
-    noSpendYesterday: !cycleNow.start.isAfter(yesterdayKey) &&
-        expenses.every((e) => Dates.dayKey(e.date) != yesterdayKey),
+    daysElapsed: daysElapsed,
+    cycleLength: cycleLen,
+    noSpendYesterday: noSpendYesterday,
   );
 
   // Cycle net used by the asset slide's delta pill. Use Gaji-only
@@ -304,28 +316,42 @@ HomeViewData buildHomeViewData({
     hasBudget: household.monthlyBudgetTotal > 0,
   );
 
-  // One compact "Perlu perhatian" card instead of a stack of banners
-  // — only things you can act on (due dates, the DSR/budget
+  // "Perlu dibereskan" — only things you can act on (due dates, the DSR/budget
   // warning). Nothing shown when there's nothing to act on.
   final attentionItems = [
     ...dueItems,
     if (debtSummary.dsr > dsrMaxOjk)
-      AttentionItem(
-        icon: Icons.warning_amber_rounded,
-        color: FtColors.danger,
-        text: 'Cicilan ${compactMoney(debtSummary.totalMonthlyDebt)} per bulan sudah '
-            '${(debtSummary.dsr * 100).round()}% dari gaji, di atas batas aman OJK 30%',
+      AttentionItem.ratio(
+        title: 'Cicilan sudah ${(debtSummary.dsr * 100).round()}% dari gaji',
+        subtitle: 'Batas aman OJK 30%',
+        ratio: debtSummary.dsr,
+        actionLabel: 'Lihat',
         onTap: () => context.push('/obligations'),
       )
     else if (overcommit > 0 && hasCommitments)
-      AttentionItem(
-        icon: Icons.warning_amber_rounded,
-        color: FtColors.ochre,
-        text: 'Budget ${compactMoney(household.monthlyBudgetTotal)} lebih besar dari uang '
-            'siap pakai ${compactMoney(debtSummary.disposable)}, yaitu gaji dikurangi cicilan',
+      AttentionItem.ratio(
+        title: 'Anggaran lebih besar dari uang siap pakai',
+        subtitle: 'Uang siap pakai ${compactMoney(debtSummary.disposable)}, '
+            'yaitu gaji dikurangi cicilan',
+        ratio: household.monthlyBudgetTotal > 0
+            ? ((household.monthlyBudgetTotal - debtSummary.disposable) /
+                    household.monthlyBudgetTotal)
+                .clamp(0.0, 1.0)
+            : 0.0,
+        actionLabel: 'Atur',
         onTap: () => context.push('/spend'),
       ),
   ];
+
+  final mood = elingMood(
+    now: now,
+    hasBudget: household.monthlyBudgetTotal > 0,
+    remaining: sts.remaining,
+    perDay: sts.perDay,
+    cycleLength: cycleLen,
+    monthlyBudget: household.monthlyBudgetTotal,
+    noSpendYesterday: noSpendYesterday,
+  );
 
   return (
     expenses: expenses,
@@ -343,5 +369,10 @@ HomeViewData buildHomeViewData({
     safe: safe,
     insightCandidate: insightCandidate,
     attentionItems: attentionItems,
+    cycleStart: cycleNow.start,
+    daysElapsed: daysElapsed,
+    cycleLength: cycleLen,
+    noSpendYesterday: noSpendYesterday,
+    mood: mood,
   );
 }

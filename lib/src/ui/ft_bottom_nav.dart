@@ -265,8 +265,71 @@ class FtFixedBottomNav extends ConsumerWidget {
           child: Row(
             children: [
               side(ftNavItems.sublist(0, 2)),
-              if (action) const _NavRecordButton(),
+              if (action) const _FixedRecordButton(),
               side(ftNavItems.sublist(2)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The docked-nav "Catat" button: the raised gold circle plus a label, so it
+/// carries a caption like every other tab (the floating pill keeps its bare
+/// button). The circle overflows upward out of the bar; the label sits on the
+/// same baseline as the side labels.
+class _FixedRecordButton extends StatelessWidget {
+  const _FixedRecordButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: 'Catat aktivitas',
+      excludeSemantics: true,
+      child: FtTapScale(
+        scale: 0.88,
+        onTap: () => ActionChooserSheet.show(context),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Reserve a side-icon-sized slot; the 48px circle overflows
+              // upward out of it, raising it above the bar like the mockup.
+              SizedBox(
+                width: 48,
+                height: 21,
+                child: OverflowBox(
+                  minWidth: 0,
+                  minHeight: 0,
+                  maxWidth: 48,
+                  maxHeight: 48,
+                  alignment: Alignment.bottomCenter,
+                  child: Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: FtColors.fab,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: FtColors.bg, width: 3),
+                    ),
+                    alignment: Alignment.center,
+                    child: Icon(Icons.add_rounded, size: 26, color: FtColors.onFab),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                'Catat',
+                maxLines: 1,
+                style: TextStyle(
+                  fontSize: 10,
+                  color: FtColors.navIcon,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
             ],
           ),
         ),

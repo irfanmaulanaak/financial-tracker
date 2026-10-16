@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/hide_assets_provider.dart';
+import '../../core/formatters.dart';
 import '../../core/layout_provider.dart';
 import '../../core/providers.dart';
 import '../../core/recurring_runner.dart';
@@ -25,13 +25,11 @@ import '../onboarding/widgets/onboarding_checklist.dart';
 import '../onboarding/widgets/welcome_sheet.dart';
 import 'home_screen_data.dart';
 import 'net_worth_snapshot_repository.dart';
+import 'widgets/activity_section.dart';
 import 'widgets/banners.dart';
-import 'widgets/category_grid.dart';
-import 'widgets/daily_insight_line.dart';
-import 'widgets/goals_preview.dart';
+import 'widgets/home_extras.dart';
 import 'widgets/home_header.dart';
-import 'widgets/home_hero_carousel.dart';
-import 'widgets/recent_list.dart';
+import 'widgets/home_hero_scene.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -71,19 +69,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // "Beranda" setting: Lengkap (default, everything) or Ringkas (only
-    // safe-to-spend + this cycle's spending + banners that need action).
+    // "Beranda" setting: Lengkap (default, everything) or Ringkas (only the
+    // hero + what needs attention).
     final ringkas = ref.watch(homeLayoutProvider) == FtHomeLayout.ringkas;
     final householdAsync = ref.watch(currentHouseholdProvider);
-    // Self-heal stale `users/{uid}.householdId` after a creator removed us
-    // from the household.
+    // Self-heal stale `users/{uid}.householdId` after a creator removed us.
     ref.watch(orphanedMembershipCleanupProvider);
     // Keep local reminders in sync with settings + cards + recurring bills.
     ref.watch(reminderSchedulerProvider);
     final loadedHid = householdAsync.value?.id;
     if (loadedHid != null && loadedHid != _lastRecurringHid) {
       _lastRecurringHid = loadedHid;
-      // Fire-and-forget; failures are non-fatal (next session retries).
       // ignore: discarded_futures
       ref.read(recurringRunnerProvider).run(householdId: loadedHid);
     }
@@ -108,21 +104,70 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             household: household,
             cycleAsync: cycleAsync,
           );
-          final expenses = data.expenses;
-          final categories = data.categories;
-          final byCat = data.byCat;
-          final carries = data.carries;
-          final goals = data.goals;
+          final displayName =
+              prettyName(user?.displayName ?? user?.email ?? 'Keluarga');
+          final onbActive = ref.watch(onboardingProvider).checklistActive;
+          const gap = SizedBox(height: 28);
 
-          Widget section(Widget child, {int index = 0}) => FtFadeUp(
-                duration: const Duration(milliseconds: 340),
-                delay: Duration(milliseconds: index * 60),
-                distance: 10,
-                child: child,
-              );
-
-          final displayName = prettyName(
-              user?.displayName ?? user?.email ?? 'Keluarga');
+          final body = Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Hero color runs from the very top (incl. the status-bar area)
+              // through the header into the hill — no seam against the panel.
+              ColoredBox(
+                color: FtColors.hero,
+                child: HomeHeader(
+                  household: household,
+                  displayName: displayName,
+                  onSelected: _handleMenu,
+                ),
+              ),
+              HomeHeroScene(
+                perDay: data.safe.perDay,
+                remaining: data.safe.remaining,
+                daysLeft: data.safe.daysLeft,
+                hasBudget: data.safe.hasBudget,
+                mood: data.mood,
+                daysElapsed: data.daysElapsed,
+                cycleLength: data.cycleLength,
+                insightCandidate: data.insightCandidate,
+                startLabel: Dates.dayMonth(data.cycleStart),
+                paydayLabel: 'Gajian ${Dates.dayMonth(data.safe.nextPayday)}',
+              ),
+              if (onbActive) ...[
+                gap,
+                OnboardingChecklist(
+                  household: household,
+                  hasExpense: data.expenses.isNotEmpty ||
+                      (recentAsync.value?.isNotEmpty ?? false),
+                ),
+              ],
+              if (data.attentionItems.isNotEmpty) ...[
+                gap,
+                AttentionSection(items: data.attentionItems),
+              ],
+              if (!ringkas) ...[
+                gap,
+                ActivitySection(
+                    recentAsync: recentAsync, household: household),
+                if (data.categories.isNotEmpty) ...[
+                  gap,
+                  BudgetSection(
+                    categories: data.categories,
+                    totals: data.byCat,
+                    carries: data.carries,
+                  ),
+                ],
+                gap,
+                NetWorthRow(nw: data.nw, trend: data.trend),
+                if (data.goals.isNotEmpty) ...[
+                  gap,
+                  GoalsSection(goals: data.goals),
+                ],
+              ],
+              const SizedBox(height: 8),
+            ],
+          );
 
           return FtAppChrome(
             current: FtTab.home,
@@ -144,80 +189,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 physics: const BouncingScrollPhysics(
                   parent: AlwaysScrollableScrollPhysics(),
                 ),
-                children: [
-                  section(
-                    HomeHeader(
-                      household: household,
-                      displayName: displayName,
-                      onSelected: _handleMenu,
-                    ),
-                    index: 0,
-                  ),
-                  section(
-                    OnboardingChecklist(
-                      household: household,
-                      hasExpense: expenses.isNotEmpty ||
-                          (recentAsync.value?.isNotEmpty ?? false),
-                    ),
-                    index: 1,
-                  ),
-                  section(
-                    HomeHeroCarousel(
-                      nw: data.nw,
-                      trend: data.trend,
-                      trendDates: data.trendDates,
-                      cycleNet: data.cycleNet,
-                      spend: data.totalSpentValue,
-                      gajiIncome: data.gajiIncome,
-                      health: data.health,
-                      safe: data.safe,
-                      compact: ringkas,
-                    ),
-                    index: 1,
-                  ),
-                  if (!ringkas)
-                    section(
-                      CommitmentLine(hidden: ref.watch(hideAssetsProvider)),
-                      index: 1,
-                    ),
-                  if (data.attentionItems.isNotEmpty)
-                    section(
-                      AttentionCard(items: data.attentionItems),
-                      index: 2,
-                    ),
-                  if (!ringkas)
-                    section(
-                      DailyInsightLine(candidate: data.insightCandidate),
-                      index: 3,
-                    ),
-                  if (!ringkas)
-                    section(
-                      CategoryGrid(
-                        categories: categories.take(4).toList(),
-                        totals: byCat,
-                        carries: carries,
-                        onTap: () => context.push('/spend'),
-                      ),
-                      index: 3,
-                    ),
-                  if (!ringkas)
-                    section(
-                      GoalsPreview(
-                        goals: goals,
-                        onTap: () => context.push('/goals'),
-                      ),
-                      index: 4,
-                    ),
-                  if (!ringkas)
-                    section(
-                      RecentList(
-                        recentAsync: recentAsync,
-                        household: household,
-                        onTap: () => context.push('/expenses'),
-                      ),
-                      index: 5,
-                    ),
-                ],
+                children: [body],
               ),
             ),
           );

@@ -1,53 +1,81 @@
-import 'package:flutter/material.dart';
+import 'dart:math' as math;
 
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+
+import '../../../core/formatters.dart';
 import '../../../theme.dart';
 import '../../../ui/ft_ui.dart';
+import 'home_formatters.dart';
 
-/// One actionable line inside [AttentionCard] — a due date or a DSR/budget
-/// warning. Not for passive info (streak, daily insight) — those get their
-/// own quiet treatment elsewhere, not a slot in this list.
+enum AttentionKind { due, ratio }
+
+/// One actionable line in "Perlu dibereskan" — a due bill (date tile + amount)
+/// or the DSR warning (percent ring + "Lihat"). Not for passive info; those
+/// get their own quiet treatment elsewhere.
 class AttentionItem {
-  const AttentionItem({
-    required this.icon,
-    required this.color,
-    required this.text,
+  /// A bill/obligation coming due.
+  const AttentionItem.due({
+    required this.date,
+    required this.title,
+    required this.subtitle,
+    required this.amount,
+    required this.danger,
     required this.onTap,
-  });
+  })  : kind = AttentionKind.due,
+        ratio = null,
+        actionLabel = null;
 
-  final IconData icon;
-  final Color color;
-  final String text;
+  /// A ratio warning (e.g. DSR over the OJK cap), shown with a percent ring.
+  const AttentionItem.ratio({
+    required this.title,
+    required this.subtitle,
+    required this.ratio,
+    required this.actionLabel,
+    required this.onTap,
+  })  : kind = AttentionKind.ratio,
+        date = null,
+        amount = null,
+        danger = true;
+
+  final AttentionKind kind;
+  final String title;
+  final String subtitle;
   final VoidCallback onTap;
+
+  // Due variant.
+  final DateTime? date;
+  final int? amount;
+  final bool danger;
+
+  // Ratio variant.
+  final double? ratio;
+  final String? actionLabel;
 }
 
-/// Single compact card replacing the old stack of separate banner cards —
-/// one line per actionable item, a shared chevron affordance. Renders
-/// nothing when [items] is empty; there's no "all clear" filler state.
-class AttentionCard extends StatelessWidget {
-  const AttentionCard({super.key, required this.items});
+/// "Perlu dibereskan" — plain rows (no card), split by hairlines, matching the
+/// mockup. Renders nothing when [items] is empty; there's no "all clear" state.
+class AttentionSection extends StatelessWidget {
+  const AttentionSection({super.key, required this.items});
 
   final List<AttentionItem> items;
 
   @override
   Widget build(BuildContext context) {
     if (items.isEmpty) return const SizedBox.shrink();
-    return FtCard(
-      margin: const EdgeInsets.fromLTRB(22, 0, 22, 16),
-      padding: EdgeInsets.zero,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 14, 16, 6),
-            child: Eyebrow('Perlu perhatian'),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const FtSectionHeader(title: 'Perlu dibereskan'),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(22, 0, 22, 0),
+          child: Column(
+            children: [
+              for (final item in items) _AttentionRow(item: item),
+            ],
           ),
-          for (var i = 0; i < items.length; i++) ...[
-            if (i > 0) const Divider(height: 1),
-            _AttentionRow(item: items[i]),
-          ],
-          const SizedBox(height: 4),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -61,29 +89,169 @@ class _AttentionRow extends StatelessWidget {
     return FtTapScale(
       scale: 0.99,
       onTap: item.onTap,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 10, 12, 10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          border: Border(top: BorderSide(color: FtColors.line, width: 0.5)),
+        ),
         child: Row(
           children: [
-            Icon(item.icon, size: 16, color: item.color),
-            const SizedBox(width: 10),
+            if (item.kind == AttentionKind.due)
+              _DateTile(date: item.date!)
+            else
+              _PercentRing(ratio: item.ratio ?? 0),
+            const SizedBox(width: 12),
             Expanded(
-              child: Text(
-                item.text,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: FtColors.ink,
-                  fontSize: 12.5,
-                  height: 1.3,
-                  fontWeight: FontWeight.w600,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: FtColors.ink,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    item.subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: FtColors.ink3, fontSize: 13),
+                  ),
+                ],
               ),
             ),
-            Icon(Icons.chevron_right_rounded, size: 16, color: FtColors.ink4),
+            const SizedBox(width: 8),
+            if (item.kind == AttentionKind.due)
+              Text(
+                compactMoney(item.amount ?? 0),
+                style: TextStyle(
+                  color: item.danger ? FtColors.danger : FtColors.ink,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              )
+            else
+              Text(
+                item.actionLabel ?? 'Lihat',
+                style: TextStyle(
+                  color: FtColors.clay,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
           ],
         ),
       ),
     );
   }
+}
+
+class _DateTile extends StatelessWidget {
+  const _DateTile({required this.date});
+  final DateTime date;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        color: FtColors.warnTile,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      alignment: Alignment.center,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            '${date.day}',
+            style: GoogleFonts.fredoka(
+              fontSize: 18,
+              height: 1,
+              fontWeight: FontWeight.w600,
+              color: FtColors.onWarnTile,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            Dates.monthShort(date),
+            style: TextStyle(
+              fontSize: 11,
+              height: 1,
+              fontWeight: FontWeight.w600,
+              color: FtColors.onWarnTile,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PercentRing extends StatelessWidget {
+  const _PercentRing({required this.ratio});
+  final double ratio;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 44,
+      height: 44,
+      child: CustomPaint(
+        painter: _RingPainter(
+          ratio: ratio.clamp(0.0, 1.0),
+          color: FtColors.danger,
+          track: FtColors.line,
+        ),
+        child: Center(
+          child: Text(
+            '${(ratio * 100).round()}%',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: FtColors.danger,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RingPainter extends CustomPainter {
+  _RingPainter({required this.ratio, required this.color, required this.track});
+  final double ratio;
+  final Color color;
+  final Color track;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Rect.fromCircle(
+      center: size.center(Offset.zero),
+      radius: size.width / 2 - 3,
+    );
+    final base = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4
+      ..color = track;
+    final arc = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4
+      ..strokeCap = StrokeCap.round
+      ..color = color;
+    canvas.drawCircle(rect.center, rect.width / 2, base);
+    canvas.drawArc(rect, -math.pi / 2, 2 * math.pi * ratio, false, arc);
+  }
+
+  @override
+  bool shouldRepaint(_RingPainter old) =>
+      old.ratio != ratio || old.color != color || old.track != track;
 }

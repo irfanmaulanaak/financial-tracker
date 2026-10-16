@@ -61,8 +61,8 @@ class LiquidThemeNotifier extends Notifier<bool> {
 }
 
 /// "Warna" — color palette choice (Settings → Tampilan). Default
-/// [FtPalette.hangat] is the original look; an unknown or missing stored
-/// value falls back to it.
+/// [FtPalette.daun] is the current look (DESIGN.md); an unknown or missing
+/// stored value falls back to it. Users who saved a palette keep theirs.
 final paletteProvider = NotifierProvider<PaletteNotifier, FtPalette>(
   PaletteNotifier.new,
 );
@@ -73,7 +73,7 @@ class PaletteNotifier extends Notifier<FtPalette> {
   @override
   FtPalette build() {
     _load();
-    return FtPalette.hangat;
+    return FtPalette.daun;
   }
 
   Future<void> _load() async {
@@ -81,7 +81,7 @@ class PaletteNotifier extends Notifier<FtPalette> {
     final v = prefs.getString(_key);
     state = FtPalette.values.firstWhere(
       (p) => p.name == v,
-      orElse: () => FtPalette.hangat,
+      orElse: () => FtPalette.daun,
     );
   }
 

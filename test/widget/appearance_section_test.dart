@@ -47,7 +47,7 @@ void main() {
     expect(find.text('Liquid Glass'), findsOneWidget);
   });
 
-  testWidgets('defaults match the original look except nav: Terang, Hangat, Menempel, Lengkap',
+  testWidgets('defaults: Terang, Daun, Menempel, Lengkap',
       (tester) async {
     await tester.pumpWidget(_harness());
     await tester.pumpAndSettle();
@@ -56,7 +56,7 @@ void main() {
       tester.element(find.byType(AppearanceSection)),
     );
     expect(container.read(themeModeProvider), ThemeMode.light);
-    expect(container.read(paletteProvider), FtPalette.hangat);
+    expect(container.read(paletteProvider), FtPalette.daun);
     expect(container.read(bottomNavStyleProvider), FtNavStyle.fixed);
     expect(container.read(homeLayoutProvider), FtHomeLayout.lengkap);
     expect(container.read(liquidThemeProvider), false);

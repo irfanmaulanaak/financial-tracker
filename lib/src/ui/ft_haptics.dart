@@ -24,6 +24,8 @@ class FtHaptics {
     } on PlatformException {
       // Device without haptics / capabilities query failed — silently ignore
       // so callers don't need try/catch around UI side-effects.
+    } on MissingPluginException {
+      // No platform implementation (e.g. tests, unsupported platform).
     }
   }
 }

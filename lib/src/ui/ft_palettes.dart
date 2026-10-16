@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
-/// Color palette choice ("Warna" in Settings). [hangat] is the original
-/// "Ceria keluarga" look and is the default — every other palette is opt-in.
-enum FtPalette { hangat, netral, hutan, laut }
+/// Color palette choice ("Warna" in Settings). [daun] is the default green
+/// look from DESIGN.md; [hangat] is the original "Ceria keluarga" look. Every
+/// non-default palette is opt-in.
+enum FtPalette { daun, hangat, netral, hutan, laut }
 
 extension FtPaletteLabel on FtPalette {
   String get label => switch (this) {
+        FtPalette.daun => 'Daun',
         FtPalette.hangat => 'Hangat',
         FtPalette.netral => 'Netral',
         FtPalette.hutan => 'Hutan',
@@ -69,8 +71,62 @@ class FtPaletteSwatches {
   FtSwatch pick(bool dark) => dark ? this.dark : light;
 }
 
-/// Default palette — exact colors of the original "Ceria keluarga" look.
-/// Must never change: this is what every existing install already shows.
+/// Default palette "Daun" — the calm green look from DESIGN.md section 2.
+/// White page, soft mint hero, a single green action accent, gold Catat.
+const daunSwatches = FtPaletteSwatches(
+  light: FtSwatch(
+    bg: Color(0xFFFFFFFF),
+    bgAlt: Color(0xFFF1F7F3),
+    surface: Color(0xFFFFFFFF),
+    surfaceAlt: Color(0xFFF3F8F4),
+    ink: Color(0xFF18231D),
+    ink2: Color(0xFF47574D),
+    ink3: Color(0xFF67756C),
+    ink4: Color(0xFFA3B2A8),
+    line: Color(0xFFEDF1EE),
+    lineStrong: Color(0xFFDBE5DF),
+    clay: Color(0xFF1F8A5B),
+    navBar: Color(0xFFE6F0EA),
+    navActive: Color(0xFFFFFFFF),
+    navActiveInk: Color(0xFF1F8A5B),
+    navIcon: Color(0xFF67756C),
+    fab: Color(0xFFF7BE34),
+    // The Catat button is always gold, so its ink stays dark in both modes.
+    onFab: Color(0xFF18231D),
+    peach: Color(0xFF7FD9A8),
+    onPeach: Color(0xFF0F2E1C),
+    hero: Color(0xFFEEF7F1),
+    onHero: Color(0xFF18231D),
+    heroDanger: Color(0xFFB3261E),
+  ),
+  dark: FtSwatch(
+    bg: Color(0xFF0F1512),
+    bgAlt: Color(0xFF141C18),
+    surface: Color(0xFF16211B),
+    surfaceAlt: Color(0xFF1C271F),
+    ink: Color(0xFFEAF2EC),
+    ink2: Color(0xFFB9C7BE),
+    ink3: Color(0xFF8D9C93),
+    ink4: Color(0xFF5E6B63),
+    line: Color(0xFF24302A),
+    lineStrong: Color(0xFF33413A),
+    clay: Color(0xFF4CC38A),
+    navBar: Color(0xFF16211B),
+    navActive: Color(0xFF21302A),
+    navActiveInk: Color(0xFF4CC38A),
+    navIcon: Color(0xFF8D9C93),
+    fab: Color(0xFFF7BE34),
+    onFab: Color(0xFF18231D),
+    peach: Color(0xFF7FD9A8),
+    onPeach: Color(0xFF0F2E1C),
+    hero: Color(0xFF14251C),
+    onHero: Color(0xFFEAF2EC),
+    heroDanger: Color(0xFFFF8A80),
+  ),
+);
+
+/// Original "Ceria keluarga" look — the opt-in warm palette.
+/// Must never change: this is what existing installs that saved it still show.
 const hangatSwatches = FtPaletteSwatches(
   light: FtSwatch(
     bg: Color(0xFFFFF6EC),
@@ -276,6 +332,7 @@ const lautSwatches = FtPaletteSwatches(
 );
 
 const Map<FtPalette, FtPaletteSwatches> paletteSwatches = {
+  FtPalette.daun: daunSwatches,
   FtPalette.hangat: hangatSwatches,
   FtPalette.netral: netralSwatches,
   FtPalette.hutan: hutanSwatches,

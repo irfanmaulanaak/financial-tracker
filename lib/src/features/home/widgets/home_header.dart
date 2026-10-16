@@ -13,6 +13,15 @@ import '../../household/name_format.dart';
 import 'home_formatters.dart';
 import 'home_header_ios_install_sheet.dart';
 
+/// Greeting by time of day (DESIGN.md section 8): pagi before 11:00, siang
+/// before 15:00, sore before 18:00, malam after. Pure for testability.
+String greetingForHour(int hour) {
+  if (hour < 11) return 'Selamat pagi';
+  if (hour < 15) return 'Selamat siang';
+  if (hour < 18) return 'Selamat sore';
+  return 'Selamat malam';
+}
+
 class HomeHeader extends StatelessWidget {
   const HomeHeader({
     super.key,
@@ -25,14 +34,6 @@ class HomeHeader extends StatelessWidget {
   final String displayName;
   final ValueChanged<String> onSelected;
 
-  static String _greeting() {
-    final h = DateTime.now().hour;
-    if (h < 11) return 'Selamat pagi';
-    if (h < 15) return 'Selamat siang';
-    if (h < 18) return 'Selamat sore';
-    return 'Selamat malam';
-  }
-
   @override
   Widget build(BuildContext context) {
     final topInset = MediaQuery.paddingOf(context).top;
@@ -42,15 +43,11 @@ class HomeHeader extends StatelessWidget {
         // Status-bar safe; matches design's 54px on iOS frame.
         topInset > 0 ? topInset + 10 : 24,
         18,
-        22,
+        18,
       ),
-      // Only what's needed every time: avatar + who's greeted, and the two
-      // actions (notifications, menu). The member chip and "Pasang" install
-      // action moved into the ⋯ menu — six things in one row was crowded and
-      // squeezed the name into an ellipsis on narrow phones.
       child: Row(
         children: [
-          _ProfileAvatar(displayName: displayName),
+          _MemberAvatars(members: household.members),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -58,11 +55,12 @@ class HomeHeader extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  _greeting(),
+                  greetingForHour(DateTime.now().hour),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: FtColors.ink3,
+                    // On the hero color — use onHero, not the page inks.
+                    color: FtColors.onHero.withValues(alpha: 0.65),
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
                   ),
@@ -73,10 +71,10 @@ class HomeHeader extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 22,
+                    fontSize: 18,
                     fontWeight: FontWeight.w800,
-                    letterSpacing: -0.4,
-                    color: FtColors.ink,
+                    letterSpacing: -0.3,
+                    color: FtColors.onHero,
                   ),
                 ),
               ],
@@ -92,28 +90,57 @@ class HomeHeader extends StatelessWidget {
   }
 }
 
-class _ProfileAvatar extends StatelessWidget {
-  const _ProfileAvatar({required this.displayName});
-  final String displayName;
+/// Overlapping member avatars (DESIGN.md section 8), using each member's own
+/// color and initial. Caps at 3 circles so the row never crowds.
+class _MemberAvatars extends StatelessWidget {
+  const _MemberAvatars({required this.members});
+  final List<Member> members;
 
   @override
   Widget build(BuildContext context) {
+    final shown = members.take(3).toList();
+    if (shown.isEmpty) return const SizedBox(width: 34, height: 34);
+    return SizedBox(
+      height: 34,
+      width: 34.0 + (shown.length - 1) * 25,
+      child: Stack(
+        children: [
+          for (var i = 0; i < shown.length; i++)
+            Positioned(
+              left: i * 25.0,
+              child: _Avatar(member: shown[i]),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Avatar extends StatelessWidget {
+  const _Avatar({required this.member});
+  final Member member;
+
+  @override
+  Widget build(BuildContext context) {
+    final initial =
+        initialsOf(member.displayName).characters.first.toUpperCase();
     return Container(
-      width: 44,
-      height: 44,
+      width: 34,
+      height: 34,
       decoration: BoxDecoration(
-        color: FtColors.tileFor(FtColors.catFood),
+        color: parseColor(member.color),
         shape: BoxShape.circle,
+        // Border matches the hero background the header now sits on, so the
+        // overlapping avatars read as cut-outs.
+        border: Border.all(color: FtColors.hero, width: 2.5),
       ),
       alignment: Alignment.center,
       child: Text(
-        initialsOf(displayName),
-        style: TextStyle(
-          fontFeatures: const [FontFeature.tabularFigures()],
+        initial,
+        style: const TextStyle(
+          color: Colors.white,
           fontSize: 14,
-          color: FtColors.ink,
-          letterSpacing: 0.5,
-          fontWeight: FontWeight.w800,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );

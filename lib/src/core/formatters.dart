@@ -145,8 +145,12 @@ class Dates {
   static final _monthLong = DateFormat('MMMM y', 'id_ID');
   static final _dayMonth = DateFormat('d MMM', 'id_ID');
   static final _monthShort = DateFormat('MMM', 'id_ID');
+  static final _weekday = DateFormat('EEEE', 'id_ID');
 
   static String short(DateTime d) => _short.format(d);
+
+  /// "Selasa" — weekday name, used for activity day headers.
+  static String weekday(DateTime d) => _weekday.format(d);
   static String grouped(DateTime d) => _grouped.format(d);
   static String monthYear(DateTime d) => _monthYear.format(d);
 
