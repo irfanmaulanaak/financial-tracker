@@ -36,8 +36,12 @@ class HideAssetsNotifier extends Notifier<bool> {
 /// Small eye icon button used inside asset hero cards. Tap flips the
 /// shared [hideAssetsProvider]; icon mirrors current state.
 class HideAssetsEye extends ConsumerWidget {
-  const HideAssetsEye({super.key, this.size = 18});
+  const HideAssetsEye({super.key, this.size = 18, this.color});
   final double size;
+
+  /// Icon tint. Defaults to [FtColors.ink3]; the hero's net-worth column
+  /// passes an `onHero`-based color so it reads on the hero background.
+  final Color? color;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -50,7 +54,7 @@ class HideAssetsEye extends ConsumerWidget {
         child: Icon(
           hidden ? Icons.visibility_off_outlined : Icons.visibility_outlined,
           size: size,
-          color: FtColors.ink3,
+          color: color ?? FtColors.ink3,
         ),
       ),
     );

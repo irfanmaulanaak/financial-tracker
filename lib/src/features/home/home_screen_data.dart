@@ -196,8 +196,8 @@ HomeViewData buildHomeViewData({
           capturedBy: user.uid,
         );
   }
-  final history = ref.watch(netWorthHistoryProvider(14)).value ??
-      const <NetWorthSnapshot>[];
+  final historyAsync = ref.watch(netWorthHistoryProvider(14));
+  final history = historyAsync.value ?? const <NetWorthSnapshot>[];
   // One point per calendar day (carry-forward over unopened days) so
   // the sparkline's x-axis is real time and scrubbing maps to dates.
   final dailySeries = fillDailyNetWorthSeries(history);
@@ -289,14 +289,17 @@ HomeViewData buildHomeViewData({
   }
   final stableGajiAsync = ref.watch(stableSalaryProvider);
   final stableGaji = stableGajiAsync.value ?? 0;
-  // All inputs behind the big number / sentence have landed — only then may the
-  // hero settle, so it never shows a budget computed from partial card data.
+  // All inputs behind the big number / sentence AND the hero net worth have
+  // landed — only then may the hero settle, so it never shows a budget computed
+  // from partial card data or a net worth missing investments / history.
   final heroInputsReady = cycleAsync.hasValue &&
       prevAsync.hasValue &&
       cardsAsync.hasValue &&
       installmentsReady &&
       obligationsAsync.hasValue &&
-      stableGajiAsync.hasValue;
+      stableGajiAsync.hasValue &&
+      investmentsAsync.hasValue &&
+      historyAsync.hasValue;
   final debtSummary = debtServiceSummary(
     stableSalary: stableGaji,
     fixedObligationsMonthly: debtMonthly,

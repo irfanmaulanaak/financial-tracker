@@ -10,6 +10,7 @@ import '../daily_insight_lock.dart';
 import '../eling/eling_mood.dart';
 import '../eling/eling_scene.dart';
 import '../home_data_synced.dart';
+import 'hero_net_worth.dart';
 import 'home_formatters.dart';
 
 /// The hero panel (DESIGN.md section 8 item 2): "Aman dibelanjakan hari ini",
@@ -35,6 +36,9 @@ class HomeHeroScene extends ConsumerStatefulWidget {
     required this.startLabel,
     required this.paydayLabel,
     required this.inputsReady,
+    required this.showNetWorth,
+    required this.nwTotal,
+    required this.nwChangeFrom,
   });
 
   final int perDay;
@@ -47,6 +51,16 @@ class HomeHeroScene extends ConsumerStatefulWidget {
   final String? insightCandidate;
   final String startLabel;
   final String paydayLabel;
+
+  /// Lengkap shows "Kekayaan bersih" beside the daily number; Ringkas keeps the
+  /// single, larger safe-to-spend number and never shows net worth.
+  final bool showNetWorth;
+
+  /// Live net worth (`computeNetWorth`) for the right column.
+  final int nwTotal;
+
+  /// First value of the 14-day daily series, or null when there's no history.
+  final double? nwChangeFrom;
 
   /// True once every provider behind [perDay] / [remaining] / [mood] has loaded.
   /// The settle check waits for this so the entrance doesn't play over a budget
@@ -157,28 +171,7 @@ class _HomeHeroSceneState extends ConsumerState<HomeHeroScene> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 10),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 0, 24, 0),
-            child: Text(
-              'Aman dibelanjakan hari ini',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
-                color: FtColors.onHero.withValues(alpha: 0.65),
-              ),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(22, 0, 22, 0),
-            child: !_stable
-                // Waiting for the data to settle: reserve the number's height
-                // so the hill doesn't jump, but show no value.
-                ? const SizedBox(height: 58)
-                : widget.hasBudget
-                    ? _number()
-                    : _noBudget(context),
-          ),
+          if (widget.showNetWorth) _twoColumnTop(context) else _singleTop(context),
           const SizedBox(height: 8),
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 0, 24, 0),
@@ -202,7 +195,93 @@ class _HomeHeroSceneState extends ConsumerState<HomeHeroScene> {
     );
   }
 
-  Widget _number() {
+  /// Ringkas hero: single column, "Aman dibelanjakan hari ini", 58px number.
+  Widget _singleTop(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 0),
+          child: _label('Aman dibelanjakan hari ini'),
+        ),
+        const SizedBox(height: 6),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(22, 0, 22, 0),
+          child: !_stable
+              // Waiting for the data to settle: reserve the number's height
+              // so the hill doesn't jump, but show no value.
+              ? const SizedBox(height: 58)
+              : widget.hasBudget
+                  ? _number(big: 58, small: 26)
+                  : _noBudget(context),
+        ),
+      ],
+    );
+  }
+
+  /// Lengkap hero: the daily number (46px) and "Kekayaan bersih" (34px) side by
+  /// side, equal width, split by a thin divider.
+  Widget _twoColumnTop(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(22, 0, 22, 0),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _label('Aman hari ini'),
+                  const SizedBox(height: 6),
+                  if (!_stable)
+                    const SizedBox(height: 46)
+                  else if (widget.hasBudget)
+                    SizedBox(
+                      height: 46,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: _number(big: 46, small: 22),
+                      ),
+                    )
+                  else
+                    _noBudget(context),
+                ],
+              ),
+            ),
+            Container(
+              width: 1,
+              color: FtColors.onHero.withValues(alpha: 0.15),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(left: 18),
+                child: HeroNetWorth(
+                  total: widget.nwTotal,
+                  changeFrom: widget.nwChangeFrom,
+                  stable: _stable,
+                  countUp: _countFromZero,
+                  reduce: _reduce,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _label(String text) => Text(
+        text,
+        style: TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w500,
+          color: FtColors.onHero.withValues(alpha: 0.65),
+        ),
+      );
+
+  Widget _number({required double big, required double small}) {
     return TweenAnimationBuilder<int>(
       tween: IntTween(
         begin: _countFromZero ? 0 : widget.perDay,
@@ -218,26 +297,26 @@ class _HomeHeroSceneState extends ConsumerState<HomeHeroScene> {
       },
       builder: (context, value, _) {
         final parts = heroMoneyParts(value);
-        final big = GoogleFonts.fredoka(
-          fontSize: 58,
+        final bigStyle = GoogleFonts.fredoka(
+          fontSize: big,
           height: 1,
           letterSpacing: -0.5,
           fontWeight: FontWeight.w600,
           color: FtColors.onHero,
           fontFeatures: const [FontFeature.tabularFigures()],
         );
-        final small = GoogleFonts.fredoka(
-          fontSize: 26,
+        final smallStyle = GoogleFonts.fredoka(
+          fontSize: small,
           fontWeight: FontWeight.w500,
           color: FtColors.onHero,
           fontFeatures: const [FontFeature.tabularFigures()],
         );
         return RichText(
           text: TextSpan(children: [
-            TextSpan(text: '${parts.prefix} ', style: small),
-            TextSpan(text: parts.number, style: big),
+            TextSpan(text: '${parts.prefix} ', style: smallStyle),
+            TextSpan(text: parts.number, style: bigStyle),
             if (parts.suffix.isNotEmpty)
-              TextSpan(text: parts.suffix, style: small),
+              TextSpan(text: parts.suffix, style: smallStyle),
           ]),
         );
       },

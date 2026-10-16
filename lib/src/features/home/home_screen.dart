@@ -134,6 +134,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 startLabel: Dates.dayMonth(data.cycleStart),
                 paydayLabel: 'Gajian ${Dates.dayMonth(data.safe.nextPayday)}',
                 inputsReady: data.heroInputsReady,
+                showNetWorth: !ringkas,
+                nwTotal: data.nw.total,
+                // Live top minus the first value of the 14-day series (not
+                // trend.last, which the day's snapshot write would move right
+                // after the hero settles). Null when there's no history.
+                nwChangeFrom:
+                    data.trend.length >= 2 ? data.trend.first : null,
               ),
               if (onbActive) ...[
                 gap,
@@ -159,8 +166,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     carries: data.carries,
                   ),
                 ],
-                gap,
-                NetWorthRow(nw: data.nw, trend: data.trend),
                 if (data.goals.isNotEmpty) ...[
                   gap,
                   GoalsSection(goals: data.goals),

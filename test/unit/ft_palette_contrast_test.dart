@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:financial_tracker/src/features/home/eling/eling_hill_painter.dart';
 import 'package:financial_tracker/src/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -122,6 +123,16 @@ void main() {
           // `onHero` (DESIGN.md section 2).
           expect(_contrast(FtColors.onHero, FtColors.hero),
               greaterThanOrEqualTo(_kAA));
+        });
+
+        test('Eling path, dot and date labels stand out on the hill', () {
+          // Regression: in Laut/Hutan/Hangat dark the accent equals `hero`, so
+          // the payday path and dot vanished, and the `ink2` labels were light
+          // text on a light hero.
+          final c = ElingSceneColors.fromTheme();
+          expect(_contrast(c.filledPath, FtColors.hero),
+              greaterThanOrEqualTo(_kAALarge));
+          expect(_contrast(FtColors.onHero, c.hill), greaterThanOrEqualTo(_kAA));
         });
       });
     }

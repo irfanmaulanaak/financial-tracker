@@ -35,7 +35,7 @@ Rules:
 
 ## 3. Type
 
-- **Fredoka 600** only for the big hero number (and Eling's "z z"). `Rp` and `rb`/`jt` are smaller (26px, weight 500) next to a 58px number.
+- **Fredoka 600** only for the hero numbers (and Eling's "z z"). `Rp` and `rb`/`jt` are smaller, weight 500. In Lengkap there are two: the daily safe-to-spend number at 46px (units 22px) on the left and "Kekayaan bersih" at 34px (units 18px) on the right. In Ringkas there is one number at 58px (units 26px).
 - **Plus Jakarta Sans** for everything else.
 - Three sizes do almost everything: 17px w700 section titles, 15px body (w600 for row titles), 13px captions. Big number is the only exception.
 - Sentence case everywhere. **No ALL-CAPS labels. No letter-spaced eyebrow labels.**
@@ -84,7 +84,7 @@ Motion is for delight and for showing what changed. It is never decoration that 
 
 From top to bottom:
 1. Header: overlapping member avatars, "Selamat pagi, Irfan" (pagi before 11:00, siang before 15:00, sore before 18:00, malam after), bell, and the existing ⋯ menu.
-2. Hero scene (hero color, full width): "Aman dibelanjakan hari ini", the big number, one plain sentence, then the hill with the payday path from the cycle start date to "Gajian <date>" with a small house at the end, Eling at today's spot, and his bubble.
+2. Hero scene (hero color, full width). In **Lengkap** it is two equal columns split by a thin divider: on the left "Aman hari ini" with the daily safe-to-spend number; on the right "Kekayaan bersih" with the live net worth, its eye toggle, and a one-line two-week change ("Turun …" in danger when it went down, "Naik …" when it went up, nothing when flat or no history). Tapping the net worth opens Aset; hidden assets mask it and drop the change line. Both numbers count up together on the entrance. In **Ringkas** it stays a single column: "Aman dibelanjakan hari ini" and the one big number, no net worth. Under the columns: one plain sentence, then the hill with the payday path from the cycle start date to "Gajian <date>" with a small house at the end, Eling at today's spot, and his bubble.
 3. Onboarding checklist (only while active).
 4. "Perlu dibereskan": due bills with a date tile, and the DSR warning with a small ring showing the percent. Hidden when empty.
 5. Activity grouped by day ("Hari ini", "Kemarin, 15 Okt", "Selasa, 14 Okt"), 5 latest items, then "Lihat semua".
@@ -92,8 +92,7 @@ From top to bottom:
 Only in **Lengkap** (the Ringkas setting stops after item 4):
 
 6. "Anggaran bulan ini": the top 4 categories as plain rows with one thin bar each (accent, red when over).
-7. "Kekayaan bersih": one row with the value and its 2-week change. Tap it to open Aset.
-8. "Tujuan": up to 3 goals as plain rows with a thin bar.
+7. "Tujuan": up to 3 goals as plain rows with a thin bar.
 
 ## 9. Banned (the AI-default look)
 

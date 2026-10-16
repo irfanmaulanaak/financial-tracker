@@ -153,16 +153,7 @@ class _ElingSceneState extends State<ElingScene>
             ? 1.0
             : 0.0;
 
-    final colors = ElingSceneColors(
-      hill: Color.alphaBlend(FtColors.clay.withValues(alpha: 0.12), FtColors.hero),
-      emptyPath:
-          Color.alphaBlend(FtColors.clay.withValues(alpha: 0.30), FtColors.hero),
-      filledPath: FtColors.clay,
-      dot: FtColors.clay,
-      houseBody: FtColors.surface,
-      roof: const Color(0xFFE5533D),
-      door: FtColors.clay,
-    );
+    final colors = ElingSceneColors.fromTheme();
 
     final tapLine = widget.perDay > 0
         ? 'Hihi, geli! Hari ini masih aman, ${compactMoney(widget.perDay)} lagi ya.'
@@ -390,7 +381,9 @@ class _ElingSceneState extends State<ElingScene>
         style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w600,
-          color: FtColors.ink2,
+          // Sits on the hill (hero color), so it uses the hero text color —
+          // `ink2` follows the app theme and vanishes on a light hero in dark.
+          color: FtColors.onHero,
         ),
       );
 }

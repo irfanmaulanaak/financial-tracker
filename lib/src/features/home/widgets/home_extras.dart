@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/hide_assets_provider.dart';
-import '../../../core/net_worth.dart';
 import '../../../theme.dart';
 import '../../../ui/ft_ui.dart';
 import '../../goals/goal.dart';
@@ -103,68 +100,6 @@ class _BudgetRow extends StatelessWidget {
           ],
         ],
       ),
-    );
-  }
-}
-
-/// "Kekayaan bersih" (Lengkap only): value + its 2-week change, respecting the
-/// hide-assets toggle. Tap opens Aset. DESIGN.md section 8 item 7.
-class NetWorthRow extends ConsumerWidget {
-  const NetWorthRow({super.key, required this.nw, required this.trend});
-  final NetWorth nw;
-  final List<double> trend;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final hidden = ref.watch(hideAssetsProvider);
-    final delta =
-        trend.length >= 2 ? (trend.last - trend.first).round() : 0;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const FtSectionHeader(title: 'Kekayaan bersih'),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(22, 0, 22, 0),
-          child: Row(
-            children: [
-              Expanded(
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => context.push('/accounts'),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        hidden ? maskMoney() : compactMoney(nw.total),
-                        style: TextStyle(
-                          color: FtColors.ink,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.3,
-                          fontFeatures: const [FontFeature.tabularFigures()],
-                        ),
-                      ),
-                      if (!hidden && delta != 0) ...[
-                        const SizedBox(height: 2),
-                        Text(
-                          '${delta >= 0 ? '+' : '−'}${compactMoney(delta.abs())} dalam 2 minggu',
-                          style: TextStyle(
-                            color: delta >= 0 ? FtColors.moss : FtColors.danger,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            fontFeatures: const [FontFeature.tabularFigures()],
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-              const HideAssetsEye(),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }

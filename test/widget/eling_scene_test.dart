@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:financial_tracker/src/core/hide_assets_provider.dart';
 import 'package:financial_tracker/src/features/home/eling/eling_mood.dart';
 import 'package:financial_tracker/src/features/home/eling/eling_scene.dart';
 import 'package:financial_tracker/src/features/home/home_data_synced.dart';
@@ -10,17 +11,27 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+class _AssetsShown extends HideAssetsNotifier {
+  @override
+  bool build() => false;
+}
+
 Widget _harness(
   int perDay, {
   bool reduce = false,
   Stream<bool>? synced,
   bool inputsReady = true,
   String? insight,
+  bool showNetWorth = false,
+  int nwTotal = 88900000,
+  double? nwChangeFrom,
+  bool assetsHidden = true,
 }) {
   return ProviderScope(
     overrides: [
       homeDataSyncedProvider
           .overrideWith((ref) => synced ?? Stream.value(true)),
+      if (!assetsHidden) hideAssetsProvider.overrideWith(_AssetsShown.new),
     ],
     child: MaterialApp(
       home: Scaffold(
@@ -39,6 +50,9 @@ Widget _harness(
               startLabel: '30 Sep',
               paydayLabel: 'Gajian 30 Okt',
               inputsReady: inputsReady,
+              showNetWorth: showNetWorth,
+              nwTotal: nwTotal,
+              nwChangeFrom: nwChangeFrom,
             ),
           ),
         ),
@@ -174,5 +188,83 @@ void main() {
     // Let the 1.5s revert timer fire so no timer is left pending.
     await tester.pump(const Duration(milliseconds: 1600));
     expect(find.text('Hari ini masih aman.'), findsOneWidget);
+  });
+
+  testWidgets('Lengkap: net worth and its down change show after settle',
+      (tester) async {
+    // First value of the series is 4,6 jt higher than nw.total → "Turun".
+    await tester.pumpWidget(_harness(
+      414000,
+      reduce: true,
+      showNetWorth: true,
+      assetsHidden: false,
+      nwTotal: 88900000,
+      nwChangeFrom: 88900000 + 4600000,
+    ));
+    await tester.pump(); // let the synced provider value reach the hero
+    await tester.pump(const Duration(milliseconds: 750)); // past the settle
+    await tester.pump(); // values reach the widget one frame later
+
+    expect(_richTextHas('88,9'), isTrue); // Rp88,9 jt
+    expect(find.text('Turun Rp4,6 jt\ndalam 2 minggu'), findsOneWidget);
+  });
+
+  testWidgets('Lengkap: hidden assets mask the value and hide the change',
+      (tester) async {
+    await tester.pumpWidget(_harness(
+      414000,
+      reduce: true,
+      showNetWorth: true,
+      // assetsHidden defaults to true (privacy default).
+      nwTotal: 88900000,
+      nwChangeFrom: 88900000 + 4600000,
+    ));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 750));
+    await tester.pump();
+
+    expect(find.text('Rp ••••'), findsOneWidget); // maskMoney()
+    expect(_richTextHas('88,9'), isFalse);
+    expect(find.text('Turun Rp4,6 jt\ndalam 2 minggu'), findsNothing);
+  });
+
+  testWidgets('Ringkas: no net worth column', (tester) async {
+    await tester.pumpWidget(_harness(
+      414000,
+      reduce: true,
+      // showNetWorth defaults to false (Ringkas).
+      assetsHidden: false,
+      nwChangeFrom: 88900000 + 4600000,
+    ));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 750));
+    await tester.pump();
+
+    expect(find.text('Kekayaan bersih'), findsNothing);
+    expect(_richTextHas('88,9'), isFalse);
+    expect(find.text('Turun Rp4,6 jt\ndalam 2 minggu'), findsNothing);
+    // The safe-to-spend number still shows as the single hero number.
+    expect(_richTextHas('414'), isTrue);
+  });
+
+  testWidgets('Lengkap: hero does not settle while net worth inputs load',
+      (tester) async {
+    // `inputsReady` folds in investments + net worth history (see
+    // buildHomeViewData.heroInputsReady). While false, nothing settles.
+    await tester.pumpWidget(_harness(
+      414000,
+      reduce: true,
+      showNetWorth: true,
+      assetsHidden: false,
+      inputsReady: false,
+      nwChangeFrom: 88900000 + 4600000,
+    ));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 800)); // past the settle
+    await tester.pump();
+
+    expect(_richTextHas('414'), isFalse); // safe number not shown
+    expect(_richTextHas('88,9'), isFalse); // net worth not shown
+    expect(find.text('Turun Rp4,6 jt\ndalam 2 minggu'), findsNothing);
   });
 }

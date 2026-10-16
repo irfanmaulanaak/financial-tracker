@@ -1,6 +1,9 @@
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+
+import '../../../theme.dart';
 
 /// Scene geometry, all in the mockup's design units (see home.html). The hill
 /// band is the slice of the mockup's 390x412 scene from y=232 down to y=412,
@@ -84,6 +87,39 @@ class ElingSceneColors {
     required this.door,
   });
   final Color hill, emptyPath, filledPath, dot, houseBody, roof, door;
+
+  /// Colors for the active palette and brightness.
+  factory ElingSceneColors.fromTheme() {
+    final accent = elingAccent(
+      accent: FtColors.clay,
+      hero: FtColors.hero,
+      onHero: FtColors.onHero,
+    );
+    return ElingSceneColors(
+      hill: Color.alphaBlend(accent.withValues(alpha: 0.12), FtColors.hero),
+      emptyPath: Color.alphaBlend(accent.withValues(alpha: 0.30), FtColors.hero),
+      filledPath: accent,
+      dot: accent,
+      houseBody: FtColors.surface,
+      roof: const Color(0xFFE5533D),
+      door: FtColors.clay,
+    );
+  }
+}
+
+/// The path and start dot use the palette accent, unless it is too close to
+/// the hero color to see (under 3:1). Laut, Hutan and Hangat use the same color
+/// for both in dark mode, and Netral light is grey on dark grey. Then the path
+/// uses the hero text color instead.
+Color elingAccent({
+  required Color accent,
+  required Color hero,
+  required Color onHero,
+}) {
+  final a = accent.computeLuminance();
+  final h = hero.computeLuminance();
+  final ratio = (math.max(a, h) + 0.05) / (math.min(a, h) + 0.05);
+  return ratio >= 3 ? accent : onHero;
 }
 
 /// Paints the hill, the payday path (empty track + the green progress that
