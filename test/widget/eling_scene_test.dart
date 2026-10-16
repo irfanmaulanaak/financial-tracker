@@ -15,6 +15,7 @@ Widget _harness(
   bool reduce = false,
   Stream<bool>? synced,
   bool inputsReady = true,
+  String? insight,
 }) {
   return ProviderScope(
     overrides: [
@@ -34,7 +35,7 @@ Widget _harness(
               mood: ElingMood.senang,
               daysElapsed: 16,
               cycleLength: 30,
-              insightCandidate: null,
+              insightCandidate: insight,
               startLabel: '30 Sep',
               paydayLabel: 'Gajian 30 Okt',
               inputsReady: inputsReady,
@@ -100,6 +101,34 @@ void main() {
     // Past the settle window: the number shows.
     await tester.pump(const Duration(milliseconds: 500));
     expect(_richTextHas('414'), isTrue);
+  });
+
+  testWidgets('daily insight is not locked from data that is still loading',
+      (tester) async {
+    final synced = StreamController<bool>();
+    addTearDown(synced.close);
+
+    // Not synced yet: a candidate computed from partial data must not be
+    // written as today's locked insight.
+    await tester.pumpWidget(_harness(414000,
+        reduce: true, synced: synced.stream, insight: 'Dari data sebagian'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    var prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString('insight_text'), isNull);
+
+    // Synced and settled: the real candidate is locked and shown.
+    await tester.pumpWidget(_harness(414000,
+        reduce: true, synced: synced.stream, insight: 'Dari data lengkap'));
+    synced.add(true);
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 800));
+    await tester.pump();
+    await tester.pump();
+    prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString('insight_text'), 'Dari data lengkap');
+    expect(find.text('Dari data lengkap'), findsOneWidget);
   });
 
   testWidgets('entrance waits until the inputs settle (debounced)',

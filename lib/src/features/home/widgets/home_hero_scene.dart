@@ -130,10 +130,13 @@ class _HomeHeroSceneState extends ConsumerState<HomeHeroScene> {
     }
 
     final locked = ref.watch(dailyInsightLockProvider);
-    // Lock today's insight the first time a candidate shows up (and whenever it
-    // changes as data streams in). Done after the frame to avoid mutating a
+    // Lock today's insight only once the hero data is complete (_stable):
+    // the lock keeps the first candidate for the whole day, and a candidate
+    // computed from cache-first partial data can be untrue ("hemat" before
+    // all spending has loaded). Done after the frame to avoid mutating a
     // provider during build.
-    if (!_resolvedOnce || widget.insightCandidate != _lastCandidate) {
+    if (_stable &&
+        (!_resolvedOnce || widget.insightCandidate != _lastCandidate)) {
       _resolvedOnce = true;
       _lastCandidate = widget.insightCandidate;
       WidgetsBinding.instance.addPostFrameCallback((_) {
