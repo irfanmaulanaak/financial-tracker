@@ -3,23 +3,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/cicilan.dart';
-import '../../core/formatters.dart';
 import '../../theme.dart';
 import '../../ui/ft_refresh.dart';
 import '../../ui/ft_ui.dart';
 import '../expenses/expense.dart';
-import '../expenses/expense_detail_sheet.dart';
 import '../expenses/expense_repository.dart';
-import '../household/household.dart';
 import '../household/household_providers.dart';
+import 'card_detail_actions.dart';
 import 'credit_card.dart';
 import 'card_repository.dart';
 import 'edit_card_sheet.dart';
-import 'edit_cicilan_sheet.dart';
 import 'pay_card_sheet.dart';
 import 'pay_installment_sheet.dart';
 import 'widgets/card_detail_header.dart';
+import 'widgets/card_detail_expenses_list.dart';
 import 'widgets/installment_list.dart';
+
+export 'widgets/card_detail_expenses_list.dart';
 
 final _cardProvider =
     StreamProvider.family<CreditCard?, ({String hid, String cardId})>((ref, p) {
@@ -121,7 +121,7 @@ class CardDetailScreen extends ConsumerWidget {
         if (context.mounted) context.pop();
       } on StateError catch (e) {
         if (!context.mounted) return;
-        showFtErrorSnack(context, _deleteErrorMessage(e.message));
+        showFtErrorSnack(context, cardDeleteErrorMessage(e.message));
       } catch (e) {
         if (!context.mounted) return;
         showFtErrorSnack(context, e, prefix: 'Gagal menghapus kartu');
@@ -173,7 +173,7 @@ class CardDetailScreen extends ConsumerWidget {
                       children: [
                         IconButton.filledTonal(
                           tooltip: 'Hitung ulang terpakai',
-                          onPressed: () => _recalcUsed(context, ref, household.id, card),
+                          onPressed: () => cardRecalcUsed(context, ref, household.id, card),
                           icon: const Icon(Icons.sync, size: 18),
                         ),
                         const SizedBox(width: 8),
@@ -239,7 +239,7 @@ class CardDetailScreen extends ConsumerWidget {
                                 installment: i,
                               ),
                               onEdit: canEdit
-                                  ? () => _editInstallment(
+                                  ? () => cardEditInstallment(
                                         context,
                                         ref,
                                         household.id,
@@ -248,7 +248,7 @@ class CardDetailScreen extends ConsumerWidget {
                                       )
                                   : null,
                               onDelete: canEdit
-                                  ? () => _deleteInstallment(
+                                  ? () => cardDeleteInstallment(
                                         context,
                                         ref,
                                         household.id,
@@ -268,7 +268,7 @@ class CardDetailScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 8),
                   const FtSectionHeader(title: 'Pengeluaran kartu'),
-                  _CardExpensesList(hid: household.id, cardId: cardId),
+                  CardExpensesList(hid: household.id, cardId: cardId),
                 ],
               ),
               ),
@@ -277,316 +277,5 @@ class CardDetailScreen extends ConsumerWidget {
         },
       ),
     );
-  }
-
-  Future<void> _recalcUsed(
-    BuildContext context,
-    WidgetRef ref,
-    String hid,
-    CreditCard card,
-  ) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Hitung ulang terpakai?'),
-        content: Text(
-          'Dua angka dihitung ulang dari data mentah:\n\n'
-          '• "Terpakai": gaya tagihan bank. Cicilan yang sudah melewati '
-          'tanggal tutup tagihan (tgl ${card.billingDay}) tapi belum '
-          'dibayar, plus transaksi reguler yang belum dibayar.\n'
-          '• Total sisa utang: seluruh sisa cicilan (tertagih maupun '
-          'belum) plus transaksi reguler. Angka ini yang dipakai kekayaan '
-          'bersih, jadi grafik tidak lompat di tanggal cetak.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Batal'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Hitung ulang'),
-          ),
-        ],
-      ),
-    );
-    if (ok != true) return;
-    try {
-      final newUsed = await ref
-          .read(cardRepositoryProvider)
-          .recalcUsed(hid: hid, cardId: card.id);
-      if (context.mounted) {
-        final delta = newUsed - card.used;
-        final msg = delta == 0
-            ? 'Sudah sinkron. Terpakai tetap ${Money.format(newUsed)}.'
-            : 'Terpakai diperbarui: ${Money.format(card.used)} → ${Money.format(newUsed)} '
-                '(${delta > 0 ? '+' : ''}${Money.format(delta)})';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(msg)),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        showFtErrorSnack(context, e, prefix: 'Gagal menghitung ulang');
-      }
-    }
-  }
-
-  Future<void> _editInstallment(
-    BuildContext context,
-    WidgetRef ref,
-    String hid,
-    CreditCard card,
-    Installment inst,
-  ) async {
-    final draft = await showModalBottomSheet<CicilanPlanDraft>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => EditCicilanSheet(initial: inst, cardApr: card.apr),
-    );
-    if (draft == null) return;
-    try {
-      await ref.read(expenseRepositoryProvider).updateCicilanPlan(
-            householdId: hid,
-            expenseId: inst.expenseId,
-            newPrincipal: draft.principal,
-            newMonths: draft.months,
-            newApr: draft.apr,
-            newLabel: draft.label,
-            newDate: draft.newDate,
-          );
-    } catch (e) {
-      if (context.mounted) {
-        showFtErrorSnack(context, e, prefix: 'Gagal memperbarui cicilan');
-      }
-    }
-  }
-
-  Future<void> _deleteInstallment(
-    BuildContext context,
-    WidgetRef ref,
-    String hid,
-    Installment inst,
-  ) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Hapus cicilan?'),
-        content: Text(
-          'Cicilan "${inst.label}" akan dihapus.\n'
-          'Sisa tagihan ${Money.format(inst.remainingAmount)} akan dikurangi dari kartu.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Batal'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: FtColors.danger),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Hapus'),
-          ),
-        ],
-      ),
-    );
-    if (ok != true) return;
-    try {
-      await ref.read(expenseRepositoryProvider).delete(
-            householdId: hid,
-            expenseId: inst.expenseId,
-          );
-    } catch (e) {
-      if (context.mounted) {
-        showFtErrorSnack(context, e, prefix: 'Gagal menghapus cicilan');
-      }
-    }
-  }
-
-}
-
-class _CardExpensesList extends ConsumerWidget {
-  const _CardExpensesList({required this.hid, required this.cardId});
-  final String hid;
-  final String cardId;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final household = ref.watch(currentHouseholdProvider).value;
-    final async = ref.watch(cardExpensesProvider((hid: hid, cardId: cardId)));
-    final plans = {
-      for (final i in ref
-              .watch(cardInstallmentsProvider((hid: hid, cardId: cardId)))
-              .value ??
-          const <Installment>[])
-        i.id: i,
-    };
-    return async.when(
-      loading: () => const Padding(
-        padding: EdgeInsets.all(16),
-        child: Center(child: CircularProgressIndicator()),
-      ),
-      error: (e, _) => FtCard(
-        child: Text(
-          'Gagal memuat pengeluaran: $e',
-          style: TextStyle(color: FtColors.danger),
-        ),
-      ),
-      data: (items) {
-        // Plain charges plus settled cicilan; unfinished plans stay in the
-        // "Cicilan aktif" section above.
-        final rows = [
-          for (final e in items)
-            if (e.installmentPlanId == null ||
-                (plans[e.installmentPlanId]?.isComplete ?? false))
-              e,
-        ];
-        if (rows.isEmpty) {
-          return FtCard(
-            child: Center(
-              child: Text(
-                'Belum ada pengeluaran kartu.',
-                style: TextStyle(color: FtColors.ink3),
-              ),
-            ),
-          );
-        }
-        return Column(
-          children: [
-            for (final e in rows)
-              _CardExpenseRow(
-                expense: e,
-                plan: plans[e.installmentPlanId],
-                category: household?.categoryOf(e.categoryId),
-                onTap: () => ExpenseDetailSheet.show(
-                  context: context,
-                  expense: e,
-                ),
-              ),
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _CardExpenseRow extends StatelessWidget {
-  const _CardExpenseRow({
-    required this.expense,
-    required this.category,
-    required this.onTap,
-    this.plan,
-  });
-
-  final Expense expense;
-  final Category? category;
-  final VoidCallback onTap;
-
-  /// Settled installment plan behind this row, when the expense was a
-  /// cicilan. Drives the "lunas" hint in the subtitle.
-  final Installment? plan;
-
-  @override
-  Widget build(BuildContext context) {
-    final cat = category;
-    final color =
-        cat != null ? _parseColor(cat.color) : FtColors.ink3;
-    return FtCard(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      onTap: onTap,
-      child: Row(
-        children: [
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: color.withValues(alpha: 0.22)),
-            ),
-            child: Icon(
-              _iconFor(cat?.icon ?? 'category'),
-              color: color,
-              size: 16,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  cat?.label ?? '-',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: FtColors.ink,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  [
-                    Dates.short(expense.date),
-                    if (plan != null)
-                      plan!.monthsTotal > 1
-                          ? 'Cicilan ${plan!.monthsTotal}× lunas'
-                          : 'Lunas',
-                    if (expense.note != null && expense.note!.isNotEmpty)
-                      expense.note!,
-                  ].join(' · '),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: FtColors.ink3, fontSize: 11),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          Text(
-            Money.format(expense.amount),
-            style: TextStyle(
-              color: FtColors.ink,
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-Color _parseColor(String hex) {
-  final h = hex.replaceFirst('#', '');
-  return Color(int.parse('FF$h', radix: 16));
-}
-
-IconData _iconFor(String name) => switch (name) {
-      'restaurant' => Icons.restaurant,
-      'receipt_long' => Icons.receipt_long,
-      'shopping_bag' => Icons.shopping_bag,
-      'directions_car' => Icons.directions_car,
-      'movie' => Icons.movie,
-      'favorite' => Icons.favorite,
-      'school' => Icons.school,
-      'pets' => Icons.pets,
-      'sports_esports' => Icons.sports_esports,
-      'trending_up' => Icons.trending_up,
-      _ => Icons.category,
-    };
-
-String _deleteErrorMessage(String? code) {
-  switch (code) {
-    case 'card_has_balance':
-      return 'Tidak bisa hapus: kartu masih punya saldo terpakai. '
-          'Bayar dulu lewat tombol "Bayar tagihan".';
-    case 'card_has_active_installments':
-      return 'Tidak bisa hapus: ada cicilan yang belum selesai.';
-    case 'card_missing':
-      return 'Kartu sudah tidak ada.';
-    default:
-      return 'Gagal menghapus kartu.';
   }
 }

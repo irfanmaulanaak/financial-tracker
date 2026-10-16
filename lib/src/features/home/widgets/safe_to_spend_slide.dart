@@ -106,7 +106,7 @@ class SafeToSpendSlide extends StatelessWidget {
                   const SizedBox(height: 8),
                   // Anotasi: dari mana angka ini.
                   Text(
-                    '= sisa anggaran ${Money.compact(remaining)} ÷ $daysLeft hari sampai gajian (${Dates.dayMonth(nextPayday)})',
+                    'Sisa anggaran ${Money.compact(remaining)} dibagi $daysLeft hari sampai gajian ${Dates.dayMonth(nextPayday)}',
                     style: TextStyle(
                         color: ink3, fontSize: 11.5, height: 1.4),
                   ),

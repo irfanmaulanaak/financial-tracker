@@ -40,7 +40,7 @@ class HealthRecommendations extends StatelessWidget {
       recs.add(const _Rec(
         icon: Icons.credit_card_rounded,
         label: 'Prioritaskan pelunasan kartu kredit',
-        detail: 'Utang kartu sudah > 50% dari saldo tabungan',
+        detail: 'Utang kartu sudah lebih dari 50% saldo tabungan',
         route: '/cards',
       ));
     }

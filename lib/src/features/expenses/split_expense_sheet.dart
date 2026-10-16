@@ -10,6 +10,7 @@ import '../../ui/ft_ui.dart';
 import '../home/widgets/home_formatters.dart';
 import '../household/household.dart';
 import 'expense_repository.dart';
+import 'widgets/split_expense_part_row.dart';
 
 /// Sheet split: bagi [total] ke 2-4 kategori. Tiap bagian disimpan sebagai
 /// pengeluaran terpisah (tanggal, sumber, pencatat & catatan sama).
@@ -73,7 +74,7 @@ class SplitExpenseSheet extends ConsumerStatefulWidget {
 class _SplitExpenseSheetState extends ConsumerState<SplitExpenseSheet> {
   static const _maxParts = 4;
 
-  final _rows = <_PartRow>[];
+  final _rows = <SplitPartRow>[];
   bool _busy = false;
   String? _error;
 
@@ -81,9 +82,9 @@ class _SplitExpenseSheetState extends ConsumerState<SplitExpenseSheet> {
   void initState() {
     super.initState();
     // Baris 1 terisi kategori awal + seluruh jumlah; baris 2 kosong.
-    _rows.add(_PartRow(categoryId: widget.initialCategoryId,
+    _rows.add(SplitPartRow(categoryId: widget.initialCategoryId,
         amount: widget.total));
-    _rows.add(_PartRow());
+    _rows.add(SplitPartRow());
   }
 
   @override
@@ -160,7 +161,7 @@ class _SplitExpenseSheetState extends ConsumerState<SplitExpenseSheet> {
     }
   }
 
-  Future<void> _pickCategory(_PartRow row) async {
+  Future<void> _pickCategory(SplitPartRow row) async {
     final cats = widget.household.categories
         .where((c) => !c.archived)
         .toList()
@@ -250,7 +251,7 @@ class _SplitExpenseSheetState extends ConsumerState<SplitExpenseSheet> {
             Align(
               alignment: Alignment.centerLeft,
               child: TextButton.icon(
-                onPressed: () => setState(() => _rows.add(_PartRow())),
+                onPressed: () => setState(() => _rows.add(SplitPartRow())),
                 icon: const Icon(Icons.add_rounded, size: 16),
                 label: const Text('Tambah bagian',
                     style: TextStyle(fontSize: 12)),
@@ -302,7 +303,7 @@ class _SplitExpenseSheetState extends ConsumerState<SplitExpenseSheet> {
     );
   }
 
-  Widget _row(_PartRow r) {
+  Widget _row(SplitPartRow r) {
     final cat =
         r.categoryId == null ? null : widget.household.categoryOf(r.categoryId!);
     return Padding(
@@ -387,15 +388,4 @@ class _SplitExpenseSheetState extends ConsumerState<SplitExpenseSheet> {
       ),
     );
   }
-}
-
-class _PartRow {
-  _PartRow({this.categoryId, int amount = 0})
-      : controller = TextEditingController(
-            text: amount > 0 ? Money.groupDigits(amount) : '');
-
-  String? categoryId;
-  final TextEditingController controller;
-
-  int get amount => Money.parse(controller.text) ?? 0;
 }

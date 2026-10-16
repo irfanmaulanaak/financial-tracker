@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/cicilan.dart';
 import '../../core/providers.dart';
-import '../accounts/account.dart';
 import '../expenses/expense.dart';
 import '../household/household.dart';
+import 'card_repository_debit.dart';
 import 'credit_card.dart';
+
+part 'card_repository_streams.dart';
 
 class CardRepository {
   CardRepository(this._db);
@@ -17,31 +19,6 @@ class CardRepository {
   CollectionReference<Map<String, dynamic>> _installments(
           String hid, String cardId) =>
       _cards(hid).doc(cardId).collection('installments');
-
-  Stream<List<CreditCard>> watchAll(String hid) {
-    return _cards(hid).snapshots().map(
-          (s) => s.docs.map(CreditCard.fromSnapshot).toList()
-            ..sort((a, b) => a.label.compareTo(b.label)),
-        );
-  }
-
-  Stream<CreditCard?> watchOne({required String hid, required String cardId}) {
-    return _cards(hid)
-        .doc(cardId)
-        .snapshots()
-        .map((s) => s.exists ? CreditCard.fromSnapshot(s) : null);
-  }
-
-  Stream<List<Installment>> watchInstallments({
-    required String hid,
-    required String cardId,
-  }) {
-    return _installments(hid, cardId)
-        .orderBy('startedAt', descending: true)
-        .snapshots()
-        .map((s) =>
-            s.docs.map((d) => Installment.fromSnapshot(d, cardId)).toList());
-  }
 
   Future<String> addCard({
     required String hid,
@@ -157,7 +134,7 @@ class CardRepository {
       final hSnap = await tx.get(householdRef);
       if (!hSnap.exists) throw StateError('household_missing');
       final household = Household.fromSnapshot(hSnap);
-      _debitAccountTx(
+      debitAccountTx(
         tx: tx,
         householdRef: householdRef,
         household: household,
@@ -193,7 +170,7 @@ class CardRepository {
       final hSnap = await tx.get(householdRef);
       if (!hSnap.exists) throw StateError('household_missing');
       final household = Household.fromSnapshot(hSnap);
-      _debitAccountTx(
+      debitAccountTx(
         tx: tx,
         householdRef: householdRef,
         household: household,
@@ -284,7 +261,7 @@ class CardRepository {
       final hSnap = await tx.get(householdRef);
       if (!hSnap.exists) throw StateError('household_missing');
       final household = Household.fromSnapshot(hSnap);
-      _debitAccountTx(
+      debitAccountTx(
         tx: tx,
         householdRef: householdRef,
         household: household,
@@ -398,7 +375,7 @@ class CardRepository {
       final hSnap = await tx.get(householdRef);
       if (!hSnap.exists) throw StateError('household_missing');
       final household = Household.fromSnapshot(hSnap);
-      _debitAccountTx(
+      debitAccountTx(
         tx: tx,
         householdRef: householdRef,
         household: household,
@@ -411,42 +388,6 @@ class CardRepository {
     if (didPay) await recalcUsed(hid: hid, cardId: cardId);
   }
 
-  /// Debits `amount` from the cash- or savings-account matching
-  /// `sourceAccountId` and writes the updated array back via [tx]. Throws
-  /// `account_missing` or `insufficient`.
-  void _debitAccountTx({
-    required Transaction tx,
-    required DocumentReference<Map<String, dynamic>> householdRef,
-    required Household household,
-    required String sourceAccountId,
-    required int amount,
-  }) {
-    final inCash = household.cashAccounts
-        .where((a) => a.id == sourceAccountId)
-        .toList();
-    final inSavings = household.savingsAccounts
-        .where((a) => a.id == sourceAccountId)
-        .toList();
-    if (inCash.isEmpty && inSavings.isEmpty) {
-      throw StateError('account_missing');
-    }
-    final kind = inCash.isNotEmpty ? AccountKind.cash : AccountKind.savings;
-    final list = kind == AccountKind.cash
-        ? household.cashAccounts
-        : household.savingsAccounts;
-    final source = (kind == AccountKind.cash ? inCash : inSavings).first;
-    if (source.value < amount) throw StateError('insufficient');
-    final updated = list
-        .map((a) => a.id == sourceAccountId
-            ? a.copyWith(value: a.value - amount)
-            : a)
-        .toList();
-    final field =
-        kind == AccountKind.cash ? 'cashAccounts' : 'savingsAccounts';
-    tx.update(householdRef, {
-      field: updated.map((a) => a.toMap()).toList(),
-    });
-  }
 }
 
 final cardRepositoryProvider = Provider<CardRepository>((ref) {

@@ -73,7 +73,7 @@ void main() {
     await tester.tap(find.bySemanticsLabel('Slide 2 dari 3'));
     await tester.pumpAndSettle();
     expect(find.text('Rp150.000'), findsOneWidget);
-    expect(find.textContaining('÷ 20 hari'), findsOneWidget);
+    expect(find.textContaining('dibagi 20 hari'), findsOneWidget);
   });
 
   // Regression: sparkline used to collapse to ~0 width when its parent

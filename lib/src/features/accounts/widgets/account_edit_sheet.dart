@@ -217,8 +217,8 @@ class _AccountEditSheetState extends State<AccountEditSheet> {
                 title: const Text('Cash ready', style: TextStyle(fontSize: 13.5)),
                 subtitle: Text(
                   _liquid
-                      ? 'Bisa dipakai kapan saja — ikut proyeksi kas'
-                      : 'Terkunci (deposito dll) — aset saja, tidak ikut proyeksi kas',
+                      ? 'Bisa dipakai kapan saja. Ikut proyeksi kas'
+                      : 'Terkunci (deposito dll). Aset saja, tidak ikut proyeksi kas',
                   style: TextStyle(color: FtColors.ink3, fontSize: 11),
                 ),
                 value: _liquid,

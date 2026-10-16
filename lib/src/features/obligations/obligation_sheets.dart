@@ -300,8 +300,8 @@ class _ObligationFormSheetState extends ConsumerState<ObligationFormSheet> {
                 title: const Text('Utang', style: TextStyle(fontSize: 13.5)),
                 subtitle: Text(
                   _isDebt
-                      ? 'Leasing/KPR — ikut rasio cicilan (batas OJK 30%)'
-                      : 'Biaya tetap (sewa dll) — tidak ikut rasio cicilan',
+                      ? 'Leasing/KPR. Ikut rasio cicilan (batas OJK 30%)'
+                      : 'Biaya tetap (sewa dll). Tidak ikut rasio cicilan',
                   style: TextStyle(color: FtColors.ink3, fontSize: 11),
                 ),
                 value: _isDebt,

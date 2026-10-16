@@ -12,13 +12,19 @@ import '../../ui/ft_refresh.dart';
 import '../../ui/ft_ui.dart';
 import '../expenses/expense.dart';
 import '../expenses/expense_providers.dart';
-import '../household/household.dart';
 import '../household/household_providers.dart';
-import '../home/widgets/home_formatters.dart' show compactMoney;
 import '../household/name_format.dart';
 import '../incomes/income.dart';
-import '../incomes/income_repository.dart';
 import 'insights_providers.dart';
+import 'recap_helpers.dart';
+import 'recap_window_incomes.dart';
+import 'widgets/recap_tiles.dart';
+import 'widgets/recap_ziswaf_card.dart';
+
+export 'recap_helpers.dart';
+export 'recap_window_incomes.dart';
+export 'widgets/recap_tiles.dart';
+export 'widgets/recap_ziswaf_card.dart';
 
 /// Rekap siklus — end-of-cycle style summary (Monarch's most-loved feature,
 /// adapted to payday cycles): totals, category movers vs previous cycle,
@@ -66,7 +72,7 @@ class _RecapScreenState extends ConsumerState<RecapScreen> {
     final baseline = _which == 0
         ? (prevCycles.isNotEmpty ? prevCycles[0] : const <Expense>[])
         : (prevCycles.length > 1 ? prevCycles[1] : const <Expense>[]);
-    final incomes = ref.watch(_windowIncomesProvider(window)).value ??
+    final incomes = ref.watch(windowIncomesProvider(window)).value ??
         const <Income>[];
 
     final invIds = household.investmentCategoryIds;
@@ -103,7 +109,7 @@ class _RecapScreenState extends ConsumerState<RecapScreen> {
             onRefresh: () async {
               ref.invalidate(cycleExpensesProvider);
               ref.invalidate(previousCyclesExpensesProvider);
-              ref.invalidate(_windowIncomesProvider);
+              ref.invalidate(windowIncomesProvider);
               await ftRefreshDelay();
             },
             child: ListView(
@@ -117,13 +123,13 @@ class _RecapScreenState extends ConsumerState<RecapScreen> {
                   padding: const EdgeInsets.fromLTRB(22, 0, 22, 14),
                   child: Row(
                     children: [
-                      _CycleChip(
+                      RecapCycleChip(
                         label: 'Siklus ini',
                         active: _which == 0,
                         onTap: () => setState(() => _which = 0),
                       ),
                       const SizedBox(width: 8),
-                      _CycleChip(
+                      RecapCycleChip(
                         label: 'Siklus lalu',
                         active: _which == 1,
                         onTap: () => setState(() => _which = 1),
@@ -192,11 +198,12 @@ class _RecapScreenState extends ConsumerState<RecapScreen> {
                   margin: const EdgeInsets.fromLTRB(22, 0, 22, 16),
                   child: Row(
                     children: [
-                      _Stat(label: 'Masuk', value: earned, color: FtColors.sage),
+                      RecapStat(
+                          label: 'Masuk', value: earned, color: FtColors.sage),
                       const SizedBox(width: 12),
-                      _Stat(label: 'Keluar', value: spent),
+                      RecapStat(label: 'Keluar', value: spent),
                       const SizedBox(width: 12),
-                      _Stat(
+                      RecapStat(
                         label: net >= 0 ? 'Sisa' : 'Defisit',
                         value: net.abs(),
                         color: net >= 0 ? FtColors.sage : FtColors.danger,
@@ -223,7 +230,7 @@ class _RecapScreenState extends ConsumerState<RecapScreen> {
                   // Framing positif: rayakan dulu yang berhasil dihemat,
                   // baru tampilkan daftar lengkap (riset churn: rasa
                   // bersalah saat melihat overspend = pemicu berhenti).
-                  if (_biggestSaver(byCat, byCatBase) case final saver?)
+                  if (biggestSaver(byCat, byCatBase) case final saver?)
                     Padding(
                       padding: const EdgeInsets.fromLTRB(22, 0, 22, 10),
                       child: Container(
@@ -261,7 +268,7 @@ class _RecapScreenState extends ConsumerState<RecapScreen> {
                     child: Eyebrow('Per kategori vs siklus sebelumnya'),
                   ),
                   for (final entry in topCats.take(6))
-                    _CategoryDeltaTile(
+                    RecapCategoryDeltaTile(
                       category: household.categoryOf(entry.key),
                       spend: entry.value,
                       baseline: byCatBase[entry.key] ?? 0,
@@ -273,10 +280,10 @@ class _RecapScreenState extends ConsumerState<RecapScreen> {
                     child: Eyebrow('Pengeluaran terbesar'),
                   ),
                   for (final e in biggest.take(3))
-                    _BiggestTile(
+                    RecapBiggestTile(
                       record: e,
                       household: household,
-                      note: _noteOf(expenses, e),
+                      note: noteOfExpense(expenses, e),
                     ),
                   const Padding(
                     padding: EdgeInsets.fromLTRB(22, 16, 22, 8),
@@ -331,7 +338,7 @@ class _RecapScreenState extends ConsumerState<RecapScreen> {
                     padding: EdgeInsets.fromLTRB(22, 16, 22, 8),
                     child: Eyebrow('ZISWAF'),
                   ),
-                  _ZiswafCard(
+                  RecapZiswafCard(
                     household: household,
                     cycleTotal: expenses
                         .where((e) =>
@@ -379,329 +386,4 @@ class _RecapScreenState extends ConsumerState<RecapScreen> {
       ),
     );
   }
-
-  /// Kategori dengan penurunan terbesar vs baseline (null bila tak ada).
-  ({String id, int saved})? _biggestSaver(
-    Map<String, int> byCat,
-    Map<String, int> byCatBase,
-  ) {
-    String? id;
-    var saved = 0;
-    for (final e in byCatBase.entries) {
-      final s = e.value - (byCat[e.key] ?? 0);
-      if (s > saved) {
-        saved = s;
-        id = e.key;
-      }
-    }
-    return id == null ? null : (id: id, saved: saved);
-  }
-
-  String? _noteOf(List<Expense> source, ExpenseRecord r) {
-    for (final e in source) {
-      if (e.amount == r.amount &&
-          e.categoryId == r.categoryId &&
-          e.date == r.date &&
-          e.spentBy == r.spentBy) {
-        return e.note;
-      }
-    }
-    return null;
-  }
 }
-
-class _Stat extends StatelessWidget {
-  const _Stat({required this.label, required this.value, this.color});
-  final String label;
-  final int value;
-  final Color? color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Eyebrow(label),
-          const SizedBox(height: 4),
-          // Compact money ("Rp49,2 jt") instead of the full grouped amount —
-          // three full amounts in one row ran into each other at 360px.
-          Text(
-            compactMoney(value),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                  fontSize: 17,
-                  color: color ?? FtColors.ink,
-                ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CycleChip extends StatelessWidget {
-  const _CycleChip({
-    required this.label,
-    required this.active,
-    required this.onTap,
-  });
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return FtTapScale(
-      scale: 0.96,
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-        decoration: BoxDecoration(
-          color: active ? FtColors.ink : FtColors.surface,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: active ? FtColors.ink : FtColors.line,
-            width: 0.5,
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: active ? Colors.white : FtColors.ink2,
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _CategoryDeltaTile extends StatelessWidget {
-  const _CategoryDeltaTile({
-    required this.category,
-    required this.spend,
-    required this.baseline,
-    required this.baselineLabel,
-  });
-  final Category? category;
-  final int spend;
-  final int baseline;
-  final String baselineLabel;
-
-  @override
-  Widget build(BuildContext context) {
-    final (deltaText, deltaColor) = switch ((baseline, spend - baseline)) {
-      (0, _) => ('baru siklus ini', FtColors.ink3),
-      (_, final d) when d > 0 => (
-          '+${(d * 100 / baseline).round()}% vs $baselineLabel',
-          FtColors.ochre,
-        ),
-      (_, final d) when d < 0 => (
-          '−${(d.abs() * 100 / baseline).round()}% vs $baselineLabel',
-          FtColors.sage,
-        ),
-      _ => ('sama dengan siklus lalu', FtColors.ink3),
-    };
-    final color = category != null
-        ? Color(int.parse('FF${category!.color.replaceFirst('#', '')}',
-            radix: 16))
-        : FtColors.ink3;
-
-    return FtCard(
-      margin: const EdgeInsets.fromLTRB(22, 0, 22, 8),
-      padding: const EdgeInsets.all(14),
-      child: Row(
-        children: [
-          Container(
-            width: 10,
-            height: 10,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  category?.label ?? '-',
-                  style: TextStyle(
-                    color: FtColors.ink,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  deltaText,
-                  style: TextStyle(color: deltaColor, fontSize: 11),
-                ),
-              ],
-            ),
-          ),
-          Text(
-            Money.format(spend),
-            style: TextStyle(
-              color: FtColors.ink,
-              fontWeight: FontWeight.bold,
-              fontSize: 13,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _BiggestTile extends StatelessWidget {
-  const _BiggestTile({
-    required this.record,
-    required this.household,
-    required this.note,
-  });
-  final ExpenseRecord record;
-  final Household household;
-  final String? note;
-
-  @override
-  Widget build(BuildContext context) {
-    final cat = household.categoryOf(record.categoryId);
-    return FtCard(
-      margin: const EdgeInsets.fromLTRB(22, 0, 22, 8),
-      padding: const EdgeInsets.all(14),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  (note?.isNotEmpty ?? false) ? note! : (cat?.label ?? '-'),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: FtColors.ink,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '${cat?.label ?? '-'} · ${Dates.short(record.date)}',
-                  style: TextStyle(color: FtColors.ink3, fontSize: 11),
-                ),
-              ],
-            ),
-          ),
-          Text(
-            Money.format(record.amount),
-            style: TextStyle(
-              color: FtColors.ink,
-              fontWeight: FontWeight.bold,
-              fontSize: 13,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Total ZISWAF: siklus terpilih + tahun berjalan.
-class _ZiswafCard extends ConsumerWidget {
-  const _ZiswafCard({required this.household, required this.cycleTotal});
-
-  final Household household;
-  final int cycleTotal;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final yearList =
-        ref.watch(ziswafYearExpensesProvider).value ?? const <Expense>[];
-    final yearTotal = yearList.fold<int>(0, (a, e) => a + e.amount);
-    final year = DateTime.now().year;
-    return FtCard(
-      margin: const EdgeInsets.fromLTRB(22, 0, 22, 8),
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.volunteer_activism_rounded,
-                  size: 18, color: FtColors.moss),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'Zakat, infak, sedekah & wakaf',
-                  style: TextStyle(
-                    color: FtColors.ink,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Eyebrow('Siklus ini'),
-                    const SizedBox(height: 2),
-                    Text(
-                      Money.format(cycleTotal),
-                      style: TextStyle(
-                        color: FtColors.ink,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Eyebrow('Total $year'),
-                    const SizedBox(height: 2),
-                    Text(
-                      Money.format(yearTotal),
-                      style: TextStyle(
-                        color: FtColors.moss,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Incomes inside an arbitrary window (recap can look at past cycles, which
-/// `cycleIncomesProvider` doesn't cover).
-final _windowIncomesProvider = StreamProvider.family<List<Income>,
-    ({DateTime start, DateTime endExclusive})>((ref, w) {
-  final household = ref.watch(currentHouseholdProvider).value;
-  if (household == null) return Stream.value(const []);
-  return ref
-      .watch(incomeRepositoryProvider)
-      .watchRecent(hid: household.id, limit: 500)
-      .map((items) => items
-          .where((i) =>
-              !i.date.isBefore(w.start) && i.date.isBefore(w.endExclusive))
-          .toList());
-});

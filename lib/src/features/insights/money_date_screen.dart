@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/budget_move.dart';
 import '../../core/expense_aggregations.dart';
-import '../../core/formatters.dart';
 import '../../core/money_date.dart';
 import '../../core/payday.dart';
 import '../../core/recurring.dart';
@@ -17,16 +16,17 @@ import '../../ui/ft_haptics.dart';
 import '../../ui/ft_ui.dart';
 import '../cards/cards_screen.dart';
 import '../cards/credit_card.dart';
-import '../categories/budget_move_sheet.dart';
 import '../expenses/expense.dart';
 import '../expenses/expense_providers.dart';
 import '../household/household.dart';
 import '../household/household_providers.dart';
-import '../household/name_format.dart';
 import '../incomes/income.dart';
 import '../incomes/income_providers.dart';
 import '../obligations/obligation_repository.dart';
 import 'insights_providers.dart';
+import 'widgets/money_date_steps.dart';
+
+export 'widgets/money_date_steps.dart';
 
 /// "Money Date" — review siklus terpandu ±7 menit, 4 langkah, maks 1
 /// keputusan (riset: pasangan yang rutin review bersama melaporkan ~40%
@@ -159,36 +159,37 @@ class _MoneyDateScreenState extends ConsumerState<MoneyDateScreen> {
                   physics: const BouncingScrollPhysics(),
                   onPageChanged: (i) => setState(() => _step = i),
                   children: [
-                    _StepScaffold(
+                    MoneyDateStepScaffold(
                        eyebrow: 'Langkah 1: Rayakan dulu',
                       title: savers.isEmpty
                           ? 'Siklus berjalan.'
                           : 'Ada kategori yang dihemat.',
-                      child: _CelebrateStep(
+                      child: MoneyDateCelebrateStep(
                         household: household,
                         savers: savers,
                         earned: earned,
                         spent: spent,
                       ),
                     ),
-                    _StepScaffold(
+                    MoneyDateStepScaffold(
                        eyebrow: 'Langkah 2: Sorotan',
                       title: risers.isEmpty
                           ? 'Tidak ada lonjakan berarti.'
                           : 'Dua kategori naik paling banyak.',
-                      child: _RisersStep(household: household, risers: risers),
+                      child: MoneyDateRisersStep(
+                          household: household, risers: risers),
                     ),
-                    _StepScaffold(
+                    MoneyDateStepScaffold(
                        eyebrow: 'Langkah 3: Lihat ke depan',
                       title: upcoming.isEmpty
                           ? '7 hari ke depan aman.'
                           : 'Tagihan 7 hari ke depan.',
-                      child: _UpcomingStep(items: upcoming),
+                      child: MoneyDateUpcomingStep(items: upcoming),
                     ),
-                    _StepScaffold(
+                    MoneyDateStepScaffold(
                        eyebrow: 'Langkah 4: Satu keputusan',
                       title: 'Cukup satu keputusan kecil.',
-                      child: _DecisionStep(
+                      child: MoneyDateDecisionStep(
                         household: household,
                         moves: moves,
                         overCategoryId: overCategory,
@@ -242,286 +243,5 @@ class _MoneyDateScreenState extends ConsumerState<MoneyDateScreen> {
       }
     }
     return worst;
-  }
-}
-
-class _StepScaffold extends StatelessWidget {
-  const _StepScaffold({
-    required this.eyebrow,
-    required this.title,
-    required this.child,
-  });
-
-  final String eyebrow;
-  final String title;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return FtFadeUp(
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(22, 10, 22, 24),
-        physics: const BouncingScrollPhysics(),
-        children: [
-          Eyebrow(eyebrow),
-          const SizedBox(height: 6),
-          Text(
-            title,
-            style: Theme.of(context)
-                .textTheme
-                .headlineLarge
-                ?.copyWith(fontSize: 24),
-          ),
-          const SizedBox(height: 16),
-          child,
-        ],
-      ),
-    );
-  }
-}
-
-class _CelebrateStep extends StatelessWidget {
-  const _CelebrateStep({
-    required this.household,
-    required this.savers,
-    required this.earned,
-    required this.spent,
-  });
-
-  final Household household;
-  final List<CategoryDelta> savers;
-  final int earned;
-  final int spent;
-
-  @override
-  Widget build(BuildContext context) {
-    final net = earned - spent;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        for (final s in savers)
-          _LineCard(
-            color: FtColors.moss,
-            icon: Icons.south_rounded,
-            title: household.categoryOf(s.id)?.label ?? '-',
-            detail:
-                'Hemat ${Money.compact(-s.delta)} dibanding siklus lalu.',
-            amount: s.spend,
-          ),
-        if (savers.isEmpty)
-          Text(
-            'Belum ada pembanding siklus lalu.',
-            style: TextStyle(color: FtColors.ink3, fontSize: 13, height: 1.5),
-          ),
-        const SizedBox(height: 8),
-        _LineCard(
-          color: net >= 0 ? FtColors.sage : FtColors.ochre,
-          icon: net >= 0
-              ? Icons.account_balance_wallet_rounded
-              : Icons.info_outline_rounded,
-          title: net >= 0 ? 'Masih sisa' : 'Sementara defisit',
-          detail: net >= 0
-              ? 'Pemasukan ${Money.compact(earned)} − pengeluaran ${Money.compact(spent)}'
-              : 'Wajar di tanggal tua. Cek langkah berikutnya.',
-          amount: net.abs(),
-        ),
-      ],
-    );
-  }
-}
-
-class _RisersStep extends StatelessWidget {
-  const _RisersStep({required this.household, required this.risers});
-
-  final Household household;
-  final List<CategoryDelta> risers;
-
-  @override
-  Widget build(BuildContext context) {
-    if (risers.isEmpty) {
-      return Text(
-        'Pengeluaran stabil dibanding siklus lalu.',
-        style: TextStyle(color: FtColors.ink3, fontSize: 13),
-      );
-    }
-    return Column(
-      children: [
-        for (final r in risers)
-          _LineCard(
-            color: FtColors.ochre,
-            icon: Icons.north_rounded,
-            title: household.categoryOf(r.id)?.label ?? '-',
-            detail: r.baseline > 0
-                ? '+${(r.delta * 100 / r.baseline).round()}% vs siklus lalu'
-                : 'Baru muncul siklus ini',
-            amount: r.spend,
-          ),
-        const SizedBox(height: 4),
-        Text(
-          'Bukan untuk menyalahkan. Cukup tahu kenapa, lalu lanjut.',
-          style: TextStyle(
-              color: FtColors.ink4, fontSize: 11, fontStyle: FontStyle.italic),
-        ),
-      ],
-    );
-  }
-}
-
-class _UpcomingStep extends StatelessWidget {
-  const _UpcomingStep({required this.items});
-
-  final List<UpcomingItem> items;
-
-  @override
-  Widget build(BuildContext context) {
-    if (items.isEmpty) {
-      return Text(
-        'Tidak ada jatuh tempo kartu atau tagihan rutin sampai minggu depan.',
-        style: TextStyle(color: FtColors.ink3, fontSize: 13, height: 1.5),
-      );
-    }
-    return Column(
-      children: [
-        for (final i in items)
-          _LineCard(
-            color: FtColors.ochre,
-            icon: i.kind == UpcomingKind.cardDue
-                ? Icons.credit_card_rounded
-                : Icons.receipt_long_rounded,
-            title: i.title,
-            detail: i.kind == UpcomingKind.cardDue
-                ? 'Jatuh tempo ${Dates.dayMonth(i.date)}'
-                : 'Biasanya tanggal ${i.date.day} (±)',
-            amount: i.amount,
-          ),
-      ],
-    );
-  }
-}
-
-class _DecisionStep extends ConsumerWidget {
-  const _DecisionStep({
-    required this.household,
-    required this.moves,
-    required this.overCategoryId,
-  });
-
-  final Household household;
-  final List<BudgetMove> moves;
-  final String? overCategoryId;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final canFull = ref.watch(canWriteAllProvider);
-    final overCat =
-        overCategoryId != null ? household.categoryOf(overCategoryId!) : null;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (moves.isNotEmpty) ...[
-          const Eyebrow('Pergeseran anggaran siklus ini'),
-          const SizedBox(height: 8),
-          for (final m in moves)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Text(
-                '${prettyName(household.memberOf(m.by)?.displayName ?? 'Anggota')} '
-                'menggeser ${Money.compact(m.amount)} dari '
-                '${household.categoryOf(m.fromId)?.label ?? '-'} ke '
-                '${household.categoryOf(m.toId)?.label ?? '-'} '
-                '(${Dates.dayMonth(m.at)})',
-                style: TextStyle(
-                    color: FtColors.ink2, fontSize: 12, height: 1.4),
-              ),
-            ),
-          const SizedBox(height: 12),
-        ],
-        if (overCat != null && canFull) ...[
-          Text(
-            '"${overCat.label}" paling melebihi anggaran. Mau geser sedikit dari kategori yang longgar?',
-            style: TextStyle(color: FtColors.ink, fontSize: 13, height: 1.5),
-          ),
-          const SizedBox(height: 10),
-          OutlinedButton.icon(
-            onPressed: () =>
-                BudgetMoveSheet.show(context, toId: overCat.id),
-            icon: const Icon(Icons.swap_horiz_rounded, size: 18),
-            label: const Text('Geser anggaran'),
-          ),
-        ] else
-          Text(
-            'Anggaran aman. Boleh tutup money date atau sepakati satu hal kecil untuk siklus depan.',
-            style: TextStyle(color: FtColors.ink2, fontSize: 13, height: 1.5),
-          ),
-      ],
-    );
-  }
-}
-
-class _LineCard extends StatelessWidget {
-  const _LineCard({
-    required this.color,
-    required this.icon,
-    required this.title,
-    required this.detail,
-    required this.amount,
-  });
-
-  final Color color;
-  final IconData icon;
-  final String title;
-  final String detail;
-  final int amount;
-
-  @override
-  Widget build(BuildContext context) {
-    return FtCard(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(14),
-      child: Row(
-        children: [
-          Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
-              border:
-                  Border.all(color: color.withValues(alpha: 0.24), width: 0.5),
-            ),
-            child: Icon(icon, size: 18, color: color),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    color: FtColors.ink,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  detail,
-                  style: TextStyle(color: FtColors.ink3, fontSize: 11),
-                ),
-              ],
-            ),
-          ),
-          Text(
-            Money.format(amount),
-            style: TextStyle(
-              color: FtColors.ink,
-              fontWeight: FontWeight.bold,
-              fontSize: 13,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }

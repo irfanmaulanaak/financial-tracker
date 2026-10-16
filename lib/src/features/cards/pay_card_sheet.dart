@@ -14,6 +14,7 @@ import '../record_common/account_picker.dart';
 import 'card_repository.dart';
 import 'credit_card.dart';
 import 'widgets/installment_list.dart';
+import 'widgets/pay_card_option_row.dart';
 
 /// Every plain (non-cicilan) charge ever made on the card — the statement
 /// math needs the all-time sum because `plainPaid` is an all-time figure.
@@ -243,18 +244,16 @@ class _PayCardSheetState extends ConsumerState<PayCardSheet> {
                 style: TextStyle(color: FtColors.ink3, fontSize: 11),
               ),
               const SizedBox(height: 14),
-              _OptionRow(
-                mode: _PayMode.min,
-                groupValue: _mode,
+              PayCardOptionRow(
+                selected: _mode == _PayMode.min,
                 label: 'Bayar Minimum',
                 detail: 'Setoran terendah · hindari denda',
                 amount: _minAmount,
                 onTap: () => setState(() => _mode = _PayMode.min),
               ),
               const SizedBox(height: 8),
-              _OptionRow(
-                mode: _PayMode.monthly,
-                groupValue: _mode,
+              PayCardOptionRow(
+                selected: _mode == _PayMode.monthly,
                 label: 'Bayar Tagihan Bulan Ini',
                 detail: 'Cicilan & transaksi yang sudah tertagih',
                 amount: monthlyBill,
@@ -270,9 +269,8 @@ class _PayCardSheetState extends ConsumerState<PayCardSheet> {
                   ),
                 ),
               const SizedBox(height: 8),
-              _OptionRow(
-                mode: _PayMode.custom,
-                groupValue: _mode,
+              PayCardOptionRow(
+                selected: _mode == _PayMode.custom,
                 label: 'Jumlah Lain',
                 detail: 'Tentukan sendiri',
                 amount: _mode == _PayMode.custom ? _custom : null,
@@ -353,91 +351,3 @@ class _PayCardSheetState extends ConsumerState<PayCardSheet> {
   }
 }
 
-class _OptionRow extends StatelessWidget {
-  const _OptionRow({
-    required this.mode,
-    required this.groupValue,
-    required this.label,
-    required this.detail,
-    required this.amount,
-    required this.onTap,
-  });
-
-  final _PayMode mode;
-  final _PayMode groupValue;
-  final String label;
-  final String detail;
-  final int? amount;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final selected = mode == groupValue;
-    return FtTapScale(
-      scale: 0.985,
-      haptic: false,
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: selected
-              ? FtColors.clay.withValues(alpha: 0.08)
-              : FtColors.bg,
-          border: Border.all(
-            color: selected ? FtColors.clay : FtColors.line,
-            width: 0.5,
-          ),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 18,
-              height: 18,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: selected ? FtColors.clay : FtColors.lineStrong,
-                  width: selected ? 5 : 1.5,
-                ),
-                color: FtColors.surface,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: TextStyle(
-                      color: FtColors.ink,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    detail,
-                    style: TextStyle(color: FtColors.ink3, fontSize: 11),
-                  ),
-                ],
-              ),
-            ),
-            if (amount != null && amount! > 0)
-              Text(
-                Money.format(amount!),
-                style: TextStyle(
-                  color: FtColors.ink,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}

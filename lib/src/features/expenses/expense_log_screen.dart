@@ -11,10 +11,10 @@ import '../home/widgets/home_formatters.dart';
 import '../household/household.dart';
 import '../household/household_providers.dart';
 import '../household/name_format.dart';
-import '../members/member_chip.dart';
 import 'expense.dart';
 import 'expense_detail_sheet.dart';
 import 'expense_repository.dart';
+import 'widgets/expense_log_tiles.dart';
 
 class ExpenseLogScreen extends ConsumerStatefulWidget {
   const ExpenseLogScreen({super.key});
@@ -137,7 +137,7 @@ class _ExpenseLogScreenState extends ConsumerState<ExpenseLogScreen> {
                   ),
                 ),
               expensesStream.when(
-                data: (all) => _TodayCard(
+                data: (all) => ExpenseLogTodayCard(
                   expenses: all,
                   onAdd: () => context.push('/expenses/new'),
                 ),
@@ -150,14 +150,14 @@ class _ExpenseLogScreenState extends ConsumerState<ExpenseLogScreen> {
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     children: [
-                      _FilterPill(
+                      ExpenseLogFilterPill(
                         label: 'Semua Anggota',
                         active: _filterMemberId == null,
                         onTap: () => setState(() => _filterMemberId = null),
                       ),
                       for (final m in household.members) ...[
                         const SizedBox(width: 8),
-                        _FilterPill(
+                        ExpenseLogFilterPill(
                           label: prettyName(m.displayName),
                           active: _filterMemberId == m.userId,
                           color: parseColor(m.color),
@@ -166,14 +166,14 @@ class _ExpenseLogScreenState extends ConsumerState<ExpenseLogScreen> {
                         ),
                       ],
                       const SizedBox(width: 16),
-                      _FilterPill(
+                      ExpenseLogFilterPill(
                         label: 'Semua Kategori',
                         active: _filterCategoryId == null,
                         onTap: () => setState(() => _filterCategoryId = null),
                       ),
                       for (final c in household.categories) ...[
                         const SizedBox(width: 8),
-                        _FilterPill(
+                        ExpenseLogFilterPill(
                           label: c.label.split(' ').first,
                           active: _filterCategoryId == c.id,
                           color: parseColor(c.color),
@@ -310,7 +310,7 @@ class _ExpenseLogScreenState extends ConsumerState<ExpenseLogScreen> {
                             for (var i = 0; i < items.length; i++)
                               FtListReveal(
                                 index: flatIndex + 1 + i,
-                                child: _ExpenseTile(
+                                child: ExpenseLogTile(
                                   expense: items[i],
                                   category:
                                       household.categoryOf(items[i].categoryId),
@@ -369,108 +369,6 @@ class _ExpenseLogScreenState extends ConsumerState<ExpenseLogScreen> {
   }
 }
 
-class _ExpenseTile extends ConsumerWidget {
-  const _ExpenseTile({
-    required this.expense,
-    required this.category,
-    required this.spender,
-    required this.onTap,
-    required this.onDelete,
-  });
-  final Expense expense;
-  final Category? category;
-  final Member? spender;
-  final VoidCallback onTap;
-  final VoidCallback onDelete;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final cat = category;
-    return FtCard(
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-      padding: const EdgeInsets.all(14),
-      onTap: onTap,
-      onLongPress: onDelete,
-      child: Row(
-        children: [
-          CircleAvatar(
-            backgroundColor: cat != null
-                ? _parseColor(cat.color).withValues(alpha: 0.15)
-                : FtColors.surfaceAlt,
-            child: Icon(
-              _iconFor(cat?.icon ?? 'category'),
-              color: cat != null ? _parseColor(cat.color) : FtColors.ink3,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  cat?.label ?? '-',
-                  style: TextStyle(
-                    color: FtColors.ink,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                if (expense.note != null && expense.note!.isNotEmpty) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    expense.note!,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: FtColors.ink3,
-                      fontSize: 11,
-                    ),
-                  ),
-                ],
-                if (spender != null) ...[
-                  const SizedBox(height: 4),
-                  MemberChip(member: spender!),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                Money.format(expense.amount),
-                style: TextStyle(
-                  color: FtColors.ink,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              // Tanda permintaan cek yang belum beres.
-              if (expense.review != null && !expense.review!.done) ...[
-                const SizedBox(height: 3),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.flag, size: 11, color: FtColors.ochre),
-                    const SizedBox(width: 3),
-                    Text(
-                      'minta dicek',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        color: FtColors.ochre,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 final _expensesProvider = StreamProvider.family<List<Expense>, String>((
   ref,
   householdId,
@@ -486,107 +384,3 @@ final _expensesProvider = StreamProvider.family<List<Expense>, String>((
         endExclusive: cycle.endExclusive,
       );
 });
-
-Color _parseColor(String hex) {
-  final h = hex.replaceFirst('#', '');
-  return Color(int.parse('FF$h', radix: 16));
-}
-
-IconData _iconFor(String name) => switch (name) {
-  'restaurant' => Icons.restaurant,
-  'receipt_long' => Icons.receipt_long,
-  'shopping_bag' => Icons.shopping_bag,
-  'directions_car' => Icons.directions_car,
-  'movie' => Icons.movie,
-  'favorite' => Icons.favorite,
-  'school' => Icons.school,
-  'pets' => Icons.pets,
-  'sports_esports' => Icons.sports_esports,
-  'trending_up' => Icons.trending_up,
-  _ => Icons.category,
-};
-
-class _TodayCard extends StatelessWidget {
-  const _TodayCard({required this.expenses, required this.onAdd});
-
-  final List<Expense> expenses;
-  final VoidCallback onAdd;
-
-  @override
-  Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final todayKey = DateTime(now.year, now.month, now.day);
-    final today = expenses
-        .where((e) => Dates.dayKey(e.date) == todayKey)
-        .fold<int>(0, (a, e) => a + e.amount.toInt());
-    return FtCard(
-      margin: const EdgeInsets.fromLTRB(22, 10, 22, 4),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Eyebrow('Hari ini'),
-                const SizedBox(height: 4),
-                Text(
-                  Money.format(today),
-                  style: Theme.of(context)
-                      .textTheme
-                      .headlineLarge
-                      ?.copyWith(fontSize: 26, letterSpacing: -0.3),
-                ),
-              ],
-            ),
-          ),
-          FtAddButton(onTap: onAdd, tooltip: 'Catat pengeluaran'),
-        ],
-      ),
-    );
-  }
-}
-
-class _FilterPill extends StatelessWidget {
-  const _FilterPill({
-    required this.label,
-    required this.active,
-    required this.onTap,
-    this.color,
-  });
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-  final Color? color;
-
-  @override
-  Widget build(BuildContext context) {
-    return FtTapScale(
-      scale: 0.96,
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-        decoration: BoxDecoration(
-          color: active
-              ? (color ?? FtColors.ink)
-              : FtColors.surface,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: active
-                ? (color ?? FtColors.ink)
-                : FtColors.line,
-            width: 0.5,
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: active ? Colors.white : FtColors.ink2,
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ),
-    );
-  }
-}
