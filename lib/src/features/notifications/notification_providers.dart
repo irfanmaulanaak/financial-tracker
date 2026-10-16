@@ -10,6 +10,7 @@ import '../expenses/expense.dart';
 import '../expenses/expense_providers.dart';
 import '../goals/goal.dart' show Goal;
 import '../goals/goals_screen.dart' show fundedGoalsProvider;
+import '../home/widgets/home_formatters.dart' show compactMoney;
 import '../household/household_providers.dart';
 import '../insights/insights_providers.dart'
     show previousCyclesExpensesProvider;
@@ -119,7 +120,7 @@ final notificationsProvider = Provider<List<AppNotification>>((ref) {
         group: NotificationGroup.fresh,
         title: '${c.label} melebihi anggaran',
         detail:
-            'Sudah Rp ${_short(spent)} dari batas Rp ${_short(limit)}',
+            'Sudah ${compactMoney(spent)} dari batas ${compactMoney(limit)}',
         ts: latestExpenseByCat[c.id] ?? now,
         route: '/categories/${c.id}',
       ));
@@ -142,8 +143,8 @@ final notificationsProvider = Provider<List<AppNotification>>((ref) {
       group: NotificationGroup.fresh,
       title: '${c.label} jatuh tempo',
       detail: daysLeft <= 0
-          ? 'Hari ini · Rp ${_short(c.used)}'
-          : '$daysLeft hari lagi · Rp ${_short(c.used)}',
+          ? 'Hari ini · ${compactMoney(c.used)}'
+          : '$daysLeft hari lagi · ${compactMoney(c.used)}',
       ts: dueTs,
       route: '/cards',
     ));
@@ -163,8 +164,8 @@ final notificationsProvider = Provider<List<AppNotification>>((ref) {
       group: NotificationGroup.fresh,
       title: '${o.label} jatuh tempo',
       detail: daysLeft <= 0
-          ? 'Hari ini · Rp ${_short(o.monthly)}'
-          : '$daysLeft hari lagi · Rp ${_short(o.monthly)}',
+          ? 'Hari ini · ${compactMoney(o.monthly)}'
+          : '$daysLeft hari lagi · ${compactMoney(o.monthly)}',
       ts: dueTs,
       route: '/obligations',
     ));
@@ -192,7 +193,7 @@ final notificationsProvider = Provider<List<AppNotification>>((ref) {
         kind: NotificationKind.goalMilestone,
         group: NotificationGroup.thisWeek,
         title: '${g.label} · ${(pct * 100).round()}% tercapai',
-        detail: 'Sedikit lagi menuju Rp ${_short(g.target)}.',
+        detail: 'Sedikit lagi menuju ${compactMoney(g.target)}.',
         ts: g.createdAt,
         route: '/goals/${g.id}',
       ));
@@ -217,7 +218,7 @@ final notificationsProvider = Provider<List<AppNotification>>((ref) {
       group: inFresh ? NotificationGroup.fresh : NotificationGroup.thisWeek,
       title: '${spender?.displayName ?? 'Anggota'} mencatat pengeluaran',
       detail:
-          'Rp ${_short(e.amount)} · ${cat?.label ?? 'Lainnya'}${(e.note ?? '').isNotEmpty ? ' · ${e.note}' : ''}',
+          '${compactMoney(e.amount)} · ${cat?.label ?? 'Lainnya'}${(e.note ?? '').isNotEmpty ? ' · ${e.note}' : ''}',
       ts: e.date,
       route: '/expenses',
     ));
@@ -297,10 +298,4 @@ DateTime _resolveDueDate({required int dueDay, required DateTime now}) {
     due = DateTime(ny, nm, domNext);
   }
   return due;
-}
-
-String _short(int v) {
-  if (v >= 1000000) return '${(v / 1000000).toStringAsFixed(1)} jt';
-  if (v >= 1000) return '${(v / 1000).round()} rb';
-  return v.toString();
 }

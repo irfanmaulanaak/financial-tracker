@@ -11,3 +11,10 @@ String prettyName(String raw) {
   if (base.isEmpty) return 'Anggota';
   return base[0].toUpperCase() + base.substring(1);
 }
+
+/// Short first-name form of [prettyName] — use wherever space is tight
+/// (header, chips, activity rows, card owner). Full names ("Irfan Maulana
+/// Akbar") go through Profile/Members; everywhere else should call this
+/// instead of repeating `prettyName(x).split(' ').first` ad hoc.
+String shortName(String raw) =>
+    prettyName(raw).split(RegExp(r'\s+')).first;

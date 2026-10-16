@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/app_lock.dart';
 import '../../core/formatters.dart';
 import '../../core/providers.dart';
-import '../../core/theme_provider.dart';
 import '../../theme.dart';
 import '../../ui/ft_haptics.dart';
 import '../../ui/ft_refresh.dart';
@@ -16,11 +16,11 @@ import '../household/household.dart';
 import '../household/household_providers.dart';
 import '../household/name_format.dart';
 import '../members/invite_sheet.dart';
+import 'widgets/appearance_section.dart';
 import 'widgets/household_section.dart';
 import 'widgets/members_section.dart';
 import 'widgets/reminders_section.dart';
 import 'widgets/security_section.dart';
-import 'widgets/settings_row.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -29,7 +29,6 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final household = ref.watch(currentHouseholdProvider).value;
     final user = ref.watch(authStateProvider).value;
-    final themeMode = ref.watch(themeModeProvider);
     final canFull = ref.watch(canWriteAllProvider);
 
     if (household == null || user == null) {
@@ -77,30 +76,24 @@ class SettingsScreen extends ConsumerWidget {
                 );
               },
             ),
-            _DisplaySection(themeMode: themeMode, ref: ref),
+            const AppearanceSection(),
             const RemindersSection(),
             HouseholdSection(
               household: household,
               canEdit: canFull,
               ref: ref,
             ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(22, 18, 22, 8),
-              child: Eyebrow('Akun & Keamanan'),
-            ),
-            FtCard(
-              margin: const EdgeInsets.fromLTRB(22, 0, 22, 18),
-              padding: EdgeInsets.zero,
-              child: Column(
-                children: const [
-                  SettingsRow(
-                    label: 'Mata uang',
-                    detail: 'IDR · Rupiah',
-                  ),
-                  AppLockRows(),
-                ],
+            if (AppLockController.supported) ...[
+              const Padding(
+                padding: EdgeInsets.fromLTRB(22, 18, 22, 8),
+                child: Eyebrow('Akun & Keamanan'),
               ),
-            ),
+              FtCard(
+                margin: const EdgeInsets.fromLTRB(22, 0, 22, 18),
+                padding: EdgeInsets.zero,
+                child: const Column(children: [AppLockRows()]),
+              ),
+            ],
             const _AboutCard(),
             Padding(
               padding: const EdgeInsets.fromLTRB(22, 0, 22, 24),
@@ -194,97 +187,6 @@ class _ProfileCard extends StatelessWidget {
   }
 }
 
-class _DisplaySection extends ConsumerWidget {
-  const _DisplaySection({
-    required this.themeMode,
-    required this.ref,
-  });
-  final ThemeMode themeMode;
-  final WidgetRef ref;
-
-  @override
-  Widget build(BuildContext context, WidgetRef _) {
-    final liquid = ref.watch(liquidThemeProvider);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Padding(
-          padding: EdgeInsets.fromLTRB(22, 18, 22, 8),
-          child: Eyebrow('Tampilan'),
-        ),
-        FtCard(
-          margin: const EdgeInsets.fromLTRB(22, 0, 22, 18),
-          padding: EdgeInsets.zero,
-          child: Column(
-            children: [
-              SettingsToggleRow(
-                label: 'Tema',
-                value: themeMode == ThemeMode.dark ? 'Gelap' : 'Terang',
-                child: Row(
-                  children: [
-                    SettingsChoiceChip(
-                      label: 'Terang',
-                      active: themeMode != ThemeMode.dark,
-                      onTap: () => ref
-                          .read(themeModeProvider.notifier)
-                          .setTheme(ThemeMode.light),
-                    ),
-                    const SizedBox(width: 8),
-                    SettingsChoiceChip(
-                      label: 'Gelap',
-                      active: themeMode == ThemeMode.dark,
-                      onTap: () => ref
-                          .read(themeModeProvider.notifier)
-                          .setTheme(ThemeMode.dark),
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(height: 1),
-              SettingsSwitchRow(
-                label: 'Liquid Glass',
-                detail: 'Tampilan kaca + background hidup (eksperimen)',
-                value: liquid,
-                trailing: const _BetaBadge(),
-                onChanged: (v) =>
-                    ref.read(liquidThemeProvider.notifier).setLiquid(v),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _BetaBadge extends StatelessWidget {
-  const _BetaBadge();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-      decoration: BoxDecoration(
-        color: FtColors.clay.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(
-          color: FtColors.clay.withValues(alpha: 0.3),
-          width: 0.5,
-        ),
-      ),
-      child: Text(
-        'BETA',
-        style: TextStyle(
-          fontSize: 9,
-          letterSpacing: 1,
-          fontWeight: FontWeight.w600,
-          color: FtColors.clay,
-        ),
-      ),
-    );
-  }
-}
-
 class _AboutCard extends StatelessWidget {
   const _AboutCard();
 
@@ -303,21 +205,28 @@ class _AboutCard extends StatelessWidget {
         ),
         FtCard(
           margin: const EdgeInsets.fromLTRB(22, 0, 22, 18),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'FinSist',
-                style: TextStyle(
-                    fontWeight: FontWeight.w600, fontSize: 14),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'v$_appVersion · Dibuat untuk keluarga Indonesia.\nData disimpan di perangkat & cloud (Firebase).',
-                style: TextStyle(
-                    color: FtColors.ink3, fontSize: 11, height: 1.4),
-              ),
-            ],
+          // Every other card here happens to contain a Row with an Expanded
+          // child, which fills the available width as a side effect. This
+          // one is plain text, so without an explicit full-width wrapper it
+          // shrinks to fit the text instead — narrower than the rest.
+          child: SizedBox(
+            width: double.infinity,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'FinSist',
+                  style: TextStyle(
+                      fontWeight: FontWeight.w600, fontSize: 14),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'v$_appVersion · Dibuat untuk keluarga Indonesia.\nData disimpan di perangkat & cloud (Firebase).',
+                  style: TextStyle(
+                      color: FtColors.ink3, fontSize: 11, height: 1.4),
+                ),
+              ],
+            ),
           ),
         ),
       ],

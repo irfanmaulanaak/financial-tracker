@@ -97,8 +97,12 @@ class _SpendActivityListState extends State<SpendActivityList> {
                         expense: pageItems[i],
                         category: widget.household
                             .categoryOf(pageItems[i].categoryId),
-                        spender:
-                            widget.household.memberOf(pageItems[i].spentBy),
+                        // Only show who spent it when "Semua Anggota" is
+                        // selected — filtered to one member, every row is
+                        // already known to be theirs.
+                        spender: _filterMemberId == null
+                            ? widget.household.memberOf(pageItems[i].spentBy)
+                            : null,
                         showTopBorder: i > 0,
                       ),
                   ],

@@ -64,24 +64,28 @@ class _AccountTabState extends ConsumerState<AccountTab> {
       ? 'Tambah rekening tunai'
       : 'Tambah tabungan';
 
+  // A row of standalone pill chips, not a `SegmentedButton` — connected,
+  // equal-width segments read as "yet another tab bar" stacked under the
+  // Aset/Tujuan and Tunai/Tabungan/Investasi/Alokasi tabs above it.
   Widget _filterBar() {
+    const options = [
+      (CashFilter.all, 'Semua'),
+      (CashFilter.bank, 'Bank'),
+      (CashFilter.ewallet, 'E-wallet'),
+    ];
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: SegmentedButton<CashFilter>(
-        showSelectedIcon: false,
-        style: ButtonStyle(
-          visualDensity: VisualDensity.compact,
-          textStyle: WidgetStatePropertyAll(
-            TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
-          ),
-        ),
-        segments: const [
-          ButtonSegment(value: CashFilter.all, label: Text('Semua')),
-          ButtonSegment(value: CashFilter.bank, label: Text('Bank')),
-          ButtonSegment(value: CashFilter.ewallet, label: Text('E-wallet')),
+      child: Row(
+        children: [
+          for (final (value, label) in options) ...[
+            _FilterChip(
+              label: label,
+              active: _filter == value,
+              onTap: () => setState(() => _filter = value),
+            ),
+            const SizedBox(width: 8),
+          ],
         ],
-        selected: {_filter},
-        onSelectionChanged: (s) => setState(() => _filter = s.first),
       ),
     );
   }
@@ -283,6 +287,46 @@ class _AccountTabState extends ConsumerState<AccountTab> {
         showFtErrorSnack(context, e, prefix: 'Gagal menghapus rekening');
       }
     }
+  }
+}
+
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return FtTapScale(
+      scale: 0.96,
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: active ? FtColors.ink : FtColors.surface,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: active ? FtColors.ink : FtColors.line,
+            width: 0.5,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: active ? FtColors.bg : FtColors.ink2,
+            fontSize: 11.5,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
   }
 }
 

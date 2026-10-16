@@ -16,6 +16,31 @@ void main() {
     });
   });
 
+  group('Money.compact', () {
+    test('id-ID style: comma decimal, one space before the unit', () {
+      expect(Money.compact(1200000), '1,2 jt');
+      expect(Money.compact(25000), '25 rb');
+      expect(Money.compact(950), '950');
+      expect(Money.compact(2500000000), '2,5 M');
+    });
+
+    test('drops the trailing ,0', () {
+      expect(Money.compact(2000000), '2 jt');
+    });
+
+    test('keeps the minus sign out front', () {
+      expect(Money.compact(-1200000), '-1,2 jt');
+    });
+  });
+
+  group('Dates.monthShort', () {
+    test('short Indonesian month label for period chips', () {
+      expect(Dates.monthShort(DateTime(2026, 7, 15)), 'Jul');
+      expect(Dates.monthShort(DateTime(2026, 8, 1)), 'Agu');
+      expect(Dates.monthShort(DateTime(2026, 9, 29)), 'Sep');
+    });
+  });
+
   group('Money.parse', () {
     test('extracts digits from formatted input', () {
       expect(Money.parse('Rp 1.234.567'), 1234567);

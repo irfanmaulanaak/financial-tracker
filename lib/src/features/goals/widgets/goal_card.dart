@@ -33,17 +33,16 @@ class GoalCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = parseColor(goal.color);
-    final months = monthsToGoal(
+    final pct = (goal.progress * 100).round();
+    // Only nudge when the due date actually requires more than the current
+    // plan — not a flat "/6 bulan" guess regardless of the deadline.
+    final requiredMonthly = requiredMonthlyContribution(
       target: goal.target,
       current: goal.current,
-      monthlyContrib: goal.monthlyContrib,
+      dueDate: goal.dueDate,
+      today: DateTime.now(),
     );
-    final pct = (goal.progress * 100).round();
-    final remaining = goal.remaining;
-    final onTrack = pct >= 50 || (months ?? 9999) <= 6;
-    final urgentMonthly = remaining > 0
-        ? (remaining / 6).ceil()
-        : 0;
+    final needsBoost = requiredMonthly > 0 && goal.monthlyContrib < requiredMonthly;
 
     // No onLongPress here: holding the card is the reorder gesture
     // (ReorderableDelayedDragStartListener in GoalsScreen). Delete lives in
@@ -153,7 +152,7 @@ class GoalCard extends StatelessWidget {
               ),
             ],
           ),
-          if (!onTrack && remaining > 0) ...[
+          if (needsBoost) ...[
             const SizedBox(height: 10),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -171,7 +170,7 @@ class GoalCard extends StatelessWidget {
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      'Naikkan setoran ke ${compactMoney(urgentMonthly)}/bln agar tercapai tepat waktu.',
+                      'Naikkan ke ${compactMoney(requiredMonthly)}/bln agar tepat waktu.',
                       style: TextStyle(
                         color: FtColors.ink2,
                         fontSize: 11,

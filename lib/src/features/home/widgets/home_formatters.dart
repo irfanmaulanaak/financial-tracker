@@ -25,9 +25,11 @@ String moneyNoSymbol(num value) => Money.format(value).replaceFirst('Rp', '');
 const String _maskedMoney = 'Rp ••••';
 String maskMoney() => _maskedMoney;
 
+/// id-ID style: comma as the decimal mark ("89,1"), not a dot.
 String _trim(num n) {
   final s = n.toStringAsFixed(1);
-  return s.endsWith('.0') ? s.substring(0, s.length - 2) : s;
+  final trimmed = s.endsWith('.0') ? s.substring(0, s.length - 2) : s;
+  return trimmed.replaceAll('.', ',');
 }
 
 String initialsOf(String name) {

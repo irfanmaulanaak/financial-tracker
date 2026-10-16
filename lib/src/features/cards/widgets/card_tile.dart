@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/formatters.dart';
 import '../../../theme.dart';
 import '../../../ui/ft_ui.dart';
+import '../../home/widgets/home_formatters.dart' show compactMoney;
 import '../credit_card.dart';
 import '../pay_card_sheet.dart';
 import 'installment_list.dart';
@@ -108,7 +109,7 @@ class CardTile extends StatelessWidget {
             child: FtStatGrid(
               items: [
                 FtStatItem(label: 'Pemilik', value: ownerName),
-                FtStatItem(label: 'Limit', value: Money.format(card.limit)),
+                FtStatItem(label: 'Limit', value: compactMoney(card.limit)),
                 FtStatItem(
                     label: 'Tagihan keluar', value: 'Tgl ${card.billingDay}'),
                 FtStatItem(label: 'Jatuh tempo', value: 'Tgl ${card.dueDay}'),

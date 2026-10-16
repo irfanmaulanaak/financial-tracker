@@ -16,11 +16,16 @@ class HealthFindings extends StatelessWidget {
     required this.categories,
     required this.current,
     required this.previousWindows,
+    this.earlyInCycle = false,
     required this.onTap,
   });
   final List<Category> categories;
   final List<Expense> current;
   final List<List<Expense>> previousWindows;
+
+  /// Hides zero-spend "-100%" rows — expected and not yet meaningful this
+  /// early in the cycle, see [HealthScreen].
+  final bool earlyInCycle;
   final ValueChanged<String> onTap;
 
   @override
@@ -52,6 +57,9 @@ class HealthFindings extends StatelessWidget {
       );
       if (a.historicalAverage == 0 && cur == 0) continue;
       if (a.deltaPct.abs() < 0.10) continue;
+      // "-100%, Sekarang Rp0" early in the cycle is just "haven't spent
+      // yet", not a finding — noise, not signal.
+      if (earlyInCycle && cur == 0 && a.historicalAverage > 0) continue;
       findings.add(_Finding(category: c, analysis: a));
     }
     findings.sort((a, b) =>

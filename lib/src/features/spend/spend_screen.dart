@@ -110,11 +110,13 @@ class _SpendScreenState extends ConsumerState<SpendScreen> {
     // windows (index 0 = most recent previous cycle).
     final cycle = currentCycle(DateTime.now(), payday: household.payday);
     final cycleRanges = <String>[];
+    final cycleShortLabels = <String>[];
     var cursor = cycle.start;
     for (var i = 0; i < prevCycles.length; i++) {
       final prevStart =
           resolvePayday(cursor.year, cursor.month - 1, household.payday);
       cycleRanges.add(Dates.cycleRange(prevStart, cursor));
+      cycleShortLabels.add(Dates.monthShort(prevStart));
       cursor = prevStart;
     }
 
@@ -135,7 +137,7 @@ class _SpendScreenState extends ConsumerState<SpendScreen> {
             parent: AlwaysScrollableScrollPhysics(),
           ),
           children: [
-            const FtSubHeader(title: 'Belanja', isTab: true),
+            const FtSubHeader(title: 'Pengeluaran', isTab: true),
             _Hero(
               total: total,
               displayAmount: focusedAmount ?? total,
@@ -152,6 +154,7 @@ class _SpendScreenState extends ConsumerState<SpendScreen> {
               ],
               prevIndex: _prevIndex,
               cycleRanges: cycleRanges,
+              cycleShortLabels: cycleShortLabels,
               onPick: (i) {
                 setState(() {
                   _prevIndex = i;
@@ -208,7 +211,7 @@ class _SpendScreenState extends ConsumerState<SpendScreen> {
               ),
             ),
             const SizedBox(height: 4),
-            const FtSectionHeader(title: 'Belanja harian'),
+            const FtSectionHeader(title: 'Pengeluaran harian'),
             const SpendCalendar(),
             SpendActivityList(expenses: active, household: household),
           ],
@@ -228,6 +231,7 @@ class _Hero extends StatelessWidget {
     required this.segments,
     required this.prevIndex,
     required this.cycleRanges,
+    required this.cycleShortLabels,
     required this.onPick,
   });
   final int total;
@@ -241,7 +245,12 @@ class _Hero extends StatelessWidget {
   final int? prevIndex;
 
   /// Compact "25 Apr–24 Mei" labels, index 0 = most recent previous cycle.
+  /// Used only for the siklus caption above the total, not the period chips.
   final List<String> cycleRanges;
+
+  /// Short "Jul"/"Agu"/"Sep" labels for the period chips, same index order
+  /// as [cycleRanges] — all the same font size, so chips never look cramped.
+  final List<String> cycleShortLabels;
   final ValueChanged<int?> onPick;
 
   @override
@@ -303,7 +312,7 @@ class _Hero extends StatelessWidget {
           const SizedBox(height: 12),
           _PeriodPicker(
             prevIndex: prevIndex,
-            cycleRanges: cycleRanges,
+            cycleShortLabels: cycleShortLabels,
             onPick: onPick,
           ),
         ],
@@ -321,18 +330,19 @@ class _Hero extends StatelessWidget {
 class _PeriodPicker extends StatelessWidget {
   const _PeriodPicker({
     required this.prevIndex,
-    required this.cycleRanges,
+    required this.cycleShortLabels,
     required this.onPick,
   });
   final int? prevIndex;
-  final List<String> cycleRanges;
+  final List<String> cycleShortLabels;
   final ValueChanged<int?> onPick;
 
   @override
   Widget build(BuildContext context) {
     // Render oldest → newest: prev2, prev1, prev0, current.
     final options = <(int?, String)>[
-      for (var i = cycleRanges.length - 1; i >= 0; i--) (i, cycleRanges[i]),
+      for (var i = cycleShortLabels.length - 1; i >= 0; i--)
+        (i, cycleShortLabels[i]),
       (null, 'Sekarang'),
     ];
     return Row(
@@ -376,18 +386,15 @@ class _PeriodChip extends StatelessWidget {
           border: active ? null : Border.all(color: FtColors.line),
         ),
         alignment: Alignment.center,
-        // Date-range labels ("25 Apr–24 Mei") can outgrow a quarter-width
-        // chip on phones; scale down instead of ellipsizing.
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(
-            label,
-            maxLines: 1,
-            style: TextStyle(
-              color: active ? FtColors.bg : FtColors.ink2,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-            ),
+        // Short labels ("Jul", "Sekarang") fit at a fixed size — every chip
+        // reads at the same font size, unlike the old full date ranges.
+        child: Text(
+          label,
+          maxLines: 1,
+          style: TextStyle(
+            color: active ? FtColors.bg : FtColors.ink2,
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
           ),
         ),
       ),

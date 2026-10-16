@@ -37,9 +37,16 @@ class CardInstallmentsInline extends ConsumerWidget {
       loading: () => const SizedBox.shrink(),
       error: (_, _) => const SizedBox.shrink(),
       data: (items) {
-        final active = items.where((i) => !i.isComplete).toList();
-        if (active.isEmpty) return const SizedBox.shrink();
-        final totalMonthly = active.fold<int>(0, (a, i) => a + i.monthly);
+        // Only real installments count as "cicilan" — a one-time (Lunas,
+        // 1-month) purchase isn't one, same rule as `monthlyInstallmentDsrTotal`.
+        final installments =
+            items.where((i) => !i.isComplete && i.monthsTotal > 1).toList();
+        final onceOff = items.where((i) => !i.isComplete && i.monthsTotal == 1).toList();
+        if (installments.isEmpty && onceOff.isEmpty) {
+          return const SizedBox.shrink();
+        }
+        final totalMonthly =
+            installments.fold<int>(0, (a, i) => a + i.monthly);
         return Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
           child: Column(
@@ -47,64 +54,77 @@ class CardInstallmentsInline extends ConsumerWidget {
             children: [
               const Divider(),
               const SizedBox(height: 10),
-              Row(
-                children: [
-                  Icon(Icons.calendar_month, size: 14, color: FtColors.ink3),
-                  const SizedBox(width: 6),
-                  Text(
-                    '${active.length} cicilan aktif · ${Money.format(totalMonthly)}/bln',
-                    style: TextStyle(
-                      color: FtColors.ink2,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
+              if (installments.isNotEmpty) ...[
+                Row(
+                  children: [
+                    Icon(Icons.calendar_month, size: 14, color: FtColors.ink3),
+                    const SizedBox(width: 6),
+                    Text(
+                      '${installments.length} cicilan aktif · ${Money.format(totalMonthly)}/bln',
+                      style: TextStyle(
+                        color: FtColors.ink2,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                for (final i in installments.take(3))
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                i.label.isNotEmpty ? i.label : 'Cicilan',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: FtColors.ink,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '${i.monthsPaid}/${i.monthsTotal} bulan · ${Money.format(i.monthly)}/bln',
+                                style: TextStyle(
+                                  color: FtColors.ink3,
+                                  fontSize: 10,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(
+                          width: 60,
+                          child: FtProgressBar(
+                            value: i.monthsPaid,
+                            max: i.monthsTotal,
+                            color:
+                                ftProgressColor(i.monthsPaid, i.monthsTotal),
+                            height: 4,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              for (final i in active.take(3))
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              i.label.isNotEmpty ? i.label : 'Cicilan',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: FtColors.ink,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              '${i.monthsPaid}/${i.monthsTotal} bulan · ${Money.format(i.monthly)}/bln',
-                              style: TextStyle(
-                                color: FtColors.ink3,
-                                fontSize: 10,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      SizedBox(
-                        width: 60,
-                        child: FtProgressBar(
-                          value: i.monthsPaid,
-                          max: i.monthsTotal,
-                          color:
-                              ftProgressColor(i.monthsPaid, i.monthsTotal),
-                          height: 4,
-                        ),
-                      ),
-                    ],
+              ],
+              if (onceOff.isNotEmpty) ...[
+                if (installments.isNotEmpty) const SizedBox(height: 4),
+                Text(
+                  '${onceOff.length} belum ditagih · '
+                  '${Money.format(onceOff.fold<int>(0, (a, i) => a + i.monthly))}',
+                  style: TextStyle(
+                    color: FtColors.ink3,
+                    fontSize: 11,
                   ),
                 ),
+              ],
             ],
           ),
         );

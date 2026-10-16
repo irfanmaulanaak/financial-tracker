@@ -8,7 +8,7 @@ import '../../../ui/ft_ui.dart';
 import '../../expenses/expense.dart';
 import '../../expenses/expense_detail_sheet.dart';
 import '../../household/household.dart';
-import '../../members/member_chip.dart';
+import '../../household/name_format.dart';
 import 'home_formatters.dart';
 
 class RecentList extends StatelessWidget {
@@ -113,9 +113,10 @@ class RecentList extends StatelessWidget {
   }
 }
 
-/// Single expense row (icon, category, date · note, spender chip, amount).
-/// Tap opens [ExpenseDetailSheet]. Shared by the home "Aktivitas Terbaru"
-/// list and the spend screen activity list.
+/// Single expense row (icon, note/category title, category · date subtitle,
+/// optional spender initial, right-aligned amount). Tap opens
+/// [ExpenseDetailSheet]. Shared by the home "Aktivitas Terbaru" list and the
+/// spend screen activity list.
 class ExpenseActivityRow extends StatelessWidget {
   const ExpenseActivityRow({
     super.key,
@@ -127,6 +128,10 @@ class ExpenseActivityRow extends StatelessWidget {
 
   final Expense expense;
   final Category? category;
+
+  /// Only pass non-null when "Semua Anggota" is the active filter (or there
+  /// is no filter, e.g. the home activity list) — otherwise every row is
+  /// already known to be the one selected member, and the avatar is noise.
   final Member? spender;
   final bool showTopBorder;
 
@@ -135,6 +140,9 @@ class ExpenseActivityRow extends StatelessWidget {
     final color = category != null
         ? parseColor(category!.color)
         : FtColors.ink3;
+    final note = expense.note;
+    final hasNote = note != null && note.isNotEmpty;
+    final title = hasNote ? note : (category?.label ?? '-');
     return FtTapScale(
       scale: 0.99,
       onTap: () =>
@@ -167,7 +175,7 @@ class ExpenseActivityRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  category?.label ?? '-',
+                  title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -181,11 +189,7 @@ class ExpenseActivityRow extends StatelessWidget {
                   children: [
                     Flexible(
                       child: Text(
-                        [
-                          Dates.short(expense.date),
-                          if (expense.note != null && expense.note!.isNotEmpty)
-                            expense.note!,
-                        ].join(' · '),
+                        '${category?.label ?? '-'} · ${Dates.short(expense.date)}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -196,15 +200,17 @@ class ExpenseActivityRow extends StatelessWidget {
                     ),
                     if (spender != null) ...[
                       const SizedBox(width: 6),
-                      MemberChip(member: spender!),
+                      _SpenderAvatar(member: spender!),
                     ],
                   ],
                 ),
               ],
             ),
           ),
+          const SizedBox(width: 8),
           Text(
             compactMoney(expense.amount),
+            textAlign: TextAlign.right,
             style: TextStyle(
               color: FtColors.ink,
               fontSize: 14,
@@ -213,6 +219,37 @@ class ExpenseActivityRow extends StatelessWidget {
           ),
         ],
       ),
+      ),
+    );
+  }
+}
+
+/// Small initial-letter avatar — who spent it, without a long name chip.
+class _SpenderAvatar extends StatelessWidget {
+  const _SpenderAvatar({required this.member});
+  final Member member;
+
+  @override
+  Widget build(BuildContext context) {
+    final initial = initialsOf(member.displayName).characters.first;
+    return Tooltip(
+      message: shortName(member.displayName),
+      child: Container(
+        width: 16,
+        height: 16,
+        decoration: BoxDecoration(
+          color: parseColor(member.color),
+          shape: BoxShape.circle,
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          initial,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 8.5,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
       ),
     );
   }

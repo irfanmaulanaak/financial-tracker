@@ -20,6 +20,7 @@ class FinancialTrackerApp extends ConsumerWidget {
     final router = ref.watch(routerProvider);
     final themeMode = ref.watch(themeModeProvider);
     final liquid = ref.watch(liquidThemeProvider);
+    final palette = ref.watch(paletteProvider);
 
     // FtColors is consumed statically, so Theme's InheritedWidget alone
     // doesn't reach widgets that never look at it. Force a one-off rebuild of
@@ -31,12 +32,15 @@ class FinancialTrackerApp extends ConsumerWidget {
     ref.listen(liquidThemeProvider, (previous, next) {
       if (previous != next) ftRebuildAllWidgets();
     });
+    ref.listen(paletteProvider, (previous, next) {
+      if (previous != next) ftRebuildAllWidgets();
+    });
 
     return MaterialApp.router(
       title: 'FinSist',
       debugShowCheckedModeBanner: false,
-      theme: buildTheme(Brightness.light, liquid: liquid),
-      darkTheme: buildTheme(Brightness.dark, liquid: liquid),
+      theme: buildTheme(Brightness.light, liquid: liquid, palette: palette),
+      darkTheme: buildTheme(Brightness.dark, liquid: liquid, palette: palette),
       themeMode: themeMode,
       // Tanpa ini MaterialApp meng-crossfade tema 200ms: di frame pertama
       // `Theme.of(...).brightness` masih nilai LAMA, padahal rebuild global
@@ -70,6 +74,7 @@ class FinancialTrackerApp extends ConsumerWidget {
         }
         _appliedBrightness = resolved;
         FtColors.setBrightness(resolved);
+        FtColors.setPalette(palette);
         final mq = MediaQuery.of(context);
         final clamped = mq.textScaler.clamp(
           minScaleFactor: 0.9,

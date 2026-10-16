@@ -74,32 +74,21 @@ class _DailyInsightLineState extends State<DailyInsightLine> {
   Widget build(BuildContext context) {
     final text = _text;
     if (text == null) return const SizedBox.shrink();
-    return Container(
-      margin: const EdgeInsets.fromLTRB(22, 0, 22, 16),
-      padding: const EdgeInsets.fromLTRB(14, 12, 16, 12),
-      decoration: BoxDecoration(
-        color: FtColors.surface,
-        borderRadius: BorderRadius.circular(20),
-      ),
+    // Plain text line, not a card — this is a quiet observation, not
+    // something that needs attention (unlike AttentionCard's rows).
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(22, 0, 22, 16),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: FtColors.tileFor(FtColors.catTransport),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(Icons.lightbulb_outline_rounded,
-                size: 18, color: FtColors.sage),
-          ),
-          const SizedBox(width: 12),
+          Icon(Icons.lightbulb_outline_rounded, size: 14, color: FtColors.ink4),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               text,
               style: TextStyle(
-                color: FtColors.ink,
-                fontSize: 13.5,
+                color: FtColors.ink3,
+                fontSize: 12.5,
                 height: 1.4,
                 fontWeight: FontWeight.w500,
               ),

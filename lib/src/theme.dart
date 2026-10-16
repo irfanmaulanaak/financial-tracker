@@ -1,12 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Warm "Ceria keluarga" palette. Supports both light and dark modes via a static
-/// brightness toggle so existing widgets don't need to change.
+import 'ui/ft_palettes.dart';
+
+export 'ui/ft_palettes.dart' show FtPalette, FtPaletteLabel;
+
+/// Warm "Ceria keluarga" palette (default). Supports both light and dark
+/// modes, plus 3 opt-in alternate palettes, via static toggles so existing
+/// widgets don't need to change.
 class FtColors {
   static Brightness _brightness = Brightness.light;
   static void setBrightness(Brightness b) => _brightness = b;
   static bool get _dark => _brightness == Brightness.dark;
+
+  /// "Warna" setting (Settings → Tampilan). Default [FtPalette.hangat] is
+  /// the original look; flipping it follows the same static + rebuild
+  /// pattern as [setBrightness] (see `ftRebuildAllWidgets`).
+  static FtPalette _palette = FtPalette.hangat;
+  static void setPalette(FtPalette p) => _palette = p;
+  static FtPalette get palette => _palette;
+  static FtSwatch get _swatch => paletteSwatches[_palette]!.pick(_dark);
 
   /// Beta "Liquid Glass": saat ON, chrome (nav/sheet) dirender sebagai kaca
   /// buram dan background memakai blob gradient (FtLiquidBackground).
@@ -16,25 +29,25 @@ class FtColors {
   static void setLiquid(bool on) => _liquid = on;
   static bool get liquid => _liquid;
 
-  // Backgrounds & surfaces. "Ceria keluarga" palette (Sep 2026): cream
-  // canvas + white cards in light, warm cocoa in dark.
-  static Color get bg => _dark ? const Color(0xFF15110E) : const Color(0xFFFFF6EC);
-  static Color get bgAlt => _dark ? const Color(0xFF1A1512) : const Color(0xFFF7EADB);
-  static Color get surface => _dark ? const Color(0xFF211B17) : const Color(0xFFFFFFFF);
-  static Color get surfaceAlt => _dark ? const Color(0xFF2A221D) : const Color(0xFFFBF1E6);
+  // Backgrounds & surfaces.
+  static Color get bg => _swatch.bg;
+  static Color get bgAlt => _swatch.bgAlt;
+  static Color get surface => _swatch.surface;
+  static Color get surfaceAlt => _swatch.surfaceAlt;
 
   // Text
-  static Color get ink => _dark ? const Color(0xFFF6ECE4) : const Color(0xFF2A160C);
-  static Color get ink2 => _dark ? const Color(0xFFD9C8BC) : const Color(0xFF5A4033);
-  static Color get ink3 => _dark ? const Color(0xFFB39E90) : const Color(0xFF7A5A48);
-  static Color get ink4 => _dark ? const Color(0xFF6E5E54) : const Color(0xFFB8A294);
+  static Color get ink => _swatch.ink;
+  static Color get ink2 => _swatch.ink2;
+  static Color get ink3 => _swatch.ink3;
+  static Color get ink4 => _swatch.ink4;
 
   // Lines
-  static Color get line => _dark ? const Color(0x14F6ECE4) : const Color(0x142A160C);
-  static Color get lineStrong => _dark ? const Color(0x29F6ECE4) : const Color(0x292A160C);
+  static Color get line => _swatch.line;
+  static Color get lineStrong => _swatch.lineStrong;
 
-  // Accents. `clay` stays the single action accent (links, selection).
-  static Color get clay => _dark ? const Color(0xFFFFB38A) : const Color(0xFFB8431F);
+  // Accents. `clay` stays the single action accent (links, selection) —
+  // follows the palette. Semantic colors below stay fixed across palettes.
+  static Color get clay => _swatch.clay;
   static Color get sage => _dark ? const Color(0xFF9FD8B5) : const Color(0xFF2E6B46);
   static Color get moss => _dark ? const Color(0xFF7FC4A0) : const Color(0xFF235A3E);
   static Color get plum => _dark ? const Color(0xFFF29AA5) : const Color(0xFFA02631);
@@ -43,24 +56,32 @@ class FtColors {
   static Color get sky => _dark ? const Color(0xFFB9C8FF) : const Color(0xFF3A5BA8);
   static Color get blush => _dark ? const Color(0xFFE8A8B8) : const Color(0xFFE8B4C0);
 
-  /// Hero fill (safe-to-spend, debt total). Text on it is always [onPeach].
-  static const Color peach = Color(0xFFFFB38A);
-  static const Color onPeach = Color(0xFF2A160C);
+  /// Fill for small accent surfaces (e.g. the Utang summary card). Text on
+  /// it is always [onPeach].
+  static Color get peach => _swatch.peach;
+  static Color get onPeach => _swatch.onPeach;
+
+  /// Hero card fill (safe-to-spend). Distinct from [peach] so Netral gets a
+  /// dark, clearly-a-surface fill instead of grey-on-grey. Text on it is
+  /// always [onHero].
+  static Color get hero => _swatch.hero;
+  static Color get onHero => _swatch.onHero;
+  static Color get onHeroDanger => _swatch.heroDanger;
 
   /// Floating pill nav: latte bar in light, cocoa bar in dark.
-  static Color get navBar => _dark ? const Color(0xFF241D18) : const Color(0xFFE6CFBA);
-  static Color get navActive => _dark ? const Color(0xFF3A2E25) : const Color(0xFFFFF6EC);
-  static Color get navActiveInk => _dark ? const Color(0xFFFFB38A) : const Color(0xFF7A4A30);
-  static Color get navIcon => _dark ? const Color(0xFFB39E90) : const Color(0xFF6B4A38);
-  static Color get fab => _dark ? const Color(0xFFFFB38A) : const Color(0xFF7A4A30);
-  static Color get onFab => _dark ? const Color(0xFF2A160C) : const Color(0xFFFFF6EC);
+  static Color get navBar => _swatch.navBar;
+  static Color get navActive => _swatch.navActive;
+  static Color get navActiveInk => _swatch.navActiveInk;
+  static Color get navIcon => _swatch.navIcon;
+  static Color get fab => _swatch.fab;
+  static Color get onFab => _swatch.onFab;
 
   // Health
   static Color get healthOk => sage;
   static Color get healthWarn => ochre;
   static Color get healthBad => danger;
 
-  // Category palette (donut, dots, icons).
+  // Category palette (donut, dots, icons) — fixed across "Warna" palettes.
   static Color get catFood => _dark ? const Color(0xFFFFB38A) : const Color(0xFFD9692F);
   static Color get catTransport => _dark ? const Color(0xFF9FD8B5) : const Color(0xFF3F8A5C);
   static Color get catBills => _dark ? const Color(0xFFE6D48E) : const Color(0xFFB8900F);
@@ -73,6 +94,15 @@ class FtColors {
   static Color tileFor(Color cat) => _dark
       ? Color.alphaBlend(cat.withValues(alpha: 0.18), surface)
       : Color.alphaBlend(cat.withValues(alpha: 0.20), const Color(0xFFFFFFFF));
+
+  /// Preview colors for the "Warna" picker — reads [p] at the *current*
+  /// brightness without mutating the active static palette, so swatches in
+  /// Settings reflect light/dark mode without flipping the whole app.
+  static ({Color bg, Color accent, Color onAccent}) previewSwatch(
+      FtPalette p) {
+    final s = paletteSwatches[p]!.pick(_dark);
+    return (bg: s.bg, accent: s.clay, onAccent: _dark ? s.onPeach : Colors.white);
+  }
 }
 
 /// Marks every element dirty so the whole tree rebuilds on the next frame.
@@ -92,9 +122,14 @@ void ftRebuildAllWidgets() {
   WidgetsBinding.instance.rootElement?.visitChildren(rebuild);
 }
 
-ThemeData buildTheme(Brightness brightness, {bool liquid = false}) {
+ThemeData buildTheme(
+  Brightness brightness, {
+  bool liquid = false,
+  FtPalette palette = FtPalette.hangat,
+}) {
   FtColors.setBrightness(brightness);
   FtColors.setLiquid(liquid);
+  FtColors.setPalette(palette);
   final isDark = brightness == Brightness.dark;
 
   final scheme = ColorScheme(

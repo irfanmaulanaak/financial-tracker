@@ -147,6 +147,62 @@ class SettingsSwitchRow extends StatelessWidget {
   }
 }
 
+/// Label + a row of [SettingsChoiceChip] options, with an optional one-line
+/// hint underneath. Used by the "Tampilan" section for Mode / Menu bawah /
+/// Beranda — a single segmented control, no separate "current value" label.
+class SettingsSegmentedRow<T> extends StatelessWidget {
+  const SettingsSegmentedRow({
+    super.key,
+    required this.label,
+    required this.options,
+    required this.value,
+    required this.onChanged,
+    this.hint,
+  });
+
+  final String label;
+  final List<(String, T)> options;
+  final T value;
+  final ValueChanged<T> onChanged;
+  final String? hint;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              for (var i = 0; i < options.length; i++) ...[
+                if (i > 0) const SizedBox(width: 8),
+                SettingsChoiceChip(
+                  label: options[i].$1,
+                  active: options[i].$2 == value,
+                  onTap: () => onChanged(options[i].$2),
+                ),
+              ],
+            ],
+          ),
+          if (hint != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              hint!,
+              style: TextStyle(color: FtColors.ink3, fontSize: 11, height: 1.3),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 /// Pill-style ink/surface choice chip used for theme + layout pickers.
 class SettingsChoiceChip extends StatelessWidget {
   const SettingsChoiceChip({

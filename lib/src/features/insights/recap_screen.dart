@@ -6,6 +6,7 @@ import '../../core/budget_move.dart';
 import '../../core/expense_aggregations.dart';
 import '../../core/formatters.dart';
 import '../../core/payday.dart';
+import '../../core/streak.dart';
 import '../../theme.dart';
 import '../../ui/ft_refresh.dart';
 import '../../ui/ft_ui.dart';
@@ -13,6 +14,7 @@ import '../expenses/expense.dart';
 import '../expenses/expense_providers.dart';
 import '../household/household.dart';
 import '../household/household_providers.dart';
+import '../home/widgets/home_formatters.dart' show compactMoney;
 import '../household/name_format.dart';
 import '../incomes/income.dart';
 import '../incomes/income_repository.dart';
@@ -90,6 +92,7 @@ class _RecapScreenState extends ConsumerState<RecapScreen> {
 
     final topCats = byCat.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
+    final streak = ref.watch(recordingStreakProvider);
 
     return Scaffold(
       backgroundColor: FtColors.bg,
@@ -133,6 +136,22 @@ class _RecapScreenState extends ConsumerState<RecapScreen> {
                     ],
                   ),
                 ),
+                if (_which == 0 && streak >= minVisibleStreak)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(22, 0, 22, 10),
+                    child: Row(
+                      children: [
+                        Icon(Icons.local_fire_department_rounded,
+                            size: 14, color: FtColors.ink4),
+                        const SizedBox(width: 6),
+                        Text(
+                          streakLabel(streak),
+                          style:
+                              TextStyle(color: FtColors.ink3, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
                 if (_which == 0)
                   FtCard(
                     margin: const EdgeInsets.fromLTRB(22, 0, 22, 10),
@@ -174,7 +193,9 @@ class _RecapScreenState extends ConsumerState<RecapScreen> {
                   child: Row(
                     children: [
                       _Stat(label: 'Masuk', value: earned, color: FtColors.sage),
+                      const SizedBox(width: 12),
                       _Stat(label: 'Keluar', value: spent),
+                      const SizedBox(width: 12),
                       _Stat(
                         label: net >= 0 ? 'Sisa' : 'Defisit',
                         value: net.abs(),
@@ -403,15 +424,16 @@ class _Stat extends StatelessWidget {
         children: [
           Eyebrow(label),
           const SizedBox(height: 4),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              Money.format(value),
-              style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                    fontSize: 17,
-                    color: color ?? FtColors.ink,
-                  ),
-            ),
+          // Compact money ("Rp49,2 jt") instead of the full grouped amount —
+          // three full amounts in one row ran into each other at 360px.
+          Text(
+            compactMoney(value),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                  fontSize: 17,
+                  color: color ?? FtColors.ink,
+                ),
           ),
         ],
       ),

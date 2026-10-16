@@ -63,7 +63,6 @@ class AppLockRows extends ConsumerWidget {
 
     return Column(
       children: [
-        Divider(height: 1, thickness: 0.5, color: FtColors.line),
         SettingsSwitchRow(
           label: 'Kunci aplikasi',
           detail: 'PIN 6 digit diminta setiap membuka app',

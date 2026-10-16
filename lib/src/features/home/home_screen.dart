@@ -7,14 +7,15 @@ import '../../core/envelope.dart';
 import '../../core/expense_aggregations.dart';
 import '../../core/formatters.dart';
 import '../../core/health_score.dart';
+import '../../core/hide_assets_provider.dart';
 import '../../core/in_app_indicators.dart';
+import '../../core/layout_provider.dart';
 import '../../core/net_worth.dart';
 import '../../core/payday.dart';
 import '../../core/providers.dart';
 import '../../core/recurring_runner.dart';
 import '../../core/reminder_times.dart';
 import '../../core/safe_to_spend.dart';
-import '../../core/streak.dart';
 import '../../theme.dart';
 import '../../ui/ft_refresh.dart';
 import '../../ui/ft_ui.dart';
@@ -89,6 +90,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // "Beranda" setting: Lengkap (default, everything) or Ringkas (only
+    // safe-to-spend + this cycle's spending + banners that need action).
+    final ringkas = ref.watch(homeLayoutProvider) == FtHomeLayout.ringkas;
     final householdAsync = ref.watch(currentHouseholdProvider);
     // Self-heal stale `users/{uid}.householdId` after a creator removed us
     // from the household.
@@ -200,7 +204,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           final nonDebtMonthly = activeObligations
               .where((o) => !o.isDebt)
               .fold<int>(0, (a, o) => a + o.monthly);
-          final obligationsMonthly = debtMonthly + nonDebtMonthly;
           // Semua obligation utang, termasuk yang tenornya tamat — pokok
           // positif tetap utang riil sampai user menolkannya.
           final obligationsPrincipal = obligations
@@ -270,17 +273,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   .length,
             ),
           );
-          final dueBanners = [
+          final dueItems = [
             for (final c in cards)
               if (daysUntilDue(dueDay: c.dueDay, now: now) case final d?)
                 if (c.used > 0)
-                  DueBanner(cardLabel: c.label, daysUntil: d, used: c.used),
+                  AttentionItem(
+                    icon: Icons.credit_card_rounded,
+                    color: d <= 0 ? FtColors.danger : FtColors.ochre,
+                    text: d <= 0
+                        ? '${c.label} jatuh tempo hari ini · ${compactMoney(c.used)}'
+                        : '${c.label} jatuh tempo $d hari lagi · ${compactMoney(c.used)}',
+                    onTap: () => context.push('/cards'),
+                  ),
             for (final o in activeObligations)
               if (!o.paidForMonth(nextCardDueDate(o.dueDay, now)))
                 if (daysUntilDue(dueDay: o.dueDay, now: now) case final d?)
-                  DueBanner(cardLabel: o.label, daysUntil: d, used: o.monthly),
+                  AttentionItem(
+                    icon: Icons.request_quote_rounded,
+                    color: d <= 0 ? FtColors.danger : FtColors.ochre,
+                    text: d <= 0
+                        ? '${o.label} jatuh tempo hari ini · ${compactMoney(o.monthly)}'
+                        : '${o.label} jatuh tempo $d hari lagi · ${compactMoney(o.monthly)}',
+                    onTap: () => context.push('/obligations'),
+                  ),
           ];
-          final streak = ref.watch(recordingStreakProvider);
 
           // Insight 1 kalimat/hari — kandidat dihitung dari data terkini,
           // dikunci per-hari oleh DailyInsightLine.
@@ -373,6 +389,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             hasBudget: household.monthlyBudgetTotal > 0,
           );
 
+          // One compact "Perlu perhatian" card instead of a stack of banners
+          // — only things you can act on (due dates, the DSR/budget
+          // warning). Nothing shown when there's nothing to act on.
+          final attentionItems = [
+            ...dueItems,
+            if (debtSummary.dsr > dsrMaxOjk)
+              AttentionItem(
+                icon: Icons.warning_amber_rounded,
+                color: FtColors.danger,
+                text: 'Cicilan ${compactMoney(debtSummary.totalMonthlyDebt)}/bln = '
+                    '${(debtSummary.dsr * 100).round()}% gaji — lewat batas OJK 30%',
+                onTap: () => context.push('/obligations'),
+              )
+            else if (overcommit > 0 && hasCommitments)
+              AttentionItem(
+                icon: Icons.warning_amber_rounded,
+                color: FtColors.ochre,
+                text: 'Budget ${compactMoney(household.monthlyBudgetTotal)} > uang siap '
+                    'pakai ${compactMoney(debtSummary.disposable)} (gaji − cicilan)',
+                onTap: () => context.push('/spend'),
+              ),
+          ];
+
           return FtAppChrome(
             current: FtTab.home,
             child: FtRefreshable(
@@ -398,7 +437,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     HomeHeader(
                       household: household,
                       displayName: displayName,
-                      onMembers: () => context.push('/members'),
                       onSelected: _handleMenu,
                     ),
                     index: 0,
@@ -419,83 +457,54 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       cycleNet: cycleNet,
                       spend: totalSpentValue,
                       gajiIncome: gajiIncome,
-                      cards: cards,
                       health: health,
                       safe: safe,
+                      compact: ringkas,
                     ),
                     index: 1,
                   ),
-                  for (var i = 0; i < dueBanners.length; i++)
-                    section(dueBanners[i], index: 2 + i),
-                  if (debtSummary.dsr > dsrMaxOjk)
+                  if (!ringkas)
                     section(
-                      AlertBand(
-                        icon: Icons.warning_amber_rounded,
-                        color: FtColors.danger,
-                        text:
-                            'Cicilan ${compactMoney(debtSummary.totalMonthlyDebt)}/bln = ${(debtSummary.dsr * 100).round()}% gaji — lewat batas OJK 30%',
-                        actionLabel: 'Lihat',
-                        onAction: () => context.push('/obligations'),
+                      CommitmentLine(hidden: ref.watch(hideAssetsProvider)),
+                      index: 1,
+                    ),
+                  if (attentionItems.isNotEmpty)
+                    section(
+                      AttentionCard(items: attentionItems),
+                      index: 2,
+                    ),
+                  if (!ringkas)
+                    section(
+                      DailyInsightLine(candidate: insightCandidate),
+                      index: 3,
+                    ),
+                  if (!ringkas)
+                    section(
+                      CategoryGrid(
+                        categories: categories.take(4).toList(),
+                        totals: byCat,
+                        carries: carries,
+                        onTap: () => context.push('/spend'),
                       ),
-                      index: 2 + dueBanners.length,
-                    )
-                  else if (overcommit > 0 && hasCommitments)
+                      index: 3,
+                    ),
+                  if (!ringkas)
                     section(
-                      AlertBand(
-                        icon: Icons.warning_amber_rounded,
-                        color: FtColors.ochre,
-                        text:
-                            'Budget ${compactMoney(household.monthlyBudgetTotal)} > uang siap pakai ${compactMoney(debtSummary.disposable)} (gaji − cicilan)',
-                        actionLabel: 'Atur',
-                        onAction: () => context.push('/spend'),
+                      GoalsPreview(
+                        goals: goals,
+                        onTap: () => context.push('/goals'),
                       ),
-                      index: 2 + dueBanners.length,
-                    )
-                  else if (obligationsMonthly > 0)
+                      index: 4,
+                    ),
+                  if (!ringkas)
                     section(
-                      AlertBand(
-                        icon: Icons.request_quote_rounded,
-                        color: FtColors.clay,
-                        text:
-                            'Cicilan tetap ${compactMoney(obligationsMonthly)}/bln jalan — uang siap pakai ${compactMoney(debtSummary.disposable)}',
-                        actionLabel: 'Lihat',
-                        onAction: () => context.push('/obligations'),
+                      RecentList(
+                        recentAsync: recentAsync,
+                        household: household,
+                        onTap: () => context.push('/expenses'),
                       ),
-                      index: 2 + dueBanners.length,
+                      index: 5,
                     ),
-                  if (streak >= minVisibleStreak)
-                    section(
-                      StreakBanner(streak: streak),
-                      index: 2 + dueBanners.length,
-                    ),
-                  section(
-                    DailyInsightLine(candidate: insightCandidate),
-                    index: 3,
-                  ),
-                  section(
-                    CategoryGrid(
-                      categories: categories.take(4).toList(),
-                      totals: byCat,
-                      carries: carries,
-                      onTap: () => context.push('/spend'),
-                    ),
-                    index: 3,
-                  ),
-                  section(
-                    GoalsPreview(
-                      goals: goals,
-                      onTap: () => context.push('/goals'),
-                    ),
-                    index: 4,
-                  ),
-                  section(
-                    RecentList(
-                      recentAsync: recentAsync,
-                      household: household,
-                      onTap: () => context.push('/expenses'),
-                    ),
-                    index: 5,
-                  ),
                 ],
               ),
             ),

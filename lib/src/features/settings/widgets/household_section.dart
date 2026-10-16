@@ -208,6 +208,11 @@ class HouseholdSection extends StatelessWidget {
                 detail: Money.format(household.monthlyBudgetTotal),
                 onTap: () => _gate(context, () => _editBudget(context)),
               ),
+              const Divider(),
+              const SettingsRow(
+                label: 'Mata uang',
+                detail: 'IDR · Rupiah',
+              ),
             ],
           ),
         ),

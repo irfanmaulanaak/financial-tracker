@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/expense_aggregations.dart';
+import '../../core/formatters.dart';
 import '../../core/health_score.dart';
+import '../../core/payday.dart';
 import '../../theme.dart';
 import '../../ui/ft_refresh.dart';
 import '../../ui/ft_ring.dart';
@@ -41,6 +43,13 @@ class HealthScreen extends ConsumerWidget {
     final prevCycles = prevAsync.value ?? const <List<Expense>>[];
     final cards = cardsAsync.value ?? const [];
     final investments = investmentsAsync.value ?? const [];
+
+    // "Belum sempat belanja" early on isn't a finding yet — it's just early.
+    // Past the first quarter of the cycle, a still-zero category is real news.
+    final cycle = currentCycle(DateTime.now(), payday: household.payday);
+    final daysElapsed =
+        Dates.dayKey(DateTime.now()).difference(cycle.start).inDays + 1;
+    final earlyInCycle = daysElapsed / cycleLengthDays(cycle) < 0.25;
 
     final records = cycleExpenses
         .map((e) => ExpenseRecord(
@@ -129,6 +138,7 @@ class HealthScreen extends ConsumerWidget {
                 .toList(),
             current: cycleExpenses,
             previousWindows: prevCycles,
+            earlyInCycle: earlyInCycle,
             onTap: (catId) => context.push('/categories/$catId'),
           ),
           HealthRecommendations(

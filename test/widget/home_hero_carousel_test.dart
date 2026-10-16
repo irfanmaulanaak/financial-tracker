@@ -44,7 +44,6 @@ Widget _harness() {
           cycleNet: 1000000,
           spend: 8100000,
           gajiIncome: 14500000,
-          cards: const [],
           health: health,
           safe: (
             perDay: 150000,
@@ -71,7 +70,7 @@ void main() {
       (tester) async {
     await tester.pumpWidget(_harness());
     await tester.pump(const Duration(milliseconds: 700));
-    await tester.tap(find.bySemanticsLabel('Slide 2 dari 5'));
+    await tester.tap(find.bySemanticsLabel('Slide 2 dari 3'));
     await tester.pumpAndSettle();
     expect(find.text('Rp150.000'), findsOneWidget);
     expect(find.textContaining('÷ 20 hari'), findsOneWidget);
@@ -108,8 +107,8 @@ void main() {
     expect(find.textContaining('· Rp'), findsNothing);
   });
 
-  // Regression: dots were purely decorative, leaving slides 2-5 unreachable
-  // with a mouse (PageView ignores mouse drags on web by default).
+  // Regression: dots were purely decorative, leaving slides unreachable with
+  // a mouse (PageView ignores mouse drags on web by default).
   testWidgets('tapping a dot navigates to that slide', (tester) async {
     await tester.pumpWidget(_harness());
     await tester.pump(const Duration(milliseconds: 700));
@@ -119,8 +118,8 @@ void main() {
         .controller;
     expect(controller?.page, 0);
 
-    await tester.tap(find.bySemanticsLabel('Slide 5 dari 5'));
+    await tester.tap(find.bySemanticsLabel('Slide 3 dari 3'));
     await tester.pumpAndSettle();
-    expect(controller?.page, 4);
+    expect(controller?.page, 2);
   });
 }

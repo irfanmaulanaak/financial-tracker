@@ -29,6 +29,10 @@ class CategoryChipRow extends StatelessWidget {
           _Chip(
             label: c.label.split(' ').first,
             iconKey: c.icon,
+            // The seeded "Lainnya" category (id 'other') legitimately uses
+            // the generic icon; any other category stuck on it just never
+            // had one picked.
+            iconChosen: c.icon != 'category' || c.id == 'other',
             selected: selected == c.id,
             onTap: () => onSelect(c.id),
           ),
@@ -41,12 +45,14 @@ class _Chip extends StatelessWidget {
   const _Chip({
     required this.label,
     required this.iconKey,
+    required this.iconChosen,
     required this.selected,
     required this.onTap,
   });
 
   final String label;
   final String iconKey;
+  final bool iconChosen;
   final bool selected;
   final VoidCallback onTap;
 
@@ -58,18 +64,21 @@ class _Chip extends StatelessWidget {
     'movie': Icons.movie,
     'favorite': Icons.favorite,
     'school': Icons.school,
+    'pets': Icons.pets,
     'sports_esports': Icons.sports_esports,
+    'trending_up': Icons.trending_up,
   };
 
   @override
   Widget build(BuildContext context) {
+    final iconColor = selected ? Colors.white : FtColors.ink3;
     return FtTapScale(
       scale: 0.95,
       haptic: false,
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
           color: selected ? FtColors.clay : FtColors.surface,
           borderRadius: BorderRadius.circular(999),
@@ -81,17 +90,23 @@ class _Chip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              _icons[iconKey] ?? Icons.category,
-              size: 13,
-              color: selected ? Colors.white : FtColors.ink3,
-            ),
+            // No icon picked: a quiet neutral dot instead of reusing the
+            // "Lainnya" catch-all icon, so custom categories don't all look
+            // like the same bucket.
+            if (iconChosen)
+              Icon(_icons[iconKey] ?? Icons.category, size: 12, color: iconColor)
+            else
+              Container(
+                width: 7,
+                height: 7,
+                decoration: BoxDecoration(color: iconColor, shape: BoxShape.circle),
+              ),
             const SizedBox(width: 6),
             Text(
               label,
               style: TextStyle(
                 color: selected ? Colors.white : FtColors.ink2,
-                fontSize: 12,
+                fontSize: 11.5,
                 fontWeight: FontWeight.w500,
               ),
             ),

@@ -172,7 +172,10 @@ class _CardsScreenState extends ConsumerState<CardsScreen> {
                 ),
                 FtCard(
                   heroTag: 'ft-kartu-hero',
-                  backgroundColor: FtColors.tileFor(FtColors.catFood),
+                  // Follows the "Warna" accent, not the (palette-fixed)
+                  // category color — otherwise this stays peach even on
+                  // Netral/Laut.
+                  backgroundColor: FtColors.tileFor(FtColors.clay),
                   margin: const EdgeInsets.fromLTRB(22, 4, 22, 18),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -227,13 +230,31 @@ class _CardsScreenState extends ConsumerState<CardsScreen> {
                                   ),
                                 ),
                                 const SizedBox(height: 4),
-                                Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: BoxDecoration(
-                                    color: debtState,
-                                    shape: BoxShape.circle,
-                                  ),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 8,
+                                      height: 8,
+                                      decoration: BoxDecoration(
+                                        color: debtState,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      debtRatio > 0.4
+                                          ? 'Tinggi'
+                                          : debtRatio > 0.25
+                                              ? 'Sedang'
+                                              : 'Aman',
+                                      style: TextStyle(
+                                        color: FtColors.ink,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
@@ -263,7 +284,7 @@ class _CardsScreenState extends ConsumerState<CardsScreen> {
                         child: CardTile(
                           card: items[i],
                           hid: household.id,
-                          ownerName: prettyName(
+                          ownerName: shortName(
                               household.memberOf(items[i].ownerId)?.displayName ?? '-'),
                           onTap: () => context.push('/cards/${items[i].id}'),
                         ),

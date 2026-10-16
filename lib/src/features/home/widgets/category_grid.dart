@@ -80,11 +80,16 @@ class _CategoryCell extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = parseColor(category.color);
     final budget = category.monthlyBudget + carry;
-    final pct = budget > 0 ? (spent / budget * 100).round() : 0;
+    final hasBudget = budget > 0;
+    final pct = hasBudget ? (spent / budget * 100).round() : 0;
+    final over = hasBudget && spent > budget;
+    // One neutral surface for every tile — the category color only shows in
+    // the small icon tile, not the whole card (that made over-budget tiles
+    // read as just "another pastel", not clearly red).
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: FtColors.tileFor(color),
+        color: FtColors.surfaceAlt,
         borderRadius: BorderRadius.circular(22),
       ),
       child: Column(
@@ -92,7 +97,16 @@ class _CategoryCell extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(iconFor(category.icon), size: 15, color: color),
+              Container(
+                width: 22,
+                height: 22,
+                decoration: BoxDecoration(
+                  color: FtColors.tileFor(color),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                alignment: Alignment.center,
+                child: Icon(iconFor(category.icon), size: 13, color: color),
+              ),
               const SizedBox(width: 7),
               Expanded(
                 child: Text(
@@ -118,28 +132,33 @@ class _CategoryCell extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          FtProgressBar(
-            // No budget: empty track (not a full "over budget" bar).
-            value: budget > 0 ? spent : 0,
-            max: budget <= 0 ? 1 : budget,
-            color: budget > 0 && spent > budget
-                ? FtColors.danger
-                : FtColors.ink,
-            overflowColor: FtColors.danger,
-            trackColor: FtColors.surface.withValues(alpha: 0.7),
-            height: 8,
-          ),
-          const SizedBox(height: 5),
-          Text(
-            budget > 0 ? '$pct% terpakai' : 'tanpa budget',
-            style: TextStyle(
-              color: budget > 0 && spent > budget
-                  ? FtColors.danger
-                  : FtColors.ink2,
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
+          if (hasBudget) ...[
+            FtProgressBar(
+              value: spent,
+              max: budget,
+              color: over ? FtColors.danger : FtColors.ink,
+              overflowColor: FtColors.danger,
+              trackColor: FtColors.surface,
+              height: 8,
             ),
-          ),
+            const SizedBox(height: 5),
+            Text(
+              '$pct% terpakai',
+              style: TextStyle(
+                color: over ? FtColors.danger : FtColors.ink2,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ] else
+            Text(
+              'tanpa budget',
+              style: TextStyle(
+                color: FtColors.ink4,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
         ],
       ),
     );

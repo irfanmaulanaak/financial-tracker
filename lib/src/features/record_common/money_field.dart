@@ -63,10 +63,12 @@ class _MoneyFieldState extends State<MoneyField> {
     super.initState();
     _controller = TextEditingController(text: _displayFor(widget.amount));
     _focusNode = widget.focusNode ?? FocusNode();
+    // Rebuilds to hide the "0" hint while focused (see `hintText` below) —
+    // needed regardless of `calculator`.
+    _focusNode.addListener(_onFocusChange);
     if (widget.calculator) {
       // Chips & "= total" preview depend on text/focus, not just on amount.
       _controller.addListener(_onLocalChange);
-      _focusNode.addListener(_onFocusChange);
     }
   }
 
@@ -89,8 +91,8 @@ class _MoneyFieldState extends State<MoneyField> {
   void dispose() {
     if (widget.calculator) {
       _controller.removeListener(_onLocalChange);
-      _focusNode.removeListener(_onFocusChange);
     }
+    _focusNode.removeListener(_onFocusChange);
     _controller.dispose();
     if (widget.focusNode == null) _focusNode.dispose();
     super.dispose();
@@ -110,7 +112,7 @@ class _MoneyFieldState extends State<MoneyField> {
   }
 
   void _onFocusChange() {
-    if (!_focusNode.hasFocus) _collapse();
+    if (widget.calculator && !_focusNode.hasFocus) _collapse();
     if (mounted) setState(() {});
   }
 
@@ -191,7 +193,10 @@ class _MoneyFieldState extends State<MoneyField> {
                     border: InputBorder.none,
                     enabledBorder: InputBorder.none,
                     focusedBorder: InputBorder.none,
-                    hintText: '0',
+                    // Hidden while focused — otherwise the blinking cursor
+                    // lands right on top of the "0", not after it (both
+                    // start at the same left-aligned offset 0).
+                    hintText: _focusNode.hasFocus ? null : '0',
                     hintStyle: Theme.of(context)
                         .textTheme
                         .displayMedium
@@ -231,18 +236,39 @@ class _MoneyFieldState extends State<MoneyField> {
           ),
         if (widget.calculator && _focusNode.hasFocus)
           Padding(
-            padding: const EdgeInsets.only(top: 12),
+            padding: const EdgeInsets.only(top: 10),
             child: TextFieldTapRegion(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              child: Column(
                 children: [
-                  _OpChip(label: '+', onTap: () => _insertOperator('+')),
-                  const SizedBox(width: 10),
-                  _OpChip(label: '−', onTap: () => _insertOperator('-')),
-                  if (_isExpression) ...[
-                    const SizedBox(width: 10),
-                    _OpChip(label: '=', onTap: _collapse),
-                  ],
+                  Text(
+                    'Jumlahkan beberapa item',
+                    style: TextStyle(color: FtColors.ink3, fontSize: 10.5),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _OpChip(
+                        label: '+',
+                        tooltip: 'Tambah item lagi',
+                        onTap: () => _insertOperator('+'),
+                      ),
+                      const SizedBox(width: 10),
+                      _OpChip(
+                        label: '−',
+                        tooltip: 'Kurangi dari total',
+                        onTap: () => _insertOperator('-'),
+                      ),
+                      if (_isExpression) ...[
+                        const SizedBox(width: 10),
+                        _OpChip(
+                          label: '=',
+                          tooltip: 'Hitung total',
+                          onTap: _collapse,
+                        ),
+                      ],
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -255,30 +281,48 @@ class _MoneyFieldState extends State<MoneyField> {
 /// Small pill button for the calculator row. Lives inside a
 /// [TextFieldTapRegion] so tapping it never dismisses the keyboard.
 class _OpChip extends StatelessWidget {
-  const _OpChip({required this.label, required this.onTap});
+  const _OpChip({
+    required this.label,
+    required this.tooltip,
+    required this.onTap,
+  });
 
   final String label;
+
+  /// Explains what the glyph does — these build a running +/- expression
+  /// in the amount field, not a generic stepper, so the bare symbol alone
+  /// reads as unclear.
+  final String tooltip;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: FtColors.surface,
-      shape: StadiumBorder(
-        side: BorderSide(color: FtColors.lineStrong, width: 0.8),
-      ),
-      child: InkWell(
-        customBorder: const StadiumBorder(),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 7),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 17,
-              height: 1.2,
-              fontWeight: FontWeight.w600,
-              color: FtColors.ink2,
+    return Tooltip(
+      message: tooltip,
+      child: Semantics(
+        button: true,
+        label: tooltip,
+        child: Material(
+          color: FtColors.surface,
+          shape: StadiumBorder(
+            side: BorderSide(color: FtColors.lineStrong, width: 0.8),
+          ),
+          child: InkWell(
+            customBorder: const StadiumBorder(),
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 7),
+              child: ExcludeSemantics(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 17,
+                    height: 1.2,
+                    fontWeight: FontWeight.w600,
+                    color: FtColors.ink2,
+                  ),
+                ),
+              ),
             ),
           ),
         ),

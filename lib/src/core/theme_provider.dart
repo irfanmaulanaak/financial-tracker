@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../theme.dart';
+
 final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(
   ThemeModeNotifier.new,
 );
@@ -55,5 +57,37 @@ class LiquidThemeNotifier extends Notifier<bool> {
     state = on;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_key, on);
+  }
+}
+
+/// "Warna" — color palette choice (Settings → Tampilan). Default
+/// [FtPalette.hangat] is the original look; an unknown or missing stored
+/// value falls back to it.
+final paletteProvider = NotifierProvider<PaletteNotifier, FtPalette>(
+  PaletteNotifier.new,
+);
+
+class PaletteNotifier extends Notifier<FtPalette> {
+  static const _key = 'ft_palette';
+
+  @override
+  FtPalette build() {
+    _load();
+    return FtPalette.hangat;
+  }
+
+  Future<void> _load() async {
+    final prefs = await SharedPreferences.getInstance();
+    final v = prefs.getString(_key);
+    state = FtPalette.values.firstWhere(
+      (p) => p.name == v,
+      orElse: () => FtPalette.hangat,
+    );
+  }
+
+  Future<void> setPalette(FtPalette palette) async {
+    state = palette;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_key, palette.name);
   }
 }

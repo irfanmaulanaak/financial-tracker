@@ -5,33 +5,37 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/cicilan.dart';
 import '../../../core/formatters.dart';
 import '../../../core/health_score.dart';
 import '../../../core/hide_assets_provider.dart';
-import '../../../core/in_app_indicators.dart';
 import '../../../core/net_worth.dart';
 import '../../../theme.dart';
 import '../../../ui/ft_animated_number.dart';
-import '../../../ui/ft_donut.dart';
 import '../../../ui/ft_haptics.dart';
 import '../../../ui/ft_sparkline.dart';
 import '../../../ui/ft_ui.dart';
-import '../../cards/credit_card.dart';
 import '../../insights/insights_providers.dart';
 import 'home_formatters.dart';
 import 'safe_to_spend_slide.dart';
 
-/// 5-page swipeable hero card on the home screen:
-///   1. Total Aset (net worth + breakdown)
-///   2. Aman dibelanjakan (sisa anggaran ÷ hari tersisa)
-///   3. Pengeluaran vs Gaji (ring chart, this cycle)
-///   4. Kartu Kredit (akumulasi tagihan)
-///   5. Kesehatan finansial
+/// 3-page swipeable hero card on the home screen — one question each:
+///   1. Total Aset (what do I own, net of debt)
+///   2. Aman dibelanjakan (can I spend today)
+///   3. Kesehatan finansial (composite verdict, incl. spend-vs-gaji and debt)
+///
+/// Dropped from the old 5-page version: a standalone "Pengeluaran vs Gaji"
+/// slide and a "Kartu Kredit" slide — both answered questions already
+/// covered elsewhere (Kesehatan's verdict, the Utang tab, and the home
+/// "Perlu perhatian" card's due-date lines), so keeping them here was just
+/// more swiping for the same answer.
 ///
 /// Each page is a self-contained card body wrapped in [FtCard] with a
 /// `onTap` that routes to the full feature screen. Below the PageView sits
 /// a row of dot indicators tracking the active page.
+///
+/// Beranda "Ringkas" ([compact]) narrows this to 2 pages — Aman dibelanjakan
+/// and Pengeluaran vs Gaji — the rest stay reachable from their own
+/// tabs/screens.
 class HomeHeroCarousel extends StatefulWidget {
   const HomeHeroCarousel({
     super.key,
@@ -41,9 +45,9 @@ class HomeHeroCarousel extends StatefulWidget {
     required this.cycleNet,
     required this.spend,
     required this.gajiIncome,
-    required this.cards,
     required this.health,
     required this.safe,
+    this.compact = false,
   });
 
   final NetWorth nw;
@@ -57,14 +61,15 @@ class HomeHeroCarousel extends StatefulWidget {
   /// to render the small delta pill.
   final int cycleNet;
 
-  /// Total expenses in the current cycle.
+  /// Total expenses in the current cycle. Only still used by the Ringkas
+  /// ratio slide — the Lengkap carousel no longer has a standalone slide
+  /// for this.
   final int spend;
 
   /// Sum of `IncomeSource.salary` rows for the current cycle. Drives the
-  /// ratio ring on page 2.
+  /// Ringkas ratio ring.
   final int gajiIncome;
 
-  final List<CreditCard> cards;
   final HealthScore health;
 
   /// Data slide "aman dibelanjakan" (dihitung di home dari budget siklus).
@@ -75,6 +80,11 @@ class HomeHeroCarousel extends StatefulWidget {
     DateTime nextPayday,
     bool hasBudget,
   }) safe;
+
+  /// Beranda "Ringkas": only the safe-to-spend hero + this cycle's spending
+  /// ratio (2 slides) — net worth and kesehatan stay reachable from their
+  /// own tabs/screens but drop off the home carousel.
+  final bool compact;
 
   @override
   State<HomeHeroCarousel> createState() => _HomeHeroCarouselState();
@@ -111,33 +121,37 @@ class _HomeHeroCarouselState extends State<HomeHeroCarousel> {
               ),
               child: PageView.builder(
               controller: _controller,
-              itemCount: 5,
+              itemCount: widget.compact ? 2 : 3,
               onPageChanged: (i) {
                 FtHaptics.select();
                 setState(() => _page = i);
               },
               itemBuilder: (_, index) {
-                final slide = switch (index) {
-                  0 => _AsetSlide(
-                      nw: widget.nw,
-                      trend: widget.trend,
-                      trendDates: widget.trendDates,
-                      cycleNet: widget.cycleNet,
-                    ),
-                  1 => SafeToSpendSlide(
-                      perDay: widget.safe.perDay,
-                      remaining: widget.safe.remaining,
-                      daysLeft: widget.safe.daysLeft,
-                      nextPayday: widget.safe.nextPayday,
-                      hasBudget: widget.safe.hasBudget,
-                    ),
-                  2 => _RatioSlide(
-                      spend: widget.spend,
-                      gajiIncome: widget.gajiIncome,
-                    ),
-                  3 => _KartuSlide(cards: widget.cards),
-                  _ => _KesehatanSlide(score: widget.health),
-                };
+                final safeToSpendSlide = SafeToSpendSlide(
+                  perDay: widget.safe.perDay,
+                  remaining: widget.safe.remaining,
+                  daysLeft: widget.safe.daysLeft,
+                  nextPayday: widget.safe.nextPayday,
+                  hasBudget: widget.safe.hasBudget,
+                );
+                final slide = widget.compact
+                    ? switch (index) {
+                        0 => safeToSpendSlide,
+                        _ => _RatioSlide(
+                            spend: widget.spend,
+                            gajiIncome: widget.gajiIncome,
+                          ),
+                      }
+                    : switch (index) {
+                        0 => _AsetSlide(
+                            nw: widget.nw,
+                            trend: widget.trend,
+                            trendDates: widget.trendDates,
+                            cycleNet: widget.cycleNet,
+                          ),
+                        1 => safeToSpendSlide,
+                        _ => _KesehatanSlide(score: widget.health),
+                      };
                 return AnimatedBuilder(
                   animation: _controller,
                   builder: (_, child) {
@@ -165,7 +179,7 @@ class _HomeHeroCarouselState extends State<HomeHeroCarousel> {
           ),
           const SizedBox(height: 10),
           _Dots(
-            count: 5,
+            count: widget.compact ? 2 : 3,
             active: _page,
             onSelect: (i) => _controller.animateToPage(
               i,
@@ -255,6 +269,11 @@ class _AsetSlideState extends ConsumerState<_AsetSlide> {
     final hidden = ref.watch(hideAssetsProvider);
     final showDelta = !hidden && cycleNet != 0 && nw.total > 0;
     final positive = cycleNet >= 0;
+    // Trend direction (first vs. last point), not this cycle's cash flow —
+    // the chart draws net worth over time, so its color should track that,
+    // not `positive` (a one-cycle spent-vs-earned sign that can disagree
+    // with a net worth line that's actually trending up).
+    final trendPositive = trend.length < 2 || trend.last >= trend.first;
     final canScrub = !hidden && widget.trendDates.length == trend.length;
     final scrub = _scrubIdx != null && canScrub && _scrubIdx! < trend.length
         ? (
@@ -262,16 +281,10 @@ class _AsetSlideState extends ConsumerState<_AsetSlide> {
             total: trend[_scrubIdx!].round(),
           )
         : null;
-    final segments = <FtDonutSegment>[
-      if (nw.cash > 0)
-        FtDonutSegment(value: nw.cash.toDouble(), color: FtColors.sky),
-      if (nw.savings > 0)
-        FtDonutSegment(value: nw.savings.toDouble(), color: FtColors.moss),
-      if (nw.investments > 0)
-        FtDonutSegment(value: nw.investments.toDouble(), color: FtColors.clay),
-    ];
     return FtCard(
-      backgroundColor: FtColors.tileFor(FtColors.catTransport),
+      // Follows the "Warna" accent, not a (palette-fixed) category color —
+      // this card isn't about one category.
+      backgroundColor: FtColors.tileFor(FtColors.clay),
       heroTag: 'ft-aset-hero',
       onTap: () => context.push('/accounts'),
       child: Column(
@@ -286,92 +299,91 @@ class _AsetSlideState extends ConsumerState<_AsetSlide> {
             ],
           ),
           const SizedBox(height: 6),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    hidden
-                        ? Text(
-                            maskMoney(),
-                            style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                                  fontSize: 32,
-                                  height: 1,
-                                  letterSpacing: -1,
-                                  fontWeight: FontWeight.w500,
-                                  color: FtColors.ink,
-                                ),
-                          )
-                        : FtAnimatedNumber(
-                            value: nw.total,
-                            formatter: compactMoney,
-                            style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                                  fontSize: 32,
-                                  height: 1,
-                                  letterSpacing: -1,
-                                  fontWeight: FontWeight.w500,
-                                  color: FtColors.ink,
-                                ),
-                          ),
-                    const SizedBox(height: 8),
-                    // Fixed-height slot so scrubbing the sparkline swaps the
-                    // pill for the day readout without layout jitter.
-                    SizedBox(
-                      height: 22,
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: scrub != null
-                            ? Text(
-                                '${Dates.dayMonth(scrub.date)} · '
-                                '${Money.format(scrub.total)}',
-                                style: TextStyle(
-                                  color: FtColors.ink2,
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w600,
-                                  fontFeatures: const [
-                                    FontFeature.tabularFigures(),
-                                  ],
-                                ),
-                              )
-                            : showDelta
-                                ? _DeltaPill(
-                                    positive: positive,
-                                    amount: cycleNet.abs(),
-                                  )
-                                : Text(
-                                    'Tunai + tabungan + investasi − utang',
-                                    style: TextStyle(
-                                      color: FtColors.ink3,
-                                      fontSize: 11,
-                                    ),
-                                  ),
+          hidden
+              ? Text(
+                  maskMoney(),
+                  style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                        fontSize: 32,
+                        height: 1,
+                        letterSpacing: -1,
+                        fontWeight: FontWeight.w500,
+                        color: FtColors.ink,
                       ),
-                    ),
-                    if (trend.length >= 2) ...[
-                      const SizedBox(height: 10),
-                      // Full width, otherwise the SizedBox collapses to 0 and
-                      // the trend renders as a vertical stub.
-                      FtSparkline(
-                        data: trend,
-                        width: double.infinity,
-                        height: 26,
-                        color: positive ? FtColors.moss : FtColors.danger,
-                        onHoverPoint: canScrub
-                            ? (i) => setState(() => _scrubIdx = i)
-                            : null,
+                )
+              : FtAnimatedNumber(
+                  value: nw.total,
+                  formatter: compactMoney,
+                  style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                        fontSize: 32,
+                        height: 1,
+                        letterSpacing: -1,
+                        fontWeight: FontWeight.w500,
+                        color: FtColors.ink,
                       ),
-                    ],
-                  ],
                 ),
-              ),
-              const SizedBox(width: 12),
-              if (segments.isNotEmpty)
-                FtDonut(segments: segments, size: 72, thickness: 9),
-            ],
+          const SizedBox(height: 8),
+          // Fixed-height slot so scrubbing the sparkline swaps the
+          // pill for the day readout without layout jitter.
+          SizedBox(
+            height: 22,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: scrub != null
+                  ? Text(
+                      '${Dates.dayMonth(scrub.date)} · '
+                      '${Money.format(scrub.total)}',
+                      style: TextStyle(
+                        color: FtColors.ink2,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                        fontFeatures: const [
+                          FontFeature.tabularFigures(),
+                        ],
+                      ),
+                    )
+                  : showDelta
+                      ? _DeltaPill(
+                          positive: positive,
+                          amount: cycleNet.abs(),
+                        )
+                      : Text(
+                          'Tunai + tabungan + investasi − utang',
+                          style: TextStyle(
+                            color: FtColors.ink3,
+                            fontSize: 11,
+                          ),
+                        ),
+            ),
           ),
+          if (trend.length >= 2) ...[
+            const SizedBox(height: 10),
+            // Full width, otherwise the SizedBox collapses to 0 and
+            // the trend renders as a vertical stub.
+            FtSparkline(
+              data: trend,
+              width: double.infinity,
+              height: 26,
+              color: trendPositive ? FtColors.moss : FtColors.danger,
+              onHoverPoint:
+                  canScrub ? (i) => setState(() => _scrubIdx = i) : null,
+            ),
+            if (widget.trendDates.length == trend.length) ...[
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Text(
+                    Dates.dayMonth(widget.trendDates.first),
+                    style: TextStyle(color: FtColors.ink4, fontSize: 10),
+                  ),
+                  const Spacer(),
+                  Text(
+                    Dates.dayMonth(widget.trendDates.last),
+                    style: TextStyle(color: FtColors.ink4, fontSize: 10),
+                  ),
+                ],
+              ),
+            ],
+          ],
           const SizedBox(height: 12),
           Container(height: 0.5, color: FtColors.line),
           const SizedBox(height: 10),
@@ -399,7 +411,6 @@ class _AsetSlideState extends ConsumerState<_AsetSlide> {
               ),
             ],
           ),
-          _CommitmentLine(hidden: hidden),
         ],
       ),
     );
@@ -408,9 +419,11 @@ class _AsetSlideState extends ConsumerState<_AsetSlide> {
 
 /// "Uang yang sudah ada pemiliknya": total tagihan terjadwal sisa siklus +
 /// perkiraan sisa kas setelahnya. Angka sama persis dengan Kalender Tagihan
-/// (satu provider). Tap → kalender.
-class _CommitmentLine extends ConsumerWidget {
-  const _CommitmentLine({required this.hidden});
+/// (satu provider). Tap → kalender. Lives below the hero carousel, not
+/// nested inside the asset card — it answers a different question ("what's
+/// already spoken for") than net worth ("what do I own").
+class CommitmentLine extends ConsumerWidget {
+  const CommitmentLine({super.key, required this.hidden});
   final bool hidden;
 
   @override
@@ -420,7 +433,7 @@ class _CommitmentLine extends ConsumerWidget {
     final total = bills.projection.upcomingBills;
     final sisa = bills.projection.projected;
     return Padding(
-      padding: const EdgeInsets.only(top: 10),
+      padding: const EdgeInsets.fromLTRB(22, 0, 22, 16),
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () => context.push('/calendar'),
@@ -781,247 +794,7 @@ class _RatioRingPainter extends CustomPainter {
 }
 
 /// ---------------------------------------------------------------------------
-/// Slide 3 — Kartu Kredit
-/// ---------------------------------------------------------------------------
-class _KartuSlide extends StatelessWidget {
-  const _KartuSlide({required this.cards});
-
-  final List<CreditCard> cards;
-
-  @override
-  Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final used = cards.fold<int>(0, (a, b) => a + b.used);
-    final minPay = cards.fold<int>(
-      0,
-      (a, b) =>
-          a + minimumPayment(balance: b.used, minPaymentPct: b.minPaymentPct),
-    );
-
-    CreditCard? soonest;
-    int? soonestDays;
-    for (final c in cards) {
-      if (c.used <= 0) continue;
-      final d = daysUntilDue(dueDay: c.dueDay, now: now, warnWithinDays: 365)
-          ?? 30;
-      if (soonestDays == null || d < soonestDays) {
-        soonestDays = d;
-        soonest = c;
-      }
-    }
-
-    return FtCard(
-      backgroundColor: FtColors.tileFor(FtColors.catShopping),
-      heroTag: 'ft-kartu-hero',
-      onTap: () => context.push('/cards'),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Expanded(child: Eyebrow('Kartu Kredit · Utang')),
-              if (minPay > 0)
-                _Chip(
-                  text: '${compactMoney(minPay)} min',
-                  color: FtColors.clay,
-                ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          if (cards.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 20),
-              child: Center(
-                child: Text(
-                  'Belum ada kartu kredit.\nTap untuk menambah.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: FtColors.ink3, fontSize: 12),
-                ),
-              ),
-            )
-          else ...[
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
-              children: [
-                Text(
-                  compactMoney(used),
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontSize: 26,
-                        height: 1.1,
-                      ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'akumulasi tagihan',
-                  style: TextStyle(color: FtColors.ink3, fontSize: 11),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            _SegmentedLimitBar(cards: cards),
-            const SizedBox(height: 12),
-            Container(height: 0.5, color: FtColors.line),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                if (soonest != null)
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Jatuh tempo terdekat',
-                          style: TextStyle(
-                            color: FtColors.ink3,
-                            fontSize: 10,
-                            letterSpacing: 0.3,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          _dueLabel(soonest.dueDay, soonestDays ?? 0,
-                              soonest.label),
-                          style: TextStyle(
-                            color: FtColors.ink,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      'Kartu aktif',
-                      style: TextStyle(
-                        color: FtColors.ink3,
-                        fontSize: 10,
-                        letterSpacing: 0.3,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${cards.length}',
-                      style: TextStyle(
-                        color: FtColors.ink,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  static String _dueLabel(int dueDay, int days, String cardLabel) {
-    final shortName = cardLabel.split(' ').first;
-    if (days <= 0) return 'Tgl $dueDay · $shortName (lewat)';
-    if (days <= 14) return 'Tgl $dueDay · $shortName ($days hr)';
-    return 'Tgl $dueDay · $shortName';
-  }
-}
-
-class _SegmentedLimitBar extends StatelessWidget {
-  const _SegmentedLimitBar({required this.cards});
-  final List<CreditCard> cards;
-
-  @override
-  Widget build(BuildContext context) {
-    final totalLimit = cards.fold<int>(0, (a, b) => a + b.limit);
-    if (totalLimit <= 0) {
-      return FtProgressBar(
-        value: 0,
-        max: 1,
-        color: ftProgressColor(0, 1),
-      );
-    }
-    return SizedBox(
-      height: 6,
-      child: Row(
-        children: [
-          for (var i = 0; i < cards.length; i++) ...[
-            Expanded(
-              flex: (cards[i].limit / totalLimit * 1000).round().clamp(1, 1000),
-              child: _SegmentTrack(
-                used: cards[i].used,
-                limit: cards[i].limit,
-              ),
-            ),
-            if (i != cards.length - 1) const SizedBox(width: 4),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _SegmentTrack extends StatelessWidget {
-  const _SegmentTrack({required this.used, required this.limit});
-  final int used;
-  final int limit;
-
-  @override
-  Widget build(BuildContext context) {
-    final pct = limit <= 0 ? 0.0 : (used / limit).clamp(0.0, 1.0);
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(4),
-      child: Stack(
-        children: [
-          Container(color: FtColors.line),
-          FractionallySizedBox(
-            widthFactor: pct,
-            child: Container(
-              color: ftProgressColor(
-                used,
-                limit,
-                dangerWhenOver: true,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Chip extends StatelessWidget {
-  const _Chip({required this.text, required this.color});
-  final String text;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        border: Border.all(color: color.withValues(alpha: 0.28), width: 0.5),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          color: color,
-          fontSize: 10.5,
-          fontWeight: FontWeight.w600,
-          fontFeatures: const [FontFeature.tabularFigures()],
-          letterSpacing: 0.2,
-        ),
-      ),
-    );
-  }
-}
-
-/// ---------------------------------------------------------------------------
-/// Slide 4 — Kesehatan finansial
+/// Slide 3 — Kesehatan finansial
 /// ---------------------------------------------------------------------------
 class _KesehatanSlide extends StatelessWidget {
   const _KesehatanSlide({required this.score});

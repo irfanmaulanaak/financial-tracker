@@ -20,7 +20,7 @@ class MemberChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = parseColor(member.color);
-    final first = prettyName(member.displayName).split(' ').first;
+    final first = shortName(member.displayName);
     return Container(
       padding: EdgeInsets.fromLTRB(3, 2, 7, 2),
       decoration: BoxDecoration(

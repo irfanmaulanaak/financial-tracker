@@ -21,7 +21,7 @@ class FtSideNav extends StatelessWidget {
       _SideItem(FtTab.home, Icons.home_rounded, Icons.home_outlined,
           'Beranda', '/home'),
       _SideItem(FtTab.spend, Icons.donut_large_rounded,
-          Icons.donut_large_outlined, 'Belanja', '/spend'),
+          Icons.donut_large_outlined, 'Pengeluaran', '/spend'),
       _SideItem(FtTab.cards, Icons.credit_card_rounded,
           Icons.credit_card_outlined, 'Utang', '/cards'),
       _SideItem(FtTab.assets, Icons.pie_chart_rounded,

@@ -29,14 +29,15 @@ class SafeToSpendSlide extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final over = hasBudget && remaining <= 0;
-    // Always on the peach hero fill, so colors are fixed (both themes).
-    const ink = FtColors.onPeach;
+    // Always on the hero fill, so colors are fixed across brightness (but
+    // follow the "Warna" palette — no longer a compile-time constant).
+    final ink = FtColors.onHero;
     final ink2 = ink.withValues(alpha: 0.78);
     final ink3 = ink.withValues(alpha: 0.62);
-    final tint = over ? const Color(0xFFA02631) : ink;
+    final tint = over ? FtColors.onHeroDanger : ink;
 
     return FtCard(
-      backgroundColor: FtColors.peach,
+      backgroundColor: FtColors.hero,
       onTap: () => context.push('/spend'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

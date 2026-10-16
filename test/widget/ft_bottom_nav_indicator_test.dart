@@ -36,7 +36,7 @@ void main() {
 
   testWidgets('Only the active tab shows its label', (tester) async {
     await pumpNav(tester, FtTab.spend);
-    expect(find.text('Belanja'), findsOneWidget);
+    expect(find.text('Pengeluaran'), findsOneWidget);
     expect(find.text('Beranda'), findsNothing);
     expect(find.text('Utang'), findsNothing);
   });
@@ -44,6 +44,6 @@ void main() {
   testWidgets('Label follows the active tab', (tester) async {
     await pumpNav(tester, FtTab.cards);
     expect(find.text('Utang'), findsOneWidget);
-    expect(find.text('Belanja'), findsNothing);
+    expect(find.text('Pengeluaran'), findsNothing);
   });
 }
