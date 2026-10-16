@@ -9,6 +9,7 @@ import '../../../theme.dart';
 import '../daily_insight_lock.dart';
 import '../eling/eling_mood.dart';
 import '../eling/eling_scene.dart';
+import '../home_data_synced.dart';
 import 'home_formatters.dart';
 
 /// The hero panel (DESIGN.md section 8 item 2): "Aman dibelanjakan hari ini",
@@ -33,6 +34,7 @@ class HomeHeroScene extends ConsumerStatefulWidget {
     required this.insightCandidate,
     required this.startLabel,
     required this.paydayLabel,
+    required this.inputsReady,
   });
 
   final int perDay;
@@ -46,6 +48,11 @@ class HomeHeroScene extends ConsumerStatefulWidget {
   final String startLabel;
   final String paydayLabel;
 
+  /// True once every provider behind [perDay] / [remaining] / [mood] has loaded.
+  /// The settle check waits for this so the entrance doesn't play over a budget
+  /// computed from partial data (cards/installments/obligations load late).
+  final bool inputsReady;
+
   @override
   ConsumerState<HomeHeroScene> createState() => _HomeHeroSceneState();
 }
@@ -58,6 +65,7 @@ class _HomeHeroSceneState extends ConsumerState<HomeHeroScene> {
   bool _reduce = false;
   bool _firstEver = false;
   bool _countFromZero = false;
+  bool _syncedLatched = false;
 
   String? _lastCandidate;
   bool _resolvedOnce = false;
@@ -67,20 +75,24 @@ class _HomeHeroSceneState extends ConsumerState<HomeHeroScene> {
     super.initState();
     _firstEver = !ElingSession.settledOnce;
     // Revisits already have loaded, steady data — show at once, no entrance.
-    if (!_firstEver) _stable = true;
+    if (!_firstEver) {
+      _stable = true;
+      _syncedLatched = true;
+    }
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _reduce = MediaQuery.disableAnimationsOf(context);
-    if (!_stable && _settle == null) _startSettle();
   }
 
   @override
   void didUpdateWidget(HomeHeroScene old) {
     super.didUpdateWidget(old);
-    if (_stable) return; // locked in; later changes only re-count the number
+    // Only re-wait on input changes after the data has synced; before that the
+    // settle timer hasn't started yet (we're still waiting for the server).
+    if (_stable || !_syncedLatched) return;
     if (widget.perDay != old.perDay ||
         widget.remaining != old.remaining ||
         widget.mood != old.mood) {
@@ -108,6 +120,15 @@ class _HomeHeroSceneState extends ConsumerState<HomeHeroScene> {
 
   @override
   Widget build(BuildContext context) {
+    // Wait for real server data before starting the settle check / entrance —
+    // Firestore emits cache-first snapshots that would otherwise animate the
+    // number over wrong values on a cold start.
+    final synced = ref.watch(homeDataSyncedProvider).value ?? false;
+    if (!_stable && synced && widget.inputsReady && !_syncedLatched) {
+      _syncedLatched = true;
+      _startSettle();
+    }
+
     final locked = ref.watch(dailyInsightLockProvider);
     // Lock today's insight the first time a candidate shows up (and whenever it
     // changes as data streams in). Done after the frame to avoid mutating a

@@ -23,6 +23,17 @@ class IncomeRepository {
         .map((s) => s.docs.map(Income.fromSnapshot).toList());
   }
 
+  /// Whether each snapshot of the *identical* [watchRecent] query came from the
+  /// server (`true`) vs the local cache (`false`). Shares Firestore's listener
+  /// with [watchRecent] — no extra reads. Used only by the home sync gate.
+  Stream<bool> watchRecentServerSynced({required String hid, int limit = 25}) {
+    return _incomes(hid)
+        .orderBy('date', descending: true)
+        .limit(limit)
+        .snapshots(includeMetadataChanges: true)
+        .map((s) => !s.metadata.isFromCache);
+  }
+
   /// All recurring-flagged incomes since [since] (recurring+date composite
   /// index). Powers the "Langganan & Rutin" screen.
   Stream<List<Income>> watchRecurringSince({

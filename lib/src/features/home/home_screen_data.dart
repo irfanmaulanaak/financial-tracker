@@ -58,6 +58,10 @@ typedef HomeViewData = ({
   }) safe,
   String? insightCandidate,
   List<AttentionItem> attentionItems,
+  // True once every provider behind the hero numbers has a value (not loading),
+  // so the hero doesn't settle on a half-computed budget while cards /
+  // installments / obligations are still arriving.
+  bool heroInputsReady,
   // Hero scene inputs.
   DateTime cycleStart,
   int daysElapsed,
@@ -137,7 +141,8 @@ HomeViewData buildHomeViewData({
                     .fold<int>(0, (a, b) => a + b.amount))
                 .fold<int>(0, (a, b) => a + b) ~/
             prevCycles.length;
-  final obligations = ref.watch(obligationsProvider).value ?? const [];
+  final obligationsAsync = ref.watch(obligationsProvider);
+  final obligations = obligationsAsync.value ?? const [];
   final activeObligations = obligations.where((o) => !o.isComplete).toList();
   final debtMonthly = activeObligations
       .where((o) => o.isDebt)
@@ -275,13 +280,23 @@ HomeViewData buildHomeViewData({
   final daysLeftCycle =
       cycleNow.endExclusive.difference(Dates.dayKey(now)).inDays;
   var ccMonthly = 0;
+  var installmentsReady = true;
   for (final c in cards) {
-    ccMonthly += monthlyInstallmentDsrTotal(ref
-            .watch(cardInstallmentsProvider((hid: household.id, cardId: c.id)))
-            .value ??
-        const []);
+    final instAsync =
+        ref.watch(cardInstallmentsProvider((hid: household.id, cardId: c.id)));
+    installmentsReady = installmentsReady && instAsync.hasValue;
+    ccMonthly += monthlyInstallmentDsrTotal(instAsync.value ?? const []);
   }
-  final stableGaji = ref.watch(stableSalaryProvider).value ?? 0;
+  final stableGajiAsync = ref.watch(stableSalaryProvider);
+  final stableGaji = stableGajiAsync.value ?? 0;
+  // All inputs behind the big number / sentence have landed — only then may the
+  // hero settle, so it never shows a budget computed from partial card data.
+  final heroInputsReady = cycleAsync.hasValue &&
+      prevAsync.hasValue &&
+      cardsAsync.hasValue &&
+      installmentsReady &&
+      obligationsAsync.hasValue &&
+      stableGajiAsync.hasValue;
   final debtSummary = debtServiceSummary(
     stableSalary: stableGaji,
     fixedObligationsMonthly: debtMonthly,
@@ -369,6 +384,7 @@ HomeViewData buildHomeViewData({
     safe: safe,
     insightCandidate: insightCandidate,
     attentionItems: attentionItems,
+    heroInputsReady: heroInputsReady,
     cycleStart: cycleNow.start,
     daysElapsed: daysElapsed,
     cycleLength: cycleLen,

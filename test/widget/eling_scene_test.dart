@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:financial_tracker/src/features/home/eling/eling_mood.dart';
 import 'package:financial_tracker/src/features/home/eling/eling_scene.dart';
+import 'package:financial_tracker/src/features/home/home_data_synced.dart';
 import 'package:financial_tracker/src/features/home/widgets/home_hero_scene.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,8 +10,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-Widget _harness(int perDay, {bool reduce = false}) {
+Widget _harness(
+  int perDay, {
+  bool reduce = false,
+  Stream<bool>? synced,
+  bool inputsReady = true,
+}) {
   return ProviderScope(
+    overrides: [
+      homeDataSyncedProvider
+          .overrideWith((ref) => synced ?? Stream.value(true)),
+    ],
     child: MaterialApp(
       home: Scaffold(
         body: MediaQuery(
@@ -25,6 +37,7 @@ Widget _harness(int perDay, {bool reduce = false}) {
               insightCandidate: null,
               startLabel: '30 Sep',
               paydayLabel: 'Gajian 30 Okt',
+              inputsReady: inputsReady,
             ),
           ),
         ),
@@ -45,6 +58,48 @@ void main() {
     GoogleFonts.config.allowRuntimeFetching = false;
     ElingSession.entrancePlayed = false;
     ElingSession.settledOnce = false;
+  });
+
+  testWidgets('waits for server sync before showing the number',
+      (tester) async {
+    final synced = StreamController<bool>();
+    addTearDown(synced.close);
+
+    await tester.pumpWidget(_harness(414000, reduce: true, synced: synced.stream));
+    await tester.pump();
+    // Not synced yet: no number.
+    expect(_richTextHas('414'), isFalse);
+
+    // Server data arrives → the 700ms settle starts, still no number yet.
+    synced.add(true);
+    await tester.pump(); // stream event reaches the provider
+    await tester.pump(); // the hero rebuilds with synced = true
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(_richTextHas('414'), isFalse);
+
+    // Past the settle window: the number shows.
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(_richTextHas('414'), isTrue);
+  });
+
+  testWidgets('waits for the hero inputs to load before showing the number',
+      (tester) async {
+    // Synced from the server, but the late providers (cards, installments,
+    // obligations, stable salary) haven't landed yet.
+    await tester.pumpWidget(_harness(414000, reduce: true, inputsReady: false));
+    await tester.pump(); // let the (synced) provider value reach the hero
+    await tester.pump(const Duration(milliseconds: 800)); // past the settle
+    expect(_richTextHas('414'), isFalse);
+
+    // Inputs finish loading → the settle starts.
+    await tester.pumpWidget(_harness(414000, reduce: true, inputsReady: true));
+    await tester.pump(); // the hero rebuilds with inputsReady = true
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(_richTextHas('414'), isFalse);
+
+    // Past the settle window: the number shows.
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(_richTextHas('414'), isTrue);
   });
 
   testWidgets('entrance waits until the inputs settle (debounced)',
@@ -68,6 +123,8 @@ void main() {
   testWidgets('reduce motion: shows the number and mood bubble, tap swaps it',
       (tester) async {
     await tester.pumpWidget(_harness(414000, reduce: true));
+    // Let the (already synced) provider value reach the hero first.
+    await tester.pump();
     // Still debounced even under reduce motion — let the inputs settle.
     await tester.pump(const Duration(milliseconds: 750));
 

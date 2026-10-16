@@ -133,6 +133,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 insightCandidate: data.insightCandidate,
                 startLabel: Dates.dayMonth(data.cycleStart),
                 paydayLabel: 'Gajian ${Dates.dayMonth(data.safe.nextPayday)}',
+                inputsReady: data.heroInputsReady,
               ),
               if (onbActive) ...[
                 gap,

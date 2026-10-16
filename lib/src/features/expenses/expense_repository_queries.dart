@@ -14,6 +14,23 @@ extension ExpenseRepositoryQueries on ExpenseRepository {
         .map((s) => s.docs.map(Expense.fromSnapshot).toList());
   }
 
+  /// Emits whether each snapshot of the *identical* [watchInRange] query came
+  /// from the server (`true`) rather than the local cache (`false`). Same query
+  /// shape, so Firestore shares the existing listener — no extra reads. Used
+  /// only by the home sync gate to avoid starting the entrance on cached data.
+  Stream<bool> watchRangeServerSynced({
+    required String householdId,
+    required DateTime startInclusive,
+    required DateTime endExclusive,
+  }) {
+    return _col(householdId)
+        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startInclusive))
+        .where('date', isLessThan: Timestamp.fromDate(endExclusive))
+        .orderBy('date', descending: true)
+        .snapshots(includeMetadataChanges: true)
+        .map((s) => !s.metadata.isFromCache);
+  }
+
   Stream<List<Expense>> watchRecent({
     required String householdId,
     int limit = 5,
