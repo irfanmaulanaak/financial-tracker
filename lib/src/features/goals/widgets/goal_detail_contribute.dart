@@ -71,24 +71,11 @@ Future<void> openGoalContribute(
             amount: amount,
             byUid: uid,
           );
-      // Perayaan milestone — sekali, tepat di momen terlewati.
-      final milestone = goalMilestoneCrossed(
-        before: goal.current,
-        after: goal.current + amount,
-        target: goal.target,
-      );
+      // Milestone 50%/100% kini dirayakan oleh animasi di scene goal detail
+      // sendiri (hero "Tercapai" yang roll + letupan emas), jadi di sini
+      // selalu tampilkan celebrate pendek biasa — tidak dobel dengan animasi.
       if (context.mounted) {
-        FtCelebrate.show(
-          context,
-          message: switch (milestone) {
-            100 => '"${goal.label}" tercapai.',
-            50 => 'Setengah jalan ke "${goal.label}".',
-            _ => 'Setoran tersimpan',
-          },
-          hold: milestone != null
-              ? const Duration(milliseconds: 1400)
-              : const Duration(milliseconds: 600),
-        );
+        FtCelebrate.show(context, message: 'Setoran tersimpan');
       }
     } catch (e) {
       if (context.mounted) {

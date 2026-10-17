@@ -129,6 +129,7 @@ class ElingHillPainter extends CustomPainter {
     required this.geo,
     required this.greenLen,
     required this.colors,
+    this.drawHouse = true,
   });
 
   final TrackGeometry geo;
@@ -136,6 +137,10 @@ class ElingHillPainter extends CustomPainter {
   /// Length of the green (walked) portion, from `l0` to here.
   final double greenLen;
   final ElingSceneColors colors;
+
+  /// False when the caller draws its own marker at `geo.p1` instead of the
+  /// payday house (the goal-detail hero puts a goal icon there).
+  final bool drawHouse;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -165,6 +170,11 @@ class ElingHillPainter extends CustomPainter {
 
     // Cycle-start dot.
     canvas.drawCircle(geo.p0, 6, Paint()..color = colors.dot);
+
+    if (!drawHouse) {
+      canvas.restore();
+      return;
+    }
 
     // Payday house at the end of the path.
     canvas.save();
@@ -203,5 +213,7 @@ class ElingHillPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(ElingHillPainter old) =>
-      old.greenLen != greenLen || old.colors != colors;
+      old.greenLen != greenLen ||
+      old.colors != colors ||
+      old.drawHouse != drawHouse;
 }

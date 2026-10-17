@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/catat_card.dart';
+import '../../core/formatters.dart';
 import '../../core/theme_provider.dart';
 import '../../theme.dart';
 import '../../ui/ft_action_sheet.dart';
 import '../../ui/ft_ui.dart';
+import '../home/eling/catat_saved_card.dart';
 
 /// Preview tema Liquid Glass — debug only, tanpa auth (`/dev/liquid`).
 /// Berisi konten dummy untuk menguji kaca: kartu warna-warni yang discroll
@@ -71,6 +74,36 @@ class LiquidPreviewScreen extends ConsumerWidget {
                       builder: (_) => const _DummySheet(),
                     ),
                     child: const Text('Buka sheet kaca'),
+                  ),
+                  const SizedBox(height: 8),
+                  OutlinedButton(
+                    onPressed: () => CatatSavedCard.show(
+                      context,
+                      categoryLabel: 'Grocery',
+                      amountLabel: Money.format(56300),
+                      amounts: const CatatCardAmounts(
+                        over: false,
+                        oldValue: 932006,
+                        newValue: 875706,
+                      ),
+                      budget: 2500000,
+                    ),
+                    child: const Text('After-Catat: di bawah anggaran'),
+                  ),
+                  const SizedBox(height: 8),
+                  OutlinedButton(
+                    onPressed: () => CatatSavedCard.show(
+                      context,
+                      categoryLabel: 'Belanja',
+                      amountLabel: Money.format(150000),
+                      amounts: const CatatCardAmounts(
+                        over: true,
+                        oldValue: 1210605,
+                        newValue: 1360605,
+                      ),
+                      budget: 5000000,
+                    ),
+                    child: const Text('After-Catat: lewat anggaran'),
                   ),
                 ],
               ),

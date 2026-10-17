@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/formatters.dart';
 import '../../../theme.dart';
 import '../../../ui/ft_refresh.dart';
-import '../../../ui/ft_ring.dart';
 import '../../../ui/ft_ui.dart';
 import '../../home/widgets/home_formatters.dart';
 import '../../household/household_providers.dart';
@@ -18,6 +17,7 @@ import '../goal_repository.dart';
 import '../goals_screen.dart' show fundedGoalsProvider, goalsProvider;
 import 'goal_detail_contribute.dart';
 import 'goal_funding_sheet.dart';
+import 'goal_progress_hero.dart';
 
 class GoalDetailBody extends ConsumerWidget {
   const GoalDetailBody({
@@ -30,7 +30,6 @@ class GoalDetailBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final pct = (goal.progress * 100).round();
     final remaining = goal.target - goal.current;
     final monthsLeft = goal.monthlyContrib > 0
         ? (remaining / goal.monthlyContrib).ceil()
@@ -98,69 +97,33 @@ class GoalDetailBody extends ConsumerWidget {
                     ),
                   ),
           ),
-          FtCard(
-            margin: const EdgeInsets.fromLTRB(22, 4, 22, 18),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    FtRing(
-                      value: goal.progress,
-                      max: 1,
-                      size: 140,
-                      thickness: 10,
-                      color: color,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Eyebrow('Tercapai'),
-                          const SizedBox(height: 2),
-                          Text(
-                            '$pct%',
-                            style: Theme.of(context)
-                                .textTheme
-                                .displaySmall
-                                ?.copyWith(fontSize: 32, height: 1),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${compactMoney(goal.current)} / ${compactMoney(goal.target)}',
-                            style: TextStyle(
-                              color: FtColors.ink3,
-                              fontSize: 11,
-                              fontFeatures: const [FontFeature.tabularFigures()],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+          GoalProgressHero(goal: goal),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(22, 16, 22, 14),
+            child: FtStatGrid(
+              items: [
+                FtStatItem(
+                  label: 'Sisa',
+                  value: Money.format(remaining),
                 ),
-                const SizedBox(height: 18),
-                const Divider(),
-                const SizedBox(height: 14),
-                FtStatGrid(
-                  items: [
-                    FtStatItem(
-                      label: 'Sisa',
-                      value: Money.format(remaining),
-                    ),
-                    FtStatItem(
-                      label: 'Setoran/bln',
-                      value: Money.format(goal.monthlyContrib),
-                    ),
-                    FtStatItem(
-                      label: 'Target',
-                      value: goal.dueDate != null
-                          ? Dates.short(goal.dueDate!)
-                          : '-',
-                    ),
-                  ],
+                FtStatItem(
+                  label: 'Setoran/bln',
+                  value: Money.format(goal.monthlyContrib),
+                ),
+                FtStatItem(
+                  label: 'Target',
+                  value:
+                      goal.dueDate != null ? Dates.short(goal.dueDate!) : '-',
                 ),
               ],
             ),
           ),
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 22),
+            height: 1,
+            color: FtColors.line,
+          ),
+          const SizedBox(height: 18),
           FtCard(
             margin: const EdgeInsets.fromLTRB(22, 0, 22, 18),
             onTap: () => _changeFunding(context, ref),

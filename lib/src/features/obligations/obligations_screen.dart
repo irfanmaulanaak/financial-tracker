@@ -6,6 +6,7 @@ import '../../theme.dart';
 import '../../ui/ft_haptics.dart';
 import '../../ui/ft_refresh.dart';
 import '../../ui/ft_ui.dart';
+import '../home/eling/month_path.dart';
 import '../household/household_providers.dart';
 import 'obligation.dart';
 import 'obligation_repository.dart';
@@ -215,17 +216,18 @@ class _ObligationTile extends ConsumerWidget {
                 fontSize: 15,
               ),
             ),
+            const SizedBox(height: 8),
+            MonthPathEling(
+              entranceId: 'obligation-${o.id}',
+              monthsTotal: o.monthsTotal,
+              monthsPaid: o.monthsPaid,
+              startedAt: o.startedAt,
+              showEling: !dimmed,
+            ),
             const SizedBox(height: 4),
             Text(
-              '${o.monthsPaid}/${o.monthsTotal} bulan · jatuh tempo tanggal ${o.dueDay}',
-              style: TextStyle(color: FtColors.ink3, fontSize: 11),
-            ),
-            const SizedBox(height: 8),
-            FtProgressBar(
-              value: o.monthsPaid,
-              max: o.monthsTotal,
-              color: ftProgressColor(o.monthsPaid, o.monthsTotal),
-              height: 3,
+              '${o.monthsPaid} dari ${o.monthsTotal} bulan, jatuh tempo tanggal ${o.dueDay}',
+              style: TextStyle(color: FtColors.ink3, fontSize: 13),
             ),
             if (o.outstandingPrincipal != null) ...[
               const SizedBox(height: 7),

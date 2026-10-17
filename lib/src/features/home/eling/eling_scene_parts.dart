@@ -3,6 +3,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../../theme.dart';
+import 'eling_hill_painter.dart' show kElingBase;
+import 'eling_motion.dart';
 
 /// One frame of Eling's animation — everything [ElingScene] computes per tick
 /// and hands to the painters.
@@ -38,6 +40,42 @@ class ElingFrame {
   final double elingLen, greenLen, bubbleOpacity, bubbleScale;
 }
 
+/// Three small floating hearts beside Eling during a tap reaction (DESIGN.md
+/// section 7). [tMs] is elapsed milliseconds in whatever controller drives
+/// the tap; [anchor] is Eling's resting base point, in the same coordinate
+/// space as [s] (px per scene unit).
+List<Widget> elingTapHearts({
+  required double tMs,
+  required Offset anchor,
+  required double s,
+  double startMs = 250,
+  double spanMs = 1050,
+  double stepMs = 180,
+}) {
+  final hearts = <Widget>[];
+  for (var i = 0; i < 3; i++) {
+    final hp = elingSeg(
+        tMs, startMs + i * stepMs, startMs + spanMs + i * stepMs);
+    if (hp <= 0 || hp >= 1) continue;
+    final opacity = hp < 0.2 ? hp * 5 : 1 - (hp - 0.2) / 0.8;
+    final x =
+        anchor.dx + 24 + const [0.0, 14.0, 26.0][i] + math.sin(hp * 6 + i) * 4;
+    final y = anchor.dy - kElingBase - 4 - hp * 26;
+    hearts.add(Positioned(
+      left: x * s,
+      top: y * s,
+      child: Opacity(
+        opacity: opacity.clamp(0.0, 1.0),
+        child: Transform.scale(
+          scale: 0.6 + 0.5 * hp,
+          child: const Icon(Icons.favorite, size: 18, color: Color(0xFFE5533D)),
+        ),
+      ),
+    ));
+  }
+  return hearts;
+}
+
 /// White rounded speech bubble with a small diamond tail pointing down at Eling.
 class ElingSpeechBubble extends StatelessWidget {
   const ElingSpeechBubble({
@@ -56,6 +94,9 @@ class ElingSpeechBubble extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
+          // Wide enough that the tail always sits under the bubble, even for
+          // a short line when Eling stands far to the right.
+          constraints: BoxConstraints(minWidth: tailLeft + 34),
           padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
           decoration: BoxDecoration(
             color: FtColors.surface,

@@ -23,6 +23,76 @@ String? _mostUsedCategoryId(
   return best;
 }
 
+/// Pre-save snapshot for the after-Catat card (DESIGN.md section 6, item 3).
+/// Returns null when the normal "Tersimpan" celebrate should show instead:
+/// the category has no budget, the expense date is outside the current
+/// cycle, or the cycle/previous-cycle data hasn't loaded yet.
+({
+  String categoryLabel,
+  String amountLabel,
+  CatatCardAmounts amounts,
+  int budget,
+})? _catatCardSnapshot(
+  WidgetRef ref,
+  Household h, {
+  required String categoryId,
+  required int amount,
+  required DateTime date,
+}) {
+  Category? category;
+  for (final c in h.categories) {
+    if (c.id == categoryId) {
+      category = c;
+      break;
+    }
+  }
+  if (category == null) return null;
+
+  final cycle = currentCycle(DateTime.now(), payday: h.payday);
+  if (!catatCardEligible(
+    monthlyBudget: category.monthlyBudget,
+    date: date,
+    cycleStart: cycle.start,
+    cycleEndExclusive: cycle.endExclusive,
+  )) {
+    return null;
+  }
+
+  final cycleAsync = ref.read(cycleExpensesProvider);
+  if (!cycleAsync.hasValue) return null;
+  var prevSpent = 0;
+  if (category.rollover) {
+    // (3) like Beranda, Pengeluaran and category detail, so it is usually
+    // already loaded; index 0 is the most recent previous cycle.
+    final prevAsync = ref.read(previousCyclesExpensesProvider(3));
+    if (!prevAsync.hasValue) return null;
+    final prevCycles = prevAsync.value!;
+    if (prevCycles.isNotEmpty) {
+      prevSpent = prevCycles[0]
+          .where((e) => e.categoryId == categoryId)
+          .fold<int>(0, (a, e) => a + e.amount.toInt());
+    }
+  }
+  final budget = effectiveBudget(
+    monthlyBudget: category.monthlyBudget,
+    rollover: category.rollover,
+    prevCycleSpent: prevSpent,
+  );
+  final spentBefore = cycleAsync.value!
+      .where((e) => e.categoryId == categoryId)
+      .fold<int>(0, (a, e) => a + e.amount.toInt());
+  return (
+    categoryLabel: category.label,
+    amountLabel: Money.format(amount),
+    amounts: catatCardAmounts(
+      budget: budget,
+      spentBeforeSave: spentBefore,
+      amount: amount,
+    ),
+    budget: budget,
+  );
+}
+
 extension _RecordExpenseActions on _RecordExpenseScreenState {
   /// Auto-suggest a category from the note text (custom labels first, then
   /// the Indonesian merchant keyword map). Only while the user hasn't
@@ -177,6 +247,17 @@ extension _RecordExpenseActions on _RecordExpenseScreenState {
       _busy = true;
       _error = null;
     });
+    // Snapshot the category's budget state *before* this save, so the
+    // after-Catat card can count from the old value to the new one.
+    final catatCard = (!widget.isEdit && !addAnother)
+        ? _catatCardSnapshot(
+            ref,
+            h,
+            categoryId: _categoryId!,
+            amount: _amount,
+            date: _date,
+          )
+        : null;
     try {
       final repo = ref.read(expenseRepositoryProvider);
       final note = _note.text.trim().isEmpty ? null : _note.text.trim();
@@ -245,6 +326,15 @@ extension _RecordExpenseActions on _RecordExpenseScreenState {
         if (addAnother) {
           FtCelebrate.show(context, message: 'Tersimpan. Lanjut.');
           _resetForNext();
+        } else if (catatCard != null) {
+          CatatSavedCard.show(
+            context,
+            categoryLabel: catatCard.categoryLabel,
+            amountLabel: catatCard.amountLabel,
+            amounts: catatCard.amounts,
+            budget: catatCard.budget,
+          );
+          context.pop();
         } else {
           FtCelebrate.show(context, message: 'Tersimpan');
           context.pop();

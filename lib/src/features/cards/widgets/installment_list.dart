@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/formatters.dart';
 import '../../../theme.dart';
-import '../../../ui/ft_ui.dart';
+import '../../home/eling/month_path_track.dart';
 import '../card_repository.dart';
 import '../credit_card.dart';
 
@@ -100,15 +100,9 @@ class CardInstallmentsInline extends ConsumerWidget {
                             ],
                           ),
                         ),
-                        SizedBox(
-                          width: 60,
-                          child: FtProgressBar(
-                            value: i.monthsPaid,
-                            max: i.monthsTotal,
-                            color:
-                                ftProgressColor(i.monthsPaid, i.monthsTotal),
-                            height: 4,
-                          ),
+                        MonthPathMini(
+                          monthsTotal: i.monthsTotal,
+                          monthsPaid: i.monthsPaid,
                         ),
                       ],
                     ),

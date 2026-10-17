@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/formatters.dart';
 import '../../theme.dart';
+import '../../ui/ft_celebrate.dart';
 import '../../ui/ft_haptics.dart';
 import '../../ui/ft_ui.dart';
 import '../household/household_providers.dart';
@@ -60,13 +61,22 @@ class _PayInstallmentSheetState extends ConsumerState<PayInstallmentSheet> {
     }
     setState(() => _busy = true);
     try {
+      final finishing = widget.installment.monthsPaid + 1 >=
+          widget.installment.monthsTotal;
       await ref.read(cardRepositoryProvider).incrementInstallment(
             hid: widget.hid,
             cardId: widget.cardId,
             installmentId: widget.installment.id,
             sourceAccountId: sourceId,
           );
-      FtHaptics.success();
+      if (finishing) {
+        final label = widget.installment.label.isNotEmpty
+            ? widget.installment.label
+            : 'Cicilan';
+        if (mounted) FtCelebrate.show(context, message: '$label lunas!');
+      } else {
+        FtHaptics.success();
+      }
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (!mounted) return;

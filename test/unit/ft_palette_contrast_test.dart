@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:financial_tracker/src/features/goals/widgets/goal_progress_scene.dart';
 import 'package:financial_tracker/src/features/home/eling/eling_hill_painter.dart';
 import 'package:financial_tracker/src/theme.dart';
 import 'package:flutter/material.dart';
@@ -133,6 +134,14 @@ void main() {
           expect(_contrast(c.filledPath, FtColors.hero),
               greaterThanOrEqualTo(_kAALarge));
           expect(_contrast(FtColors.onHero, c.hill), greaterThanOrEqualTo(_kAA));
+        });
+
+        test('goal end icon stands out on its circle', () {
+          // Regression: Laut dark drew a navy icon on a near-black circle.
+          final accent = ElingSceneColors.fromTheme().filledPath;
+          final circle =
+              goalEndCircleColor(accent: accent, hero: FtColors.hero);
+          expect(_contrast(accent, circle), greaterThanOrEqualTo(_kAALarge));
         });
       });
     }

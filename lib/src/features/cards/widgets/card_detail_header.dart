@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/formatters.dart';
 import '../../../theme.dart';
 import '../../../ui/ft_ui.dart';
+import '../../home/eling/month_path.dart';
 import '../credit_card.dart';
 
 /// Hero card on the card-detail screen. Pure display widget.
@@ -169,14 +170,26 @@ class CardInstallmentTile extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 4),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: FtProgressBar(
-                value: pct,
-                max: 1,
-                color: ftProgressColor(pct, 1),
+            if (inst.monthsTotal > 1)
+              Padding(
+                padding: const EdgeInsets.only(top: 4, bottom: 4),
+                child: MonthPathEling(
+                  entranceId: 'installment-${inst.id}',
+                  monthsTotal: inst.monthsTotal,
+                  monthsPaid: inst.monthsPaid,
+                  startedAt: inst.startedAt,
+                  showEling: !inst.isComplete,
+                ),
+              )
+            else
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: FtProgressBar(
+                  value: pct,
+                  max: 1,
+                  color: ftProgressColor(pct, 1),
+                ),
               ),
-            ),
             const SizedBox(height: 8),
             Row(
               children: [

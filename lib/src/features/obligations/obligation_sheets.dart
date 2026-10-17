@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/formatters.dart';
 import '../../core/providers.dart';
 import '../../theme.dart';
+import '../../ui/ft_celebrate.dart';
 import '../../ui/ft_haptics.dart';
 import '../../ui/ft_ui.dart';
 import '../household/household_providers.dart';
@@ -39,6 +40,8 @@ class _PayObligationSheetState extends ConsumerState<PayObligationSheet> {
     if (household == null || _accountId == null) return;
     setState(() => _busy = true);
     try {
+      final finishing =
+          widget.obligation.monthsPaid + 1 >= widget.obligation.monthsTotal;
       await ref
           .read(obligationRepositoryProvider)
           .payMonth(
@@ -48,7 +51,12 @@ class _PayObligationSheetState extends ConsumerState<PayObligationSheet> {
             expectedMonthsPaid: widget.obligation.monthsPaid,
           );
       if (mounted) {
-        FtHaptics.success();
+        if (finishing) {
+          FtCelebrate.show(context,
+              message: '${widget.obligation.label} lunas!');
+        } else {
+          FtHaptics.success();
+        }
         Navigator.pop(context);
       }
     } catch (e) {

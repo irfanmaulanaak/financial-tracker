@@ -8,6 +8,7 @@ import '../../../ui/ft_haptics.dart';
 import '../widgets/home_formatters.dart';
 import 'eling_hill_painter.dart';
 import 'eling_mood.dart';
+import 'eling_motion.dart';
 import 'eling_painter.dart';
 import 'eling_scene_parts.dart';
 
@@ -23,6 +24,15 @@ class ElingSession {
   /// the first stable frame so later mounts (tab revisits) render instantly
   /// instead of re-waiting for the debounce.
   static bool settledOnce = false;
+
+  /// Goal ids whose detail-screen hero entrance has already played this
+  /// session. Mirrors [entrancePlayed] but per-goal, since several goal
+  /// detail screens can be visited in one session.
+  static final Set<String> goalsEntered = {};
+
+  /// Screen/tile ids whose month-path entrance (DESIGN.md section 6, item 2)
+  /// has already played this session.
+  static final Set<String> monthPathsEntered = {};
 }
 
 /// The hero scene: the hill, the payday path from the cycle start to the
@@ -133,13 +143,6 @@ class _ElingSceneState extends State<ElingScene>
     _tap.forward(from: 0);
   }
 
-  static double _seg(double t, double a, double b) =>
-      ((t - a) / (b - a)).clamp(0.0, 1.0);
-  static double _back(double p) {
-    const c = 1.9;
-    return 1 + (c + 1) * math.pow(p - 1, 3) + c * math.pow(p - 1, 2);
-  }
-
   @override
   Widget build(BuildContext context) {
     final cycleLength = widget.cycleLength <= 0 ? 1 : widget.cycleLength;
@@ -224,8 +227,12 @@ class _ElingSceneState extends State<ElingScene>
                       ),
                     ),
                     // Floating hearts (tap).
-                    for (var i = 0; i < 3; i++)
-                      ..._heart(i, restPt, s),
+                    if (_tap.isAnimating)
+                      ...elingTapHearts(
+                        tMs: _tap.value * 1500,
+                        anchor: restPt,
+                        s: s,
+                      ),
                     // Speech bubble.
                     Positioned(
                       left: 70 * s,
@@ -276,23 +283,23 @@ class _ElingSceneState extends State<ElingScene>
     final ev = _entrance.value;
     if (ev > 0 && ev < 1) {
       final t = ev * 2300;
-      final pw = _seg(t, 0, 1500);
+      final pw = elingSeg(t, 0, 1500);
       final eased = 1 - (1 - pw) * (1 - pw);
       elingLen = l0 + (lt - l0) * eased;
       greenLen = elingLen;
       rollDegrees = ((elingLen - l0) / kBallRadius) * 180 / math.pi;
       rolling = t < 1500;
       if (restStand == 1) {
-        final up = _seg(t, 1500, 1850);
+        final up = elingSeg(t, 1500, 1850);
         standness = up;
-        standScale = 0.55 + 0.45 * (up > 0 && up < 1 ? _back(up) : up);
+        standScale = 0.55 + 0.45 * (up > 0 && up < 1 ? elingBack(up) : up);
       } else {
         standness = 0;
         standScale = 0.55;
       }
-      final bp = _seg(t, 1850, 2200);
+      final bp = elingSeg(t, 1850, 2200);
       bubbleOpacity = bp > 0 ? 1.0 : 0.0;
-      bubbleScale = bp > 0 ? 0.6 + 0.4 * _back(bp) : 0.6;
+      bubbleScale = bp > 0 ? 0.6 + 0.4 * elingBack(bp) : 0.6;
     }
 
     final iv = _idle.value;
@@ -300,7 +307,7 @@ class _ElingSceneState extends State<ElingScene>
       final ti = iv * 10000;
       if (restStand == 1) breathe = 1 + 0.022 * math.sin(ti / 420);
       double blinkAt(double a) {
-        final b = _seg(ti, a, a + 140);
+        final b = elingSeg(ti, a, a + 140);
         return (b > 0 && b < 1) ? 1 - 0.9 * math.sin(math.pi * b) : 1;
       }
 
@@ -312,23 +319,23 @@ class _ElingSceneState extends State<ElingScene>
       if (restStand == 1) {
         double u;
         if (tt < 150) {
-          u = 1 - _seg(tt, 0, 150);
+          u = 1 - elingSeg(tt, 0, 150);
         } else if (tt < 450) {
           u = 0;
         } else if (tt < 800) {
-          u = _seg(tt, 450, 800);
+          u = elingSeg(tt, 450, 800);
         } else {
           u = 1;
         }
         standness = u;
-        final up = (tt >= 450 && tt < 800) ? _seg(tt, 450, 800) : null;
-        standScale = 0.55 + 0.45 * (up != null ? _back(up) : u);
+        final up = (tt >= 450 && tt < 800) ? elingSeg(tt, 450, 800) : null;
+        standScale = 0.55 + 0.45 * (up != null ? elingBack(up) : u);
         rolling = tt < 800;
       } else {
         standness = 0;
         standScale = 0.55;
       }
-      final wob = _seg(tt, 150, 600);
+      final wob = elingSeg(tt, 150, 600);
       if (wob > 0 && wob < 1) {
         rollDegrees += math.sin(wob * math.pi * 5) * 14 * (1 - wob);
       }
@@ -348,32 +355,6 @@ class _ElingSceneState extends State<ElingScene>
       bubbleOpacity: bubbleOpacity,
       bubbleScale: bubbleScale,
     );
-  }
-
-  List<Widget> _heart(int i, Offset restPt, double s) {
-    if (!_tap.isAnimating) return const [];
-    final tt = _tap.value * 1500;
-    final hp = _seg(tt, 250 + i * 180.0, 1300 + i * 180.0);
-    if (hp <= 0 || hp >= 1) return const [];
-    final opacity = hp < 0.2 ? hp * 5 : 1 - (hp - 0.2) / 0.8;
-    // Beside Eling, to the right and floating up — clear of the bubble.
-    final x =
-        restPt.dx + 24 + const [0.0, 14.0, 26.0][i] + math.sin(hp * 6 + i) * 4;
-    final y = restPt.dy - kElingBase - 4 - hp * 26;
-    return [
-      Positioned(
-        left: x * s,
-        top: y * s,
-        child: Opacity(
-          opacity: opacity.clamp(0.0, 1.0),
-          child: Transform.scale(
-            scale: 0.6 + 0.5 * hp,
-            child: const Icon(Icons.favorite,
-                size: 18, color: Color(0xFFE5533D)),
-          ),
-        ),
-      ),
-    ];
   }
 
   Widget _label(String text) => Text(
