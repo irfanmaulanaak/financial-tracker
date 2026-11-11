@@ -54,6 +54,46 @@ void main() {
     });
   });
 
+  group('cycleWindow', () {
+    final now = DateTime(2026, 11, 6);
+
+    test('cyclesBack 0 is the current cycle', () {
+      final w = cycleWindow(now, payday: 30);
+      expect(w, currentCycle(now, payday: 30));
+      expect(w.start, DateTime(2026, 10, 30));
+      expect(w.endExclusive, DateTime(2026, 11, 30));
+    });
+
+    test('cyclesBack 1 and 2 walk back one payday at a time', () {
+      final one = cycleWindow(now, payday: 30, cyclesBack: 1);
+      expect(one.start, DateTime(2026, 9, 30));
+      expect(one.endExclusive, DateTime(2026, 10, 30));
+
+      // 30 Aug 2026 is a Sunday, so payday rolls back to Fri 28 Aug.
+      final two = cycleWindow(now, payday: 30, cyclesBack: 2);
+      expect(two.start, DateTime(2026, 8, 28));
+      expect(two.endExclusive, DateTime(2026, 9, 30));
+    });
+
+    test('payday 31 follows resolvePayday in shorter months', () {
+      final march = DateTime(2026, 3, 15);
+      final w = cycleWindow(march, payday: 31, cyclesBack: 1);
+      expect(w.start, resolvePayday(2026, 1, 31));
+      expect(w.endExclusive, resolvePayday(2026, 2, 31));
+      expect(w.endExclusive, DateTime(2026, 2, 27));
+    });
+  });
+
+  group('parseCyclesBack', () {
+    test('reads a positive number', () => expect(parseCyclesBack('1'), 1));
+    test('missing, invalid, zero or negative mean current cycle', () {
+      expect(parseCyclesBack(null), 0);
+      expect(parseCyclesBack('abc'), 0);
+      expect(parseCyclesBack('0'), 0);
+      expect(parseCyclesBack('-2'), 0);
+    });
+  });
+
   group('currentCycle', () {
     _paydayEdgeTests();
 

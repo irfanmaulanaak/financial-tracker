@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/envelope.dart';
 import '../../../core/formatters.dart';
+import '../../../core/payday.dart';
 import '../../../theme.dart';
 import '../../../ui/ft_ui.dart';
 import '../../expenses/expense.dart';
@@ -19,13 +20,20 @@ class CategoryDetailHeaderCard extends StatelessWidget {
     required this.expensesAsync,
     required this.prevAsync,
     required this.cycle,
+    this.cyclesBack = 0,
     required this.color,
     required this.canMoveBudget,
   });
   final Category category;
   final AsyncValue<List<Expense>> expensesAsync;
+
+  /// Cycles to compare against, newest first. For a past cycle these are the
+  /// cycles before the selected one.
   final AsyncValue<List<List<Expense>>> prevAsync;
   final ({DateTime start, DateTime endExclusive}) cycle;
+
+  /// 0 = current cycle; above 0 the card describes a finished cycle.
+  final int cyclesBack;
   final Color color;
 
   /// Akses `full` → boleh geser anggaran antar kategori.
@@ -54,7 +62,8 @@ class CategoryDetailHeaderCard extends StatelessWidget {
         : 0;
     final budget = category.monthlyBudget + carry;
     final pct = budget > 0 ? (spent / budget * 100).round() : 0;
-    final over = spent > budget;
+    final hasBudget = budget > 0;
+    final over = hasBudget && spent > budget;
     final prevTotals = <int>[
       for (final w in prev)
         w.where((e) => e.categoryId == category.id).fold<int>(
@@ -69,7 +78,11 @@ class CategoryDetailHeaderCard extends StatelessWidget {
 
     // Real daily bars: last 14 days ending today, summing this category's
     // expenses per day. Missing days → 0.
-    final today = Dates.dayKey(DateTime.now());
+    final isPast = cyclesBack > 0;
+    final lastDay = isPast
+        ? Dates.dayKey(cycle.endExclusive.subtract(const Duration(days: 1)))
+        : null;
+    final today = lastDay ?? Dates.dayKey(DateTime.now());
     final cycleExpenses = expensesAsync.value ?? const <Expense>[];
     final perDay = <DateTime, int>{};
     for (final e in cycleExpenses) {
@@ -80,7 +93,9 @@ class CategoryDetailHeaderCard extends StatelessWidget {
       final day = today.subtract(Duration(days: 13 - i));
       return perDay[day] ?? 0;
     });
-    final daysPassed = DateTime.now().difference(cycle.start).inDays + 1;
+    final daysPassed = isPast
+        ? cycleLengthDays(cycle)
+        : DateTime.now().difference(cycle.start).inDays + 1;
     final dailyAvg = daysPassed > 0 ? spent ~/ daysPassed : 0;
 
     return FtCard(
@@ -110,7 +125,9 @@ class CategoryDetailHeaderCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Eyebrow('Pengeluaran siklus ini'),
+                    Eyebrow(isPast
+                        ? 'Siklus ${Dates.dayMonth(cycle.start)} sampai ${Dates.dayMonth(today)}'
+                        : 'Pengeluaran siklus ini'),
                     Text(
                       Money.format(spent),
                       style: Theme.of(context)
@@ -121,39 +138,45 @@ class CategoryDetailHeaderCard extends StatelessWidget {
                   ],
                 ),
               ),
-              _StatusChip(over: over),
+              if (hasBudget) _StatusChip(over: over),
             ],
           ),
           const SizedBox(height: 14),
-          FtProgressBar(
-            value: spent,
-            max: budget <= 0 ? 1 : budget,
-            color: ftProgressColor(
-              spent,
-              budget,
-              dangerWhenOver: true,
+          if (hasBudget) ...[
+            FtProgressBar(
+              value: spent,
+              max: budget,
+              color: ftProgressColor(
+                spent,
+                budget,
+                dangerWhenOver: true,
+              ),
+              height: 6,
             ),
-            height: 6,
-          ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '${Money.format(spent)} / ${Money.format(budget)}'
-                '${carry > 0 ? ' (gulir +${Money.format(carry)})' : ''}',
-                style: TextStyle(
-                    color: FtColors.ink2, fontSize: 11),
-              ),
-              Text(
-                '$pct% terpakai',
-                style: TextStyle(
-                  color: over ? FtColors.danger : FtColors.ink3,
-                  fontSize: 11,
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '${Money.format(spent)} / ${Money.format(budget)}'
+                  '${carry > 0 ? ' (gulir +${Money.format(carry)})' : ''}',
+                  style: TextStyle(
+                      color: FtColors.ink2, fontSize: 11),
                 ),
-              ),
-            ],
-          ),
+                Text(
+                  '$pct% terpakai',
+                  style: TextStyle(
+                    color: over ? FtColors.danger : FtColors.ink3,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ] else
+            Text(
+              'Belum ada anggaran untuk kategori ini.',
+              style: TextStyle(color: FtColors.ink3, fontSize: 11),
+            ),
           const SizedBox(height: 18),
           const Divider(),
           const SizedBox(height: 14),
@@ -212,11 +235,12 @@ class CategoryDetailHeaderCard extends StatelessWidget {
             children: [
               Text('14 hari terakhir',
                   style: TextStyle(color: FtColors.ink3, fontSize: 10)),
-              Text('hari ini',
+              Text(isPast ? Dates.dayMonth(today) : 'hari ini',
                   style: TextStyle(color: FtColors.ink3, fontSize: 10)),
             ],
           ),
-          const SizedBox(height: 14),
+          if (hasBudget) const SizedBox(height: 14),
+          if (hasBudget)
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(

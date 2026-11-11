@@ -17,8 +17,15 @@ import 'widgets/category_detail_header_card.dart';
 export 'widgets/category_detail_header_card.dart';
 
 class CategoryDetailScreen extends ConsumerWidget {
-  const CategoryDetailScreen({super.key, required this.categoryId});
+  const CategoryDetailScreen({
+    super.key,
+    required this.categoryId,
+    this.cyclesBack = 0,
+  });
   final String categoryId;
+
+  /// 0 = current cycle, 1 = the cycle right before it, and so on.
+  final int cyclesBack;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -47,11 +54,20 @@ class CategoryDetailScreen extends ConsumerWidget {
       );
     }
 
-    final cycle = currentCycle(DateTime.now(), payday: household.payday);
-    final expensesAsync = ref.watch(
-      _categoryExpensesProvider((hid: household.id, catId: categoryId)),
+    final cycle = cycleWindow(
+      DateTime.now(),
+      payday: household.payday,
+      cyclesBack: cyclesBack,
     );
-    final prevAsync = ref.watch(previousCyclesExpensesProvider(3));
+    final expensesKey =
+        (hid: household.id, catId: categoryId, back: cyclesBack);
+    final expensesAsync = ref.watch(_categoryExpensesProvider(expensesKey));
+    // The comparison cycles are the three right before the selected one.
+    final prevAsync = ref
+        .watch(previousCyclesExpensesProvider(cyclesBack + 3))
+        .whenData((all) => all.length > cyclesBack
+            ? all.sublist(cyclesBack)
+            : const <List<Expense>>[]);
 
     final color = parseColor(category.color);
 
@@ -62,7 +78,7 @@ class CategoryDetailScreen extends ConsumerWidget {
         child: FtRefreshable(
           onRefresh: () async {
             ref.invalidate(currentHouseholdProvider);
-            ref.invalidate(_categoryExpensesProvider((hid: household.id, catId: categoryId)));
+            ref.invalidate(_categoryExpensesProvider(expensesKey));
             ref.invalidate(previousCyclesExpensesProvider);
             await ftRefreshDelay();
           },
@@ -78,6 +94,7 @@ class CategoryDetailScreen extends ConsumerWidget {
               expensesAsync: expensesAsync,
               prevAsync: prevAsync,
               cycle: cycle,
+              cyclesBack: cyclesBack,
               color: color,
               canMoveBudget: ref.watch(canWriteAllProvider),
             ),
@@ -90,7 +107,9 @@ class CategoryDetailScreen extends ConsumerWidget {
                     padding: EdgeInsets.all(32),
                     child: Center(
                       child: Text(
-                        'Belum ada pengeluaran di kategori ini.',
+                        cyclesBack > 0
+                            ? 'Belum ada pengeluaran di siklus ini.'
+                            : 'Belum ada pengeluaran di kategori ini.',
                         style: TextStyle(color: FtColors.ink3),
                       ),
                     ),
@@ -160,11 +179,15 @@ class CategoryDetailScreen extends ConsumerWidget {
 }
 
 final _categoryExpensesProvider =
-    StreamProvider.family<List<Expense>, ({String hid, String catId})>(
+    StreamProvider.family<List<Expense>, ({String hid, String catId, int back})>(
   (ref, p) {
     final household = ref.watch(currentHouseholdProvider).value;
     if (household == null) return Stream.value(const []);
-    final cycle = currentCycle(DateTime.now(), payday: household.payday);
+    final cycle = cycleWindow(
+      DateTime.now(),
+      payday: household.payday,
+      cyclesBack: p.back,
+    );
     return ref
         .watch(expenseRepositoryProvider)
         .watchByCategory(

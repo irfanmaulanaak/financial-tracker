@@ -197,8 +197,10 @@ class _SpendScreenState extends ConsumerState<SpendScreen> {
                               _focusedCategoryId == categories[i].id,
                           canEditBudget:
                               ref.watch(canRecordTxnProvider),
-                          onTap: () =>
-                              context.push('/categories/${categories[i].id}'),
+                          onTap: () => context.push(
+                            '/categories/${categories[i].id}'
+                            '${_prevIndex == null ? '' : '?c=${_prevIndex! + 1}'}',
+                          ),
                           onEditBudget: () => BudgetEditSheet.show(
                             context: context,
                             category: categories[i],

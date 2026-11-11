@@ -43,6 +43,7 @@ import 'features/settings/settings_screen.dart';
 import 'features/spend/spend_screen.dart';
 import 'features/transfers/transfer_screen.dart';
 import 'ui/ft_motion.dart';
+import 'core/payday.dart';
 import 'core/providers.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -118,7 +119,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           EditExpenseScreen(expenseId: state.pathParameters['expenseId']!)),
       _fadeRoute('/categories', (_) => const CategoryManageScreen()),
       _scaleRoute('/categories/:categoryId', (state) =>
-          CategoryDetailScreen(categoryId: state.pathParameters['categoryId']!)),
+          CategoryDetailScreen(
+            categoryId: state.pathParameters['categoryId']!,
+            cyclesBack: parseCyclesBack(state.uri.queryParameters['c']),
+          )),
       _fadeRoute('/members', (_) => const MemberListScreen()),
       _scaleRoute('/members/:memberId', (state) =>
           MemberDetailScreen(memberId: state.pathParameters['memberId']!)),

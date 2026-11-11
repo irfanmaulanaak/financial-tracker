@@ -43,6 +43,29 @@ DateTime resolvePayday(int year, int month, int day) {
   return (start: start, endExclusive: endExclusive);
 }
 
+/// The cycle [cyclesBack] cycles before the current one (0 = current cycle,
+/// 1 = the cycle right before it). Same walk-back rule as
+/// `previousCyclesExpensesProvider`.
+({DateTime start, DateTime endExclusive}) cycleWindow(
+  DateTime now, {
+  required int payday,
+  int cyclesBack = 0,
+}) {
+  var window = currentCycle(now, payday: payday);
+  for (var i = 0; i < cyclesBack; i++) {
+    final prevStart = resolvePayday(window.start.year, window.start.month - 1, payday);
+    window = (start: prevStart, endExclusive: window.start);
+  }
+  return window;
+}
+
+/// Reads the `c` query value of a category link. Missing, invalid or < 1
+/// means the current cycle (0).
+int parseCyclesBack(String? raw) {
+  final n = int.tryParse(raw ?? '') ?? 0;
+  return n < 1 ? 0 : n;
+}
+
 /// Number of days in the current cycle (inclusive of start, exclusive of end).
 int cycleLengthDays(({DateTime start, DateTime endExclusive}) cycle) {
   return cycle.endExclusive.difference(cycle.start).inDays;
